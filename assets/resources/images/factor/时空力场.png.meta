@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "c455204b-ee3b-4885-aaee-c3e855c22e42",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 76,
+  "height": 76,
+  "platformSettings": {},
+  "subMetas": {
+    "时空力场": {
+      "ver": "1.0.6",
+      "uuid": "b0ec104f-b8c9-480d-806d-48ca7c23ce1f",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "c455204b-ee3b-4885-aaee-c3e855c22e42",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 76,
+      "height": 76,
+      "rawWidth": 76,
+      "rawHeight": 76,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

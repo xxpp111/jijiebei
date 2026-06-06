@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "c9f73246-4dee-4daf-a6f8-fe55994e8326",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 1884,
+  "height": 1060,
+  "platformSettings": {},
+  "subMetas": {
+    "回归杯合作模式比赛": {
+      "ver": "1.0.6",
+      "uuid": "bde9865e-e94d-48d0-af44-207827712f54",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "c9f73246-4dee-4daf-a6f8-fe55994e8326",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 16,
+      "offsetY": -19.5,
+      "trimX": 420,
+      "trimY": 407,
+      "width": 1076,
+      "height": 285,
+      "rawWidth": 1884,
+      "rawHeight": 1060,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

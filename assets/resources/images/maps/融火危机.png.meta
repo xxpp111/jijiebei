@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "d78fcee6-18d2-4783-b898-cfaf9cbbd362",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 475,
+  "height": 85,
+  "platformSettings": {},
+  "subMetas": {
+    "融火危机": {
+      "ver": "1.0.6",
+      "uuid": "6371c77d-a1af-48bb-abe1-de283b304a88",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "d78fcee6-18d2-4783-b898-cfaf9cbbd362",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 475,
+      "height": 85,
+      "rawWidth": 475,
+      "rawHeight": 85,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "0de3278a-8672-4fa2-9935-12337cf88420",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 150,
+  "height": 150,
+  "platformSettings": {},
+  "subMetas": {
+    "菲尼克斯V1": {
+      "ver": "1.0.6",
+      "uuid": "11309a13-4adb-4679-9502-01df50181301",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "0de3278a-8672-4fa2-9935-12337cf88420",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 150,
+      "height": 150,
+      "rawWidth": 150,
+      "rawHeight": 150,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

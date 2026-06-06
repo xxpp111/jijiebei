@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "38e4675a-9f60-4cd4-a0d1-f0522fcd2d03",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 48,
+  "height": 46,
+  "platformSettings": {},
+  "subMetas": {
+    "死灵之书": {
+      "ver": "1.0.6",
+      "uuid": "aaac0657-16a0-4c4f-a97f-2728b76e0aaf",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "38e4675a-9f60-4cd4-a0d1-f0522fcd2d03",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 48,
+      "height": 46,
+      "rawWidth": 48,
+      "rawHeight": 46,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

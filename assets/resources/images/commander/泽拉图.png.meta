@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "5d34a448-0f2a-4355-89b3-7f011bcfb8b6",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 80,
+  "height": 96,
+  "platformSettings": {},
+  "subMetas": {
+    "泽拉图": {
+      "ver": "1.0.6",
+      "uuid": "b381922f-0546-480d-b477-976169b2bbbc",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "5d34a448-0f2a-4355-89b3-7f011bcfb8b6",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 80,
+      "height": 96,
+      "rawWidth": 80,
+      "rawHeight": 96,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "b68ad923-0989-4992-a7f4-e2c8f1f7da0c",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 47,
+  "height": 45,
+  "platformSettings": {},
+  "subMetas": {
+    "亚空间放逐": {
+      "ver": "1.0.6",
+      "uuid": "43df26d6-e9ab-40bd-8691-b816476e100b",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "b68ad923-0989-4992-a7f4-e2c8f1f7da0c",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 47,
+      "height": 45,
+      "rawWidth": 47,
+      "rawHeight": 45,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

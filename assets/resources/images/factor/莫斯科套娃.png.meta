@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "176952d6-d78a-430c-a2f5-ee5cff43be79",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 49,
+  "height": 47,
+  "platformSettings": {},
+  "subMetas": {
+    "莫斯科套娃": {
+      "ver": "1.0.6",
+      "uuid": "d43bcf3c-3476-4ae0-87fd-4f4470607615",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "176952d6-d78a-430c-a2f5-ee5cff43be79",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 49,
+      "height": 47,
+      "rawWidth": 49,
+      "rawHeight": 47,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "9506103b-d13c-47e2-ae99-ce4936cb2d42",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 38,
+  "height": 51,
+  "platformSettings": {},
+  "subMetas": {
+    "蒙斯克A": {
+      "ver": "1.0.6",
+      "uuid": "4c6f861e-2c83-4973-968d-f8b92c917d07",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "9506103b-d13c-47e2-ae99-ce4936cb2d42",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 38,
+      "height": 51,
+      "rawWidth": 38,
+      "rawHeight": 51,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

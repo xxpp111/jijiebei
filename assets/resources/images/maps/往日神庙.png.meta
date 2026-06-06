@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "5a1e0308-a49b-49aa-9d9e-6296daceb39a",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 475,
+  "height": 85,
+  "platformSettings": {},
+  "subMetas": {
+    "往日神庙": {
+      "ver": "1.0.6",
+      "uuid": "cfc0409c-8f5b-4386-834c-e89ed0df38ed",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "5a1e0308-a49b-49aa-9d9e-6296daceb39a",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 475,
+      "height": 85,
+      "rawWidth": 475,
+      "rawHeight": 85,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

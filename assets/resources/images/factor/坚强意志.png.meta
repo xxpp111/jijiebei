@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "1ea04ca5-961a-445a-a6f3-a1b4a49c6853",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 76,
+  "height": 76,
+  "platformSettings": {},
+  "subMetas": {
+    "坚强意志": {
+      "ver": "1.0.6",
+      "uuid": "a3eef209-a0ed-4d61-a07f-1dabc785b1bd",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "1ea04ca5-961a-445a-a6f3-a1b4a49c6853",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 76,
+      "height": 76,
+      "rawWidth": 76,
+      "rawHeight": 76,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

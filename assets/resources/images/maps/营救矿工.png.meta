@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "86d67c34-cbc4-4744-86e1-25ea4fb4ad6c",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 475,
+  "height": 85,
+  "platformSettings": {},
+  "subMetas": {
+    "营救矿工": {
+      "ver": "1.0.6",
+      "uuid": "77eb0b84-e519-4025-acfd-6e9f6095e52b",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "86d67c34-cbc4-4744-86e1-25ea4fb4ad6c",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 475,
+      "height": 85,
+      "rawWidth": 475,
+      "rawHeight": 85,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

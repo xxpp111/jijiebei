@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "771115a0-5da9-415f-a101-88d7d48f1b67",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 76,
+  "height": 76,
+  "platformSettings": {},
+  "subMetas": {
+    "杀戮机器人": {
+      "ver": "1.0.6",
+      "uuid": "bd1b22ea-4a7a-49b2-a636-5a9e8a8c3b1c",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "771115a0-5da9-415f-a101-88d7d48f1b67",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 76,
+      "height": 76,
+      "rawWidth": 76,
+      "rawHeight": 76,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

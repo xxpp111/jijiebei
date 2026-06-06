@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "bce9ef0a-76e1-472c-93db-cfeabdcc879e",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 475,
+  "height": 85,
+  "platformSettings": {},
+  "subMetas": {
+    "净网行动": {
+      "ver": "1.0.6",
+      "uuid": "3cd30fb3-aafa-447b-93c8-a95a66729085",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "bce9ef0a-76e1-472c-93db-cfeabdcc879e",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 475,
+      "height": 85,
+      "rawWidth": 475,
+      "rawHeight": 85,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}
