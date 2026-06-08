@@ -49,3 +49,24 @@ Thumbs.db
 #//////////////////////////
 
 .vscode/
+
+#//////////////////////////
+# Playwright / MCP artifacts
+#//////////////////////////
+
+.playwright-mcp/
+
+#//////////////////////////
+# harness-pro（本地治理，不入 XP 仓）
+#//////////////////////////
+
+/.harness-pro*
+/.claude/
+/.codex/
+/.githooks/
+/config/
+/scripts/
+/HARNESS-PRO-ADAPTER.md
+/package.json
+/package-lock.json
+

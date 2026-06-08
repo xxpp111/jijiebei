@@ -1,0 +1,135 @@
+/* ============================================================
+   集结杯 × CM — styles.css
+   3 styles × 2 modes. Tokens drive theme.css structure.
+   .style-metal / .style-sc2 / .style-minimal  ×  .mode-dark / .mode-light
+   ============================================================ */
+
+/* ===== shared background wiring (uses --bg-a/--bg-b tokens) ===== */
+.jjb .bg-grad { background: radial-gradient(120% 90% at 50% 0%, var(--bg-a, #16273f), var(--bg-b, #05090f) 78%); }
+
+/* ============================================================
+   STYLE · 精修金属 (navy + 金属金 + 银钢)
+   ============================================================ */
+.style-metal { --font-title: "Noto Serif SC", "Noto Sans SC", serif; }
+.style-metal.mode-dark {
+  --bg-a: #16273f; --bg-b: #05090f; --ink: #e9eef4; --muted: #93a3b8;
+  --accent: #D8B15A; --on-accent: #1a1206;
+  --panel-bg: linear-gradient(180deg, rgba(44,62,86,.55), rgba(13,23,37,.68));
+  --panel-edge: rgba(199,209,222,.24); --drop-bg: rgba(255,255,255,.025); --drop-edge: rgba(216,177,90,.42);
+  --avatar-bg: #0a1018; --vbtn-bg: rgba(255,255,255,.04);
+  --win: #4f9d72; --bonus: #6f86bd; --lose: #a3434a; --on-state: #0b1206;
+}
+.style-metal.mode-light {
+  --bg-a: #e2e9f1; --bg-b: #bcc7d6; --ink: #15233a; --muted: #5d6b80;
+  --accent: #a9761f; --on-accent: #ffffff;
+  --panel-bg: rgba(255,255,255,.78); --panel-edge: rgba(21,35,58,.27); --drop-bg: rgba(21,35,58,.04); --drop-edge: rgba(169,118,31,.5);
+  --avatar-bg: #c3ccd8; --vbtn-bg: rgba(255,255,255,.62);
+  --win: #2f8d5c; --bonus: #3f63b8; --lose: #b23b3b; --on-state: #ffffff;
+}
+.style-metal.mode-dark .bg-tex {
+  background: radial-gradient(60% 46% at 50% 8%, rgba(216,177,90,.12), transparent 70%),
+              repeating-linear-gradient(118deg, rgba(255,255,255,.02) 0 2px, transparent 2px 7px);
+}
+.style-metal.mode-light .bg-tex { background: repeating-linear-gradient(118deg, rgba(21,35,58,.022) 0 2px, transparent 2px 7px); }
+.style-metal.mode-light .bg-vignette { box-shadow: inset 0 0 170px 46px rgba(120,135,160,.34); }
+.style-metal .lockup-cn { font-family: "Noto Serif SC", "Noto Sans SC", serif; font-weight: 900; }
+.style-metal.mode-dark .lockup-cn {
+  background: linear-gradient(180deg, #f6e7b6 0%, #d8b15a 52%, #a87e2f 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 2px 7px rgba(0,0,0,.5);
+}
+.style-metal .mode-btn, .style-metal .startbtn {
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+}
+.style-metal .mode-btn::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #f0d488, #b98e36); }
+.style-metal .mode-btn:hover { border-color: var(--accent); box-shadow: 0 0 18px rgba(216,177,90,.22); }
+.style-metal .startbtn { background: linear-gradient(180deg, #ecca74, #c69a3c); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 7px 20px rgba(0,0,0,.32); }
+.style-metal .startbtn:hover { filter: brightness(1.06); }
+
+/* ============================================================
+   STYLE · 星际2质感 (game console · 钢绿读出)
+   ============================================================ */
+.style-sc2 { --font-title: "Rajdhani", "Noto Sans SC", sans-serif; }
+.style-sc2.mode-dark {
+  --bg-a: #101c20; --bg-b: #05090b; --ink: #dfeae6; --muted: #7f9389;
+  --accent: #56cf8c; --on-accent: #062013;
+  --panel-bg: linear-gradient(180deg, rgba(30,48,46,.6), rgba(10,18,18,.72));
+  --panel-edge: rgba(120,150,140,.3); --drop-bg: rgba(86,207,140,.05); --drop-edge: rgba(86,207,140,.4);
+  --avatar-bg: #0a1413; --vbtn-bg: rgba(255,255,255,.03);
+  --win: #56cf8c; --bonus: #52a7c4; --lose: #d06b6b; --on-state: #062013;
+}
+.style-sc2.mode-light {
+  --bg-a: #dde8e4; --bg-b: #b4c5bf; --ink: #14241f; --muted: #54665d;
+  --accent: #1f8a55; --on-accent: #ffffff;
+  --panel-bg: rgba(248,251,249,.82); --panel-edge: rgba(20,36,31,.27); --drop-bg: rgba(31,138,85,.06); --drop-edge: rgba(31,138,85,.5);
+  --avatar-bg: #bfcdc7; --vbtn-bg: rgba(255,255,255,.6);
+  --win: #1f8a55; --bonus: #2f7fa0; --lose: #b23b3b; --on-state: #ffffff;
+}
+.style-sc2.mode-dark .bg-tex {
+  background: linear-gradient(rgba(86,207,140,.05) 1px, transparent 1px) 0 0 / 100% 44px,
+              linear-gradient(90deg, rgba(86,207,140,.05) 1px, transparent 1px) 0 0 / 44px 100%;
+  -webkit-mask-image: radial-gradient(92% 82% at 50% 40%, #000 30%, transparent 92%);
+          mask-image: radial-gradient(92% 82% at 50% 40%, #000 30%, transparent 92%);
+}
+.style-sc2.mode-light .bg-tex {
+  background: linear-gradient(rgba(31,138,85,.06) 1px, transparent 1px) 0 0 / 100% 44px,
+              linear-gradient(90deg, rgba(31,138,85,.06) 1px, transparent 1px) 0 0 / 44px 100%;
+}
+.style-sc2.mode-light .bg-vignette { box-shadow: inset 0 0 170px 46px rgba(108,128,122,.34); }
+.style-sc2 .lockup-cn { font-weight: 700; letter-spacing: 7px; }
+.style-sc2.mode-dark .lockup-cn { text-shadow: 0 0 16px rgba(86,207,140,.32); }
+/* corner-tick console frames */
+.style-sc2 .mode-btn, .style-sc2 .slot, .style-sc2 .match, .style-sc2 .rcard,
+.style-sc2 .spec-card, .style-sc2 .ovf-row { position: relative; }
+.style-sc2 .mode-btn::before, .style-sc2 .slot::before, .style-sc2 .match::before, .style-sc2 .rcard::before,
+.style-sc2 .spec-card::before, .style-sc2 .ovf-row::before {
+  content: ""; position: absolute; left: -1px; top: -1px; width: 12px; height: 12px;
+  border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); pointer-events: none;
+}
+.style-sc2 .mode-btn::after, .style-sc2 .slot::after, .style-sc2 .match::after, .style-sc2 .rcard::after,
+.style-sc2 .spec-card::after, .style-sc2 .ovf-row::after {
+  content: ""; position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px;
+  border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none;
+}
+.style-sc2 .mode-btn { box-shadow: inset 0 1px 0 rgba(255,255,255,.07); }
+.style-sc2 .mode-btn:hover { border-color: var(--accent); background: rgba(86,207,140,.07); }
+.style-sc2 .startbtn { background: var(--accent); box-shadow: 0 0 22px rgba(86,207,140,.35); }
+.style-sc2.mode-light .startbtn { box-shadow: 0 6px 16px rgba(31,138,85,.3); }
+
+/* ============================================================
+   STYLE · 极简 (flat · 大字号 · 单蓝强调)
+   ============================================================ */
+.style-minimal { --font-title: "Noto Sans SC", sans-serif; }
+.style-minimal.mode-dark {
+  --bg-a: #16181d; --bg-b: #0a0b0e; --ink: #f1f3f6; --muted: #888e9a;
+  --accent: #4f8ff5; --on-accent: #04101f;
+  --panel-bg: rgba(255,255,255,.035); --panel-edge: rgba(255,255,255,.14); --drop-bg: rgba(255,255,255,.02); --drop-edge: rgba(255,255,255,.2);
+  --avatar-bg: #16181d; --vbtn-bg: transparent;
+  --win: #3fae74; --bonus: #4f8ff5; --lose: #e0606e; --on-state: #04101f;
+}
+.style-minimal.mode-light {
+  --bg-a: #ffffff; --bg-b: #edeff2; --ink: #14171c; --muted: #69707c;
+  --accent: #2f6fd6; --on-accent: #ffffff;
+  --panel-bg: #ffffff; --panel-edge: rgba(20,23,28,.14); --drop-bg: rgba(20,23,28,.03); --drop-edge: rgba(20,23,28,.22);
+  --avatar-bg: #e7eaee; --vbtn-bg: transparent;
+  --win: #1f9d63; --bonus: #2f6fd6; --lose: #d34a58; --on-state: #ffffff;
+}
+.style-minimal .bg-grad { background: linear-gradient(180deg, var(--bg-a), var(--bg-b)); }
+.style-minimal .bg-tex { background: none; }
+.style-minimal .bg-vignette { box-shadow: none; }
+.style-minimal.mode-dark .bg-vignette { box-shadow: inset 0 0 150px 36px rgba(0,0,0,.38); }
+.style-minimal .lockup-cn { font-weight: 900; letter-spacing: 4px; }
+.style-minimal .lockup-div { width: 3px; opacity: 1; }
+.style-minimal .mode-btn:hover { border-color: var(--accent); }
+.style-minimal .startbtn { background: var(--accent); }
+.style-minimal .startbtn:hover { filter: brightness(1.05); }
+.style-minimal.mode-light .spec-card,
+.style-minimal.mode-light .slot,
+.style-minimal.mode-light .match,
+.style-minimal.mode-light .rcard,
+.style-minimal.mode-light .ovf-row,
+.style-minimal.mode-light .mode-btn { box-shadow: 0 1px 3px rgba(20,23,28,.06); }
+
+/* ===== light-mode panel lift (OBS legibility) ===== */
+.mode-light .mode-btn, .mode-light .slot, .mode-light .match, .mode-light .rcard,
+.mode-light .ovf-row, .mode-light .spec-card, .mode-light .player-field,
+.mode-light .topbar, .mode-light .ovf-row { box-shadow: 0 1px 5px rgba(18,28,46,.08); }

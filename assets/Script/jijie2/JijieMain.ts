@@ -1,5 +1,6 @@
 import JijieControl from "./JijieContro";
 import JJConfigData from "./data/JJConfigData";
+import JJBDesignBoot from "../jjbDesign/JJBDesignBoot";
 
 const {ccclass, property} = cc._decorator;
 
@@ -34,5 +35,8 @@ export default class JijieMain extends cc.Component {
 
         JJConfigData.init(this.ruleTxt.text,this.mapTxt.text,this.commanderTxt.text,this.factorTxt.text,this.commandeBanTxt.text);
         JijieControl.show(this.node);
+
+        // 设计前端预览（?design=...）：XP 逻辑已就绪，叠加新视图并驱动；普通 URL 无影响
+        JJBDesignBoot.tryMount(this.node);
     }
 }

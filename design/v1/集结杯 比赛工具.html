@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>集结杯 × CM · 比赛工具视觉原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  :root { --chrome: #15171b; --chrome2: #1d2026; --chrome-line: #2c3038; --chrome-ink: #e7e9ee; --chrome-mut: #888e9a; --chrome-acc: #d8b15a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0e0f12; font-family: "Noto Sans SC", system-ui, sans-serif; }
+  #root, .app { height: 100%; }
+  .app { display: flex; flex-direction: column; }
+
+  .bar { display: flex; align-items: center; gap: 22px; padding: 0 20px; height: 58px; background: var(--chrome); border-bottom: 1px solid var(--chrome-line); flex: 0 0 auto; }
+  .bar-title { font-weight: 900; font-size: 17px; letter-spacing: 2px; color: var(--chrome-ink); white-space: nowrap; }
+  .bar-title span { font-weight: 400; font-size: 12px; letter-spacing: 1px; color: var(--chrome-mut); margin-left: 8px; }
+  .tabs { display: flex; gap: 2px; flex: 1; overflow-x: auto; }
+  .tab { border: none; background: none; color: var(--chrome-mut); font: 600 14px "Noto Sans SC"; padding: 8px 14px; border-radius: 7px; cursor: pointer; white-space: nowrap; transition: .12s; }
+  .tab:hover { color: var(--chrome-ink); background: rgba(255,255,255,.04); }
+  .tab.on { color: #fff; background: rgba(255,255,255,.09); }
+  .bar-right { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .seg { display: flex; background: var(--chrome2); border: 1px solid var(--chrome-line); border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg-b { border: none; background: none; color: var(--chrome-mut); font: 600 13px "Noto Sans SC"; padding: 6px 13px; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: .12s; }
+  .seg-b:hover { color: var(--chrome-ink); }
+  .seg-b.on { color: #1a1206; background: var(--chrome-acc); }
+  .seg-mode .seg-b.on { background: var(--chrome-ink); color: #15171b; }
+
+  .stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden;
+    background:
+      linear-gradient(45deg, #141519 25%, transparent 25%) -10px 0 / 20px 20px,
+      linear-gradient(-45deg, #141519 25%, transparent 25%) -10px 0 / 20px 20px,
+      linear-gradient(45deg, transparent 75%, #141519 75%) -10px 0 / 20px 20px,
+      linear-gradient(-45deg, transparent 75%, #141519 75%) -10px 0 / 20px 20px,
+      #0e0f12; }
+  .stage-frame { width: 1280px; height: 720px; transform-origin: center center; box-shadow: 0 30px 90px rgba(0,0,0,.6); flex: 0 0 auto; }
+  .stage-cap { position: absolute; left: 16px; bottom: 12px; font: 12px "Share Tech Mono", monospace; letter-spacing: 1px; color: rgba(255,255,255,.4); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="spec.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const STYLES = [
+  { id: 'metal', label: '精修金属' },
+  { id: 'sc2', label: '星际2质感' },
+  { id: 'minimal', label: '极简' },
+];
+const MODES = [{ id: 'dark', label: '暗' }, { id: 'light', label: '亮' }];
+const SCREENS = [
+  { id: 'home', label: '首页', C: window.Home },
+  { id: 'sel', label: '选择面板', C: window.Selection },
+  { id: 'battle', label: '对战页', C: window.Battle },
+  { id: 'result', label: '结算页', C: window.Result },
+  { id: 'overlay', label: '常驻浮层', C: window.Overlay },
+  { id: 'spec', label: '规范', C: window.Spec },
+  { id: 'brief', label: '交付分工', C: window.Brief },
+];
+
+function usePersist(key, def) {
+  const [v, setV] = useState(() => localStorage.getItem(key) || def);
+  useEffect(() => { localStorage.setItem(key, v); }, [key, v]);
+  return [v, setV];
+}
+
+function App() {
+  const [style, setStyle] = usePersist('jjb.style', 'metal');
+  const [mode, setMode] = usePersist('jjb.mode', 'dark');
+  const [screen, setScreen] = usePersist('jjb.screen', 'home');
+  const stageRef = useRef(null);
+  const [scale, setScale] = useState(0.6);
+
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const fit = () => setScale(Math.min(el.clientWidth / 1280, el.clientHeight / 720) * 0.95);
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const Cur = (SCREENS.find((s) => s.id === screen) || SCREENS[0]).C;
+  const styleLabel = (STYLES.find((s) => s.id === style) || STYLES[0]).label;
+
+  return (
+    <div className="app">
+      <header className="bar">
+        <div className="bar-title">集结杯<span>× CM · 比赛工具视觉原型</span></div>
+        <nav className="tabs">
+          {SCREENS.map((s) => (
+            <button key={s.id} className={'tab' + (s.id === screen ? ' on' : '')} onClick={() => setScreen(s.id)}>{s.label}</button>
+          ))}
+        </nav>
+        <div className="bar-right">
+          <div className="seg">
+            {STYLES.map((o) => (<button key={o.id} className={'seg-b' + (o.id === style ? ' on' : '')} onClick={() => setStyle(o.id)}>{o.label}</button>))}
+          </div>
+          <div className="seg seg-mode">
+            {MODES.map((o) => (<button key={o.id} className={'seg-b' + (o.id === mode ? ' on' : '')} onClick={() => setMode(o.id)}>{o.label}</button>))}
+          </div>
+        </div>
+      </header>
+      <div className="stage" ref={stageRef}>
+        <div className="stage-frame" style={{ transform: 'scale(' + scale + ')' }}>
+          <Cur style={style} mode={mode} />
+        </div>
+        <div className="stage-cap">OBS 捕获区 · 1280×720 · {styleLabel} / {mode === 'dark' ? '暗色' : '亮色'}</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
