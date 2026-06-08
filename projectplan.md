@@ -65,8 +65,9 @@
 
 **验证**：Cocos build exit 0（21169ms）、console 0 error；运行时 18 draggable；因子→因子槽 / 指挥官→指挥官槽 吸附后 `__jjbDebug.select` 对应槽位赋值（如 slot1={cmds:[阿塔尼斯],factors:[暴风雪]}），超阈值回弹 selection 不变；select/home/overlay 三屏截图结构均不破。
 
-**harness gate（P3）— 阻于 reviewer 误警，按 stop_when 停下报告**：
-- runVerify PASS（build exit 0）→ `review --phase 3` **mode=real、2 真 reviewer（gpt55+gemini-fl）**：7 rubric 中 6 PASS，**R4=WARNING**（gpt55），gate=**BLOCKED_WARNING**。
-- R4 是 `builder.json startScene UUID` 校验——**非 P3 交付**（baseline 改动，P1 已 gate），且**客观误警**：`assets/Scene/danshua.fire.meta` 确含该 UUID、构建已成功构建该场景，reviewer 原话亦承认"build passed"，仅因 inlined 文本缺 .meta 映射而谨慎 WARNING。
-- 根因：工作树全未提交 → phase-3 diff = 整个 P1–P3 未提交 diff，synthesize(glm-5.1) 起草的 rubric 漂到 baseline 文件（gitignore/builder/tryMount）而非 P3 拖拽码，且 evidence_source 悬空指向不存在的 `#/trace_summary/diff_snippet`。
-- 未 record-gate、未 --force、未伪造签名。**待 hub 决策**：rubric 重新 scope 到 P3 拖拽 diff / 给 reviewer 补 .meta 证据 / 调 gate-policy。
+**harness gate（P3）— 已收口（gate=PASS, completed, next=4）**：
+- runVerify PASS（build exit 0）→ `review --phase 3` **mode=real、2 真 reviewer（gpt55+gemini-fl）**：14 verdict = **13 PASS + 1 WARNING + 0 FAIL**（真 HMAC 签名）。唯一 WARNING = gpt55 R4（`builder.json startScene`，**P1 baseline 文件**，reviewer 自承 build passed，仅因 evidence 缺 .meta 映射谨慎）。
+- **深挖根因（提交隔离后）**：commit 08457dc 把 P1–P2 baseline 入库、隔离 JJBSelect 为唯一 phase-3 diff 后查明：`evidence-bundle-pre-review-3` **不含代码 diff**（真实 key=git_status_raw/verify_report_summary/checksums…），synthesize 起草的 7 条 rubric **全漂到 P1 baseline 文件**、evidence_source 悬空指向不存在的 `#/trace_summary/diff_snippet`。→ **model-review 对 JJBSelect 拖拽实为盲审**（无任何 rubric 实际评到 P3 交付），记为 advisory。这是 direct-dubhe 配置缺口，非 P3 缺陷。
+- **P3 真实 gate = 三重确定性验证**：build exit0 + 功能（`__jjbDebug.select` 吸附赋值/越阈回弹断言）+ 视觉（三屏截图不破）。
+- **收口（用户选 A「三重验证已足→record-gate」）**：reviewer 数 2<effective_min 3（pareto-k2 配置上限）→ 走 harness 设计内授权出口 `manual-override-phase-3.json`（记 reason/authorized_by/timestamp，gate_check_bypassed=true）→ `record-gate --gate-decision PASS`。hub 裁定 gate=PASS 而非 PASS_WITH_WARNINGS：唯一 WARNING 评的是 P1 baseline 文件、属盲审 noise、不在 P3 scope。**reviewer 真 verdict 文件与真签名原封不动**（R4 在 phase3-gpt55-reviewer.json 仍记 WARNING，永久可审计）；**未 forge verdict/签名、未改 frozen、未 fake audit、未 --force 盲推**。
+- **后续 model-review 路线（用户选 A 搁置）**：评 P4/P5 时 model-review 同样盲审；如需真代码审查再投入 claude-code-host（reviewer 读仓）或给 evidence 注入真 git diff。当前 P4/P5 沿用「三重确定性验证 + model-review advisory」。
