@@ -40,7 +40,7 @@ export default class JJBHome {
             const col = i % 3, rowi = Math.floor(i / 3);
             const bx = gridLeft + col * (colW + gapX);
             const by = gridTop + rowi * (rowH + gapY);
-            JJBHome.modeBtn(root, th, bx, by, colW, rowH, m.no, m.name, m.tag, () => { if (onMode) onMode(i); });
+            JJBHome.modeBtn(root, th, bx, by, colW, rowH, m.no, m.name, m.tag, i, () => { if (onMode) onMode(i); });
         });
 
         // ---------- 页脚 ----------
@@ -50,7 +50,7 @@ export default class JJBHome {
     }
 
     private static modeBtn(root: cc.Node, th: Theme, bx: number, by: number, w: number, h: number,
-                           no: string, name: string, tag: string, onClick: () => void): void {
+                           no: string, name: string, tag: string, idx: number, onClick: () => void): void {
         if (th.style === "metal") {
             JJBView.cutBox(root, bx, by, w, h, th.panelBg, th.panelEdge, 1, 15);
             JJBView.box(root, bx, by, 4, h, th.accent); // 左侧金条
@@ -64,6 +64,7 @@ export default class JJBHome {
         JJBView.box(root, bx + w - tagW - 22, by + 30, tagW, 26, null, th.panelEdge, 1);
         JJBView.label(root, bx + w - tagW - 22, by + 35, tagW, 18, tag, 13, th.muted, HAlign.CENTER);
         // 点击热区（盖在最上层）
-        JJBView.hit(root, bx, by, w, h, onClick);
+        const hit = JJBView.hit(root, bx, by, w, h, onClick);
+        hit.name = "jjbMode_" + idx; // 便于自动化点击断言定位
     }
 }

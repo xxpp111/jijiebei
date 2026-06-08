@@ -1,5 +1,7 @@
 // 集结杯 × CM — 设计预览用数据（移植自 design/v1/data.jsx）
-// 注：游戏真实数据在 resources/jjdata/*.txt；此处仅首页文案/模式，后续屏接入真实数据。
+// 注：游戏真实数据在 resources/jjdata/*.txt；首页文案/模式仍用此处常量；
+//     select/battle/result 三屏在「真实会话」(home→select 跑过 XP toStart+toSelect)下读真实 JijieData，否则回落 DEMO_*。
+import JijieData from "../jijie2/JijieData";
 
 export const EVENT = {
     cn: "集结杯",
@@ -55,4 +57,48 @@ export const VERDICTS = ["win", "bonus", "lose"];
 export const RESULT_LABEL: { [k: string]: string } = { win: "胜利", bonus: "带奖励", lose: "失败" };
 export const RESULT_VAL: { [k: string]: number } = { lose: 0, win: 1, bonus: 2 }; // winLoseList 编码：0失败/1胜利/2带奖励
 export const VAL_RESULT = ["lose", "win", "bonus"]; // 反查：index = winLoseList 值
+
+// ===== 真实会话桥（方案 A：jjbDesign 自驱读写 JijieData public static；0 改 jijie2） =====
+// jjbDesign 自有扁平因子布局：每场 1 指挥官 + FAC_PER_MATCH 因子槽。
+// selectedCommanderList[场idx]、selectedFactorList[场idx*FAC_PER_MATCH+槽idx]。
+// 这两个数组在 XP TS 代码中是 vestigial(无任何读取/真实写入)，jjbDesign 写入不损坏 XP 结构。
+export const FAC_PER_MATCH = 3;
+export function facFlatIdx(slot: number, idx: number): number { return slot * FAC_PER_MATCH + idx; }
+
+// 屏用 match 视图模型（与 DEMO_MATCHES 同形：slot/map/cmds/factors/result，可选 doubles）。
+export interface MatchVM {
+    slot: string; map: string; cmds: string[]; factors: string[];
+    result?: string; doubles?: boolean;
+}
+
+/** 是否处于真实会话：home→select 跑过 XP toStart+toSelect（status>=2 且抽出 3 张地图）。 */
+export function jjbLive(): boolean {
+    const d: any = JijieData;
+    return !!(d && d.status >= 2 && Array.isArray(d.mapList) && d.mapList.length >= 3);
+}
+
+/** 把真实 JijieData 整理成 3 场视图模型：map/lock 来自抽取结果，cmds/factors 来自已写入的 selected*。 */
+export function sessionMatches(): MatchVM[] {
+    const d: any = JijieData;
+    const out: MatchVM[] = [];
+    for (let i = 0; i < 3; i++) {
+        const cmd: string = (d.selectedCommanderList || [])[i];
+        const lock: string = (d.lockFactorList || [])[i];
+        const fac: string[] = lock ? [lock] : []; // 锁定因子(自动) 打头
+        for (let k = 0; k < FAC_PER_MATCH; k++) {
+            const v = (d.selectedFactorList || [])[facFlatIdx(i, k)];
+            if (v) fac.push(v);
+        }
+        const wl = (d.winLoseList || [])[i];
+        out.push({
+            slot: i < 2 ? "第 " + (i + 1) + " 场" : "BOSS 战",
+            map: (d.mapList || [])[i] || "—",
+            cmds: cmd ? [cmd] : [],
+            factors: fac,
+            result: (typeof wl === "number") ? VAL_RESULT[wl] : undefined,
+            doubles: false,
+        });
+    }
+    return out;
+}
 

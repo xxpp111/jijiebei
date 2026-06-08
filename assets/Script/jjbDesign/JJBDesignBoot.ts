@@ -5,7 +5,6 @@
 import { getTheme, Theme } from "./JJBTheme";
 import JJBView from "./JJBView";
 import JJBHome from "./JJBHome";
-import JJBDrawn from "./JJBDrawn";
 import JJBOverlay from "./JJBOverlay";
 import JJBSelect from "./JJBSelect";
 import JJBBattle from "./JJBBattle";
@@ -47,11 +46,11 @@ export default class JJBDesignBoot {
                 return;
             }
             if (screen === "select") {
-                JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); // 选择面板（演示数据 + 真实图标）
+                JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); // 选择面板（standalone=DEMO；点开始→对战）
                 return;
             }
             if (screen === "battle") {
-                JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); // 对战页（Verdict 三态判定 + JijieData 记分）
+                JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult()); // 对战页（Verdict 三态判定 + JijieData 记分）
                 return;
             }
             if (screen === "result") {
@@ -109,31 +108,44 @@ export default class JJBDesignBoot {
         JJBHome.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (i) => JJBDesignBoot.onMode(i));
     }
 
-    /** 点击模式 → 调 XP 的 InitPanel 真实逻辑（设 JijieData + toStart 随机抽取）→ 渲染结果。 */
+    /** 点击模式 → 调 XP 的 InitPanel 真实逻辑（设 JijieData + toStart 随机抽取）→ 确保 toSelect 后进选择面板。 */
     private static onMode(i: number): void {
         try {
             const ip: any = JijieControl.jjUI.initPanel;
             if (ip && ip.txtName) ip.txtName.string = "选手";
             const handlers = ["onClick2", "onClick3", "onClick13", "onClick4", "onClickHard", "onClickSuiji"];
-            const fn = handlers[i] || "onClick2";
-            ip[fn](null); // 直接调用 XP 手写的处理函数，零改动复用其逻辑
+            const fn = handlers[i] || "onClick3";
+            ip[fn](null); // 直接调用 XP 手写的处理函数，零改动复用其逻辑（toStart 随机抽取）
+            // 标准 8/10/12 因子模式 toStart 后停在 status=1（手选/随机二选一），补调 public toSelect 抽取因子/指挥官池。
+            if (JijieData.status < 2) JijieControl.toSelect();
         } catch (e) {
             cc.warn("[JJBDesignBoot] onMode 调 XP 逻辑出错: " + e);
         }
-        JJBDesignBoot.showDrawn();
-    }
-
-    private static showDrawn(): void {
-        JJBDrawn.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.showHome());
         // 暴露给自动化验证（确认 XP 逻辑确实产出了真实数据）
         try {
             (window as any).__jjbDebug = {
                 player: JijieData.playerName,
                 factorCount: JijieData.modelFactorCount,
+                status: JijieData.status,
                 maps: (JijieData.mapList || []).slice(),
                 lockFactors: (JijieData.lockFactorList || []).slice(),
+                randomFactorPoor: (JijieData.randomFactorPoor || []).slice(),
+                randomCommanderPoorA: (JijieData.randomCommanderPoorA || []).slice(),
+                randomCommanderPoorB: (JijieData.randomCommanderPoorB || []).slice(),
             };
         } catch (e) { /* noop */ }
+        JJBDesignBoot.goSelect();
+    }
+
+    /** 端到端导航（同一会话内重建节点树，数据连续，不刷新页面）。 */
+    private static goSelect(): void {
+        JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
+    }
+    private static goBattle(): void {
+        JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult());
+    }
+    private static goResult(): void {
+        JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
     }
 
     private static parseQuery(): { [k: string]: string } {

@@ -1,10 +1,14 @@
 // 集结杯 × CM — 对战页（操作位）。忠实还原 design/v1 Battle + Verdict + theme.css .match/.verdict/.v-btn。
-// 3 场比赛，每场 Verdict 三态判定(胜利/带奖励/失败)；点击写回 JijieData.winLoseList[i]、实时重算比分、
-// 切换 active 高亮、写 window.__jjbDebug.battle。用 DEMO_MATCHES 渲染 + DEMO result 初始化记分。0 改 jijie2 源码。
+// 双源（方案 A）：
+//   · standalone(?design=battle)=DEMO_MATCHES 渲染 + DEMO result 预置三态(showcase，可自由切换不导航)。
+//   · 真实会话=渲染真实抽取的 match；Verdict 从未判定开始，点击按 XP 语义累加真实记分，3 场判定完调 showResultEnd()+导航结算。
+// XP 语义（jijie2/LMatchItem 权威）：胜利 winCount++/totalCount++；带奖励 winCount++/winbCount++/totalCount++；失败 totalCount++。
+//   即 winCount 已含带奖励=总获胜场数。0 改 jijie2 源码（只读写 public static + 调 public showResultEnd）。
 import { Theme } from "./JJBTheme";
-import { DEMO_MATCHES, MARK, EVENT, RESULT_LABEL, RESULT_VAL } from "./JJBData";
+import { DEMO_MATCHES, MARK, EVENT, RESULT_LABEL, RESULT_VAL, jjbLive, sessionMatches } from "./JJBData";
 import JJBView from "./JJBView";
-import JijieData from "../jijie2/JijieData"; // 只读写 public static（goal 允许；不改源码）
+import JijieData from "../jijie2/JijieData";       // 只读写 public static（goal 允许；不改源码）
+import JijieControl from "../jijie2/JijieContro";   // 调 public showResultEnd（XP 比赛结束钩子）
 
 const HA = cc.Label.HorizontalAlign;
 const ON_STATE = cc.color(11, 18, 6);        // --on-state #0b1206（win/bonus 激活字色）
@@ -16,29 +20,36 @@ const V_DEFS = [{ res: "win", w: 70 }, { res: "bonus", w: 87 }, { res: "lose", w
 
 export default class JJBBattle {
 
-    static build(root: cc.Node, th: Theme): void {
+    static build(root: cc.Node, th: Theme, onDone?: () => void): void {
         JJBView.bg(root, th);
+
+        const live = jjbLive();
+        const dAny: any = JijieData;
+        const matches: any[] = live ? sessionMatches() : DEMO_MATCHES;
 
         // ---------- TopBar（与选择面板同款） ----------
         JJBView.sprite(root, 50, 30, 52, 42, MARK[th.style] || MARK["metal"]);
         const titleW = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 42, tWd = Math.round(tH * titleW / 200);
         JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style);
-        JJBView.label(root, 760, 30, 470, 20, "当前选手  Potato_01", 15, th.muted, HA.RIGHT);
-        JJBView.label(root, 760, 54, 470, 20, "比赛模式  8 因子 · 手选", 15, th.ink, HA.RIGHT);
+        const fcount = dAny.modelFactorCount === 2 ? 8 : (dAny.modelFactorCount === 4 ? 12 : 10);
+        JJBView.label(root, 760, 30, 470, 20, live ? ("当前选手  " + (dAny.playerName || "选手")) : "当前选手  Potato_01", 15, th.muted, HA.RIGHT);
+        JJBView.label(root, 760, 54, 470, 20, live ? ("比赛模式  " + fcount + " 因子 · 手选") : "比赛模式  8 因子 · 手选", 15, th.ink, HA.RIGHT);
 
-        // ---------- 记分（DEMO result → winLoseList；直接读写 JijieData public static） ----------
-        JijieData.winLoseList = DEMO_MATCHES.map((m: any) => RESULT_VAL[m.result]);
+        // ---------- 记分初始化（直接读写 JijieData public static） ----------
+        // 真实会话：从未判定开始（用户逐场点判定）；standalone：DEMO result 预置三态 showcase。
+        JijieData.winLoseList = live ? [] : DEMO_MATCHES.map((m: any) => RESULT_VAL[m.result]);
         const recompute = () => {
             const wl = JijieData.winLoseList || [];
-            JijieData.winCount = wl.filter((v) => v === 1).length;   // 值1=胜利 计数
-            JijieData.winbCount = wl.filter((v) => v === 2).length;  // 值2=带奖励 计数
+            JijieData.winCount = wl.filter((v) => v === 1 || v === 2).length;  // XP：胜利+带奖励=总获胜场数
+            JijieData.winbCount = wl.filter((v) => v === 2).length;             // 带奖励 计数
             JijieData.totalCount = wl.filter((v) => v === 0 || v === 1 || v === 2).length; // 已判定场数
         };
         const updateDebug = () => {
             try {
                 const w: any = window; w.__jjbDebug = w.__jjbDebug || {};
                 w.__jjbDebug.battle = {
+                    live: live,
                     winLoseList: (JijieData.winLoseList || []).slice(),
                     winCount: JijieData.winCount, winbCount: JijieData.winbCount, totalCount: JijieData.totalCount,
                 };
@@ -68,7 +79,13 @@ export default class JJBBattle {
                 const hit = JJBView.hit(root, bx, btnTop, d.w, 40, () => {
                     if (!JijieData.winLoseList) JijieData.winLoseList = [];
                     JijieData.winLoseList[i] = val;
-                    recompute(); drawVerdict(i); updateDebug();
+                    recompute(); updateDebug();
+                    // 真实会话：3 场判定完 → 调 XP 比赛结束钩子 + 导航结算（standalone 不导航，纯 showcase）
+                    if (live && JijieData.totalCount >= 3) {
+                        try { JijieControl.showResultEnd(); } catch (e) { cc.warn("[JJBBattle] showResultEnd: " + e); }
+                        if (onDone) { onDone(); return; }
+                    }
+                    drawVerdict(i);
                 });
                 hit.name = "jjbV_" + i + "_" + val; // 便于自动化点击断言定位
                 vNodes[i].push(box, lbl, hit);
@@ -77,13 +94,14 @@ export default class JJBBattle {
         };
 
         // ---------- 3 场 ----------
-        DEMO_MATCHES.forEach((m: any, i: number) => {
+        matches.forEach((m: any, i: number) => {
             const rowTop = ROW_TOPS[i];
-            const boss = !!m.doubles;
-            JJBView.box(root, 50, rowTop, 1180, H, th.panelBg, boss ? th.accent : th.panelEdge, boss ? 2 : 1);
+            const doubles = !!m.doubles;
+            const isBoss = doubles || (typeof m.slot === "string" && m.slot.indexOf("BOSS") >= 0);
+            JJBView.box(root, 50, rowTop, 1180, H, th.panelBg, isBoss ? th.accent : th.panelEdge, isBoss ? 2 : 1);
 
             // match-no（+ 双打标）
-            if (boss) {
+            if (doubles) {
                 JJBView.label(root, 70, rowTop + 35, 100, 26, m.slot, 22, th.accent, HA.LEFT);
                 JJBView.box(root, 70, rowTop + 64, 44, 20, null, th.panelEdge, 1);
                 JJBView.label(root, 70, rowTop + 67, 44, 16, "双打", 11, th.ink, HA.CENTER);
@@ -96,11 +114,12 @@ export default class JJBBattle {
             JJBView.label(root, 190, rowTop + 78, 270, 18, m.map, 14, th.muted, HA.LEFT);
 
             // match-cmds（avatar big 70×84）
-            m.cmds.forEach((c: string, k: number) => JJBView.coverSprite(root, 480 + k * 78, rowTop + 16, 70, 84, "images/commander/" + c));
+            (m.cmds || []).forEach((c: string, k: number) => JJBView.coverSprite(root, 480 + k * 78, rowTop + 16, 70, 84, "images/commander/" + c));
 
             // match-factors（50×50）
-            const facX = 480 + m.cmds.length * 70 + (m.cmds.length - 1) * 8 + 20;
-            m.factors.forEach((f: string, k: number) => JJBView.sprite(root, facX + k * 60, rowTop + 33, 50, 50, "images/factor/" + f));
+            const cmdCount = (m.cmds || []).length || 1;
+            const facX = 480 + cmdCount * 70 + (cmdCount - 1) * 8 + 20;
+            (m.factors || []).forEach((f: string, k: number) => JJBView.sprite(root, facX + k * 60, rowTop + 33, 50, 50, "images/factor/" + f));
 
             // verdict
             drawVerdict(i);
@@ -112,6 +131,6 @@ export default class JJBBattle {
         JJBView.label(root, 600, 662, 630, 22, EVENT.links[0].k + " " + EVENT.links[0].v + "　　B站主播 " + EVENT.host, 15, th.muted, HA.RIGHT);
 
         recompute();
-        updateDebug(); // 初始（DEMO result）即暴露记分
+        updateDebug(); // 初始即暴露记分（standalone=DEMO 三态；真实会话=全 0）
     }
 }

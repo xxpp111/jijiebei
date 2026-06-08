@@ -88,3 +88,55 @@
 **harness（停在 gate 前，交 hub 收口）**：phase 4 → runVerify **PASS**(build exit0) → synthesize 7 条 rubric（**正确 scope 到 P4**：RESULT_VAL/VAL_RESULT/VERDICTS 一致性 + DEMO result + 路由守卫；per-phase commit 隔离 diff 生效，无 P3 那种 baseline drift）→ `review --phase 4` **gate=PASS（mode=real，2 真 reviewer gpt55+gemini-fl，7/7 rubric 全 PASS 一致，真 HMAC 签名 req=chatcmpl-a90c54bf/0af3769a）**。evidence_source 仍悬空(同 P3 结构缺口，model-review 仍 advisory)。**未 record-gate / 未 --force / 未伪造签名**——交 hub 收口。
 
 **hub 收口（2026-06-08）**：独立完成代码核对（逻辑/边界/additive，git 实证 0 改 jijie2）+ build exit0 + browser-use 亲验 battle(三态高亮全展示)/result(大比分3·完美通关·战绩卡配色) 两屏高保真(五屏不破) + 验算 spoke 功能断言数值自洽 → `manual-override-phase-4.json`(reviewer 数 2<3 系 pareto-k2 配置上限) → `record-gate --gate-decision PASS` → status=completed, **next=5**。reviewer 真签名/verdict 未碰；未 forge/fake audit/--force。per-phase commit 入库。
+
+## P5 执行记录（2026-06-08，goal 任务，末 phase，停在 gate 前交 hub）
+
+**调研结论（停报红线已解除，方案 A 成立，0 改 jijie2）**：
+- **`selectedFactorList`/`selectedCommanderList` 是 XP TS 代码中的 vestigial 死数组**：全仓只在 `toSelect()` `push(null)` 初始化、`initStart()` `=[]`，**无任何地方读取或写入真实值**（grep 实证）。XP 真实数据路径走 LMatchItem 节点属性（`fct.factorName`/`spCommander.cname`），与这两个数组无关。→ jjbDesign 写入它们**不可能损坏 XP 结构**（无 XP 读取；jjbDesign 自建节点树不跑 XP SelectPanel/LMatchItem）。index 语义只需 jjbDesign 自洽：每场 1 指挥官→`selectedCommanderList[场idx]`、每场 3 因子槽→`selectedFactorList[场idx*3+槽idx]`（扁平 9 格）。**select 真实联调无需降级。**
+- **winCount 语义（XP 权威，修正 P4）**：XP `LMatchItem.onWinClick`=`winCount++;totalCount++`；`onWinbClick`=`winCount++;winbCount++;totalCount++`；`onLoseClick`=`totalCount++`。即 **winCount 已含带奖励胜=总获胜场数**，`showResultEnd` 直接显示 `winCount`。P4 当时用「winCount=仅胜利、result=winCount+winbCount」与 XP 不符 → P5 修正为 battle 按 XP 累加、result 直接读 winCount。
+- `JijieControl.show()`（含 `initStart()` status=0）在 `tryMount` 之前跑 → 直接 URL 旗标 status=0=非 live → 走 DEMO（六皮肤截图零风险，DEMO 路径 byte 不变）。
+- `JJLog.writeLog/writeMatchLog` 全注释=no-op → 调 `showResultEnd()` 安全（只写隐藏 jjUI label）。
+
+**实现（方案 A：jjbDesign 自驱读写 public static + 调 public 方法）**：
+- `JJBData.ts`：加 `jjbLive()`(status>=2 且 mapList>=3)、`sessionMatches()`(真实 JijieData→屏用 match VM)、扁平因子布局 helper；DEMO_* 保留作 standalone fallback。
+- `JJBSelect.ts`：live 时渲染真实 mapList/lockFactorList/随机池(randomFactorPoor/randomCommanderPoorA/B)，`fillTarget` 同时写真实 `selectedCommanderList[slot]`/`selectedFactorList[flatIdx]`，预填+「比赛开始」`onStart` 导航 battle；DEMO 路径不变。
+- `JJBBattle.ts`：`recompute` 改 XP 语义(winCount=v∈{1,2}计数, winbCount=v===2, totalCount=已判定)，`totalCount>=3` 调 `JijieControl.showResultEnd()`+`onDone` 导航 result；live 渲染真实 match。
+- `JJBResult.ts`：`wins=JijieData.winCount`(不再 +winbCount)；live 渲染真实战绩卡。
+- `JJBDesignBoot.ts`：`goSelect/goBattle/goResult` 导航；`onMode` 后 `status<2` 补 `toSelect()` 再进 select；移除 `JJBDrawn` import/`showDrawn`；home/select 热区命名(`jjbMode_i`/`jjbStart`)便于自动化。
+- 删除 `JJBDrawn.ts`(+.meta)。
+
+**验证**：见末尾补充（build / 端到端 __jjbDebug 数值 / 六皮肤 / runVerify / review）。
+
+**P5 验证结果（spoke 实测）**：
+- **build**：Cocos web-mobile exit 0（21288ms 手测 + runVerify 20531ms），TS 0 编译错误，console 0 error（首次 2 error 系浏览器缓存旧 index.html 的 settings.js hash，cache-buster 后消失）。
+- **端到端（URL 旗标，同会话不刷新，Playwright emit + 读 __jjbDebug）**：home 点 jjbMode_1(10因子) → XP onClick3+toStart+(补)toSelect → status=2、真实随机 maps=[升格之链/机会渺茫/往日神庙]、lockFactors=[坚强意志/光子过载/自毁程序]、真实随机池 → goSelect(live) 写真实 **selectedCommanderList=[斯图科夫,扎加拉,菲尼克斯]**、**selectedFactorList=9项真实因子** → jjbStart → battle(live, 记分全0) → 判定 match0胜利[1]→winCount1/winbCount0/total1、match1带奖励[1,2]→winCount2/winbCount1/total2、match2失败[1,2,0]→winCount2/winbCount1/**total3 自动 showResultEnd+导航** → result **wins=2（=winCount，非 winCount+winbCount=3，P5 双计修正得证）**。
+- **六皮肤**：home(minimal-dark)/overlay(sc2-light)/select(metal-light DEMO + metal-dark live真实地图)/battle(sc2-dark+minimal-light+metal-dark live)/result(sc2-light DEMO·3完美通关 + metal-dark live·2/3) 截图，6皮肤全覆盖、5屏全覆盖，token 切换结构一致仅视觉变，DEMO 路径不破、live 真实数据渲染。
+- **JJBDrawn**：已删（.ts+.meta），全仓 0 残留引用，build 仍 exit0。
+- **0 改 jijie2**：git status 实证改动仅 jjbDesign/6文件 + 删 JJBDrawn + projectplan.md，无任何 jijie2/ 改动。独立只读 subagent 复审 4 维度全 PASS（0改jijie2/XP语义等价/DEMO不破/无孤儿）。
+
+**harness（停在 gate 前，交 hub）**：phase5 → runVerify **PASS**(build exit0) → synthesize 7 rubric(glm-5.1) → `review --phase 5` **gate=BLOCKED（mode=real，2 真 reviewer gpt55+gemini-fl）：6/7 PASS 一致，R2 双 BLOCK**。
+- **R2 BLOCK = 假阳性（evidence-bundle diff 截断 artifact，非代码缺陷）**：R2 rubric 断言「JJBHome 把 m.name 改成 m.na」。根因——`evidence-bundle-pre-review-5.json` 的 diff_snippet 把行 `...m.no, m.name, m.tag, i, ...` **截断成 `...m.no, m.na`**（gemini-fl verdict 原文明指"truncated line `m.no, m.na`"）；synthesize 据截断幻觉出 R2，两 reviewer 忠实按此虚假前提判 BLOCK。**实证反驳**：git diff 显示 JJBHome 第43行仍 `m.name`（仅插入 `i` 参数 + 热区命名）、全文无 `m.na`、MODES 每项有 name 字段、build exit0、home 六皮肤截图渲染全部模式名。
+- **未 record-gate / 未 --force / 未写 manual-override / 未伪造签名** —— 交 hub 收口。reviewer 真签名/verdict 原封（req=chatcmpl-ab1ef079 / chatcmpl-0500761e）。
+- **建议 hub**：R2 系 evidence 截断假阳性（同 P3/P4 evidence_source 结构缺口家族）。可选 (a) 修 evidence 生成的 diff 截断后重 synthesize+review；(b) 编辑 R2 DRAFT rubric 对齐真实代码后重 review；(c) 走 P3/P4 同款 documented override（理由=R2 假阳性，附本节实证）。三重确定性验证（build0+端到端真实数据流+六皮肤截图）已足证 P5 交付正确。
+
+## 方向重估与决策（2026-06-09 · workflow 全局诊断后）
+
+**workflow `jjb-planning-review`**（6 维并行调研 + live 复核，完整报告见 task output `wdbr1ai1n`）揭示：原 5-phase 是「界面复刻 + URL 旗标预览」，但**真实目标**是「把已实现的集结杯新 UI + 单刷引擎从旗标预览态切换为线上默认生产入口；并决策双打套新 UI 还是维持回归杯」。
+
+**两条线割裂**：
+- XP 线（线上已部署）：古法 UI，单刷规则完整✅，双打仍跑回归杯老引擎（官突+n 0 实现）❌，`title=huiguibei`。
+- jjbDesign 新线（已实现未上线）：6 皮肤完整，被 `JJBDesignBoot.ts:25` 一行 `if(!q["design"])return` 门控，线上 0 可见。
+
+**三大 gap**：① 设计（皮肤专属视觉 metal切角/sc2刻线 Cocos 未还原=最大债；背景实景图已落地；亮色 logo/大比分次要）② 规则（单刷 XP 已实现；双打官突+n 设计完代码 0 行；数据 bug 虚空重生者缺分值列；官突 ABC 口径 56A/81B/11C vs 56A/60B/33C 不一致）③ 合流（cutover 根本没在原计划，grep 0 命中；去 `JJBDesignBoot.ts:25` 一行=单刷默认接管；双打无新 UI 路径=独立大工程；部署在 XP 手上）。
+
+**风险**：reviewer 全程盲审（evidence 缺真 diff）不能当上线许可；近零改 XP 与改规则/校数据的张力；`getJijieFactor` while-true 拒绝采样对配置敏感易死循环；CM↔jijiebei 无数据对接靠人工搬运。
+
+**yb 决策**：路线 **C 暂不上线，先精修+校准**（不 cutover，先打质量地基）。并行启动 4 件（均不依赖 XP）：
+1. **P5 收口+真代码审查**：真代码审查=invoke read-only subagent 读仓逐行审 jjbDesign 未提交 diff（修 harness 盲审）；审完改 must-fix → 提交 8 .ts+删 JJBDrawn；全模式（极难/拯救/随机）真机回归待排。
+2. **设计精修回 Claude Design**：hub 产出 prompt → yb 出 v2（亮色 logo/标题、大比分换算、皮肤专属视觉几何规格、边框、背景方向确认）。
+3. **数据校准**：hub 改 `因子配置.txt:30` 回填虚空重生者分值列 + 单测防 while-true 死循环。
+4. **官突 ABC 口径统一**：invoke read-only subagent 核对 CSV 输出统一表（落双打代码前置）。
+
+**P5 收口（2026-06-09 · 真代码审查 = 修 harness 盲审）**：read-only subagent 逐行审 P5 未提交 diff + 通读 jjbDesign/jijie2 边界 → **🔴 0 must-fix bug**；🟡 Y1（tryMount catch-all，cutover 强制前置）+ Y2（selectedFactorList 稀疏数组，vestigial 无害不阻塞）；🟢 G1-G10 全 PASS（winCount 对齐 LMatchItem 权威 / jijie2 0改 git 实证 / onMode 各模式恰好 toSelect 一次 / JJBDrawn 删除 0 残留 / showResultEnd+JJLog 安全 / 稀疏 winLoseList filter 幂等 / 异步 cc.isValid 守护 / 事件无泄漏 / live-standalone 三屏一致双防护）。**总评 P5 可安全提交**。全模式真机回归（极难/拯救/随机）代码层已静态确证（G3），动态回归留 cutover 前。
+
+**待启动（地基好 + 和 XP 对齐部署窗口后）**：单刷 cutover（去 `JJBDesignBoot.ts:25` 旗标默认接管 + 改 title=集结杯 + 清场景旧文本 + 全模式回归）——🔴 **强制前置 Y1**：删旗标的同一 PR 必须给 `JJBDesignBoot.tryMount` 的 catch-all（行36-38，现仅 `cc.warn` 吞异常）加可见降级/上报 + 挂载失败回落老 jjUI 兜底，否则 cutover 后任何挂载异常=直播开赛黑屏静默无报错（真代码审查 Y1）；双打官突+n 引擎（独立 ≥3 phase 立项）；XP 重 build+重部署。
