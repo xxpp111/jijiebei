@@ -43,10 +43,16 @@ export const MARK: { [k: string]: string } = {
 };
 
 // 演示对局（真实游戏图标名，resources 里均存在）——后续接 XP 真实 JijieData。
-// status: win 胜利 / live 进行中 / wait 待战
+// status: win 胜利 / live 进行中 / wait 待战（浮层用）。result: win/bonus/lose（对战/结算三态判定，对齐 design MATCHES）。
 export const DEMO_MATCHES = [
-    { slot: "第 1 场", map: "克哈裂痕", cmds: ["凯瑞甘"], factors: ["岩浆爆发", "虚空裂隙", "丧尸大战"], status: "win" },
-    { slot: "第 2 场", map: "黑暗杀星", cmds: ["雷诺"], factors: ["核弹打击", "暴风雪", "相互摧毁"], status: "live" },
-    { slot: "BOSS 战", map: "往日神庙", cmds: ["阿塔尼斯", "凯瑞甘"], factors: ["虚空裂隙", "岩浆爆发", "核弹打击", "丧尸大战", "净化光束"], status: "wait", doubles: true },
+    { slot: "第 1 场", map: "克哈裂痕", cmds: ["凯瑞甘"], factors: ["岩浆爆发", "虚空裂隙", "丧尸大战"], status: "win", result: "win" },
+    { slot: "第 2 场", map: "黑暗杀星", cmds: ["雷诺"], factors: ["核弹打击", "暴风雪", "相互摧毁"], status: "live", result: "bonus" },
+    { slot: "BOSS 战", map: "往日神庙", cmds: ["阿塔尼斯", "凯瑞甘"], factors: ["虚空裂隙", "岩浆爆发", "核弹打击", "丧尸大战", "净化光束"], status: "wait", doubles: true, result: "win" },
 ];
+
+// 三态判定（对战页 Verdict / 结算页 战绩）。设计顺序 win/bonus/lose；编码对齐 JijieData.winLoseList。
+export const VERDICTS = ["win", "bonus", "lose"];
+export const RESULT_LABEL: { [k: string]: string } = { win: "胜利", bonus: "带奖励", lose: "失败" };
+export const RESULT_VAL: { [k: string]: number } = { lose: 0, win: 1, bonus: 2 }; // winLoseList 编码：0失败/1胜利/2带奖励
+export const VAL_RESULT = ["lose", "win", "bonus"]; // 反查：index = winLoseList 值
 

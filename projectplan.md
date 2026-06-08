@@ -71,3 +71,20 @@
 - **P3 真实 gate = 三重确定性验证**：build exit0 + 功能（`__jjbDebug.select` 吸附赋值/越阈回弹断言）+ 视觉（三屏截图不破）。
 - **收口（用户选 A「三重验证已足→record-gate」）**：reviewer 数 2<effective_min 3（pareto-k2 配置上限）→ 走 harness 设计内授权出口 `manual-override-phase-3.json`（记 reason/authorized_by/timestamp，gate_check_bypassed=true）→ `record-gate --gate-decision PASS`。hub 裁定 gate=PASS 而非 PASS_WITH_WARNINGS：唯一 WARNING 评的是 P1 baseline 文件、属盲审 noise、不在 P3 scope。**reviewer 真 verdict 文件与真签名原封不动**（R4 在 phase3-gpt55-reviewer.json 仍记 WARNING，永久可审计）；**未 forge verdict/签名、未改 frozen、未 fake audit、未 --force 盲推**。
 - **后续 model-review 路线（用户选 A 搁置）**：评 P4/P5 时 model-review 同样盲审；如需真代码审查再投入 claude-code-host（reviewer 读仓）或给 evidence 注入真 git diff。当前 P4/P5 沿用「三重确定性验证 + model-review advisory」。
+
+## P4 执行记录（2026-06-08，goal 任务，停在 gate 前交 hub）
+
+**交付（完成 + 三重确定性验证）**：对战页 `JJBBattle.ts` + 结算页 `JJBResult.ts`，0 改 jijie2 源码。
+- `JJBBattle.ts`：3 场 match 行（match-no+双打标 / 地图横幅+名 / 指挥官 / 因子 / Verdict 三按钮）。点 Verdict → 写 `JijieData.winLoseList[i]`(0失败/1胜利/2带奖励) → 重算 `winCount(值1计数)/winbCount(值2计数)/totalCount` → 重绘 active 高亮 → 写 `__jjbDebug.battle`。按钮 `JJBView.hit`(MOUSE_UP)，命名 `jjbV_{场}_{值}`。
+- `JJBResult.ts`：banner(kicker + rs-num 108px Oswald 大比分 + /3场获胜 + 完美通关|本局战绩) + 3 战绩卡(按 winLoseList 配色 badge)。大比分=`winCount+winbCount`。
+- `JJBData.ts`：DEMO_MATCHES 加 `result`(win/bonus/win) + `VERDICTS/RESULT_LABEL/RESULT_VAL/VAL_RESULT` 常量。`JJBDesignBoot.ts`：加 battle/result 路由+import。
+- **语义注记**：winCount 按 goal 显式定义=值1(仅胜利)计数；游戏 `jijie2/LMatchItem` 的 winCount 含 bonus(bonus 路径 winCount++;winbCount++)。P4 取 goal 定义(获胜场数=winCount+winbCount 不双计)，**P5 真实联调需对齐此差异**。
+
+**三重确定性验证（真 gate）**：
+- build exit0(23124ms)、console0；新文件 .meta 构建自动生成。
+- 功能（Playwright emit MOUSE_UP 断言）：初始 `[1,2,1]` winCount2/winbCount1/totalCount3 → 点 match1 胜利 `[1,1,1]` winCount3/winbCount0 → 点 match0 带奖励 `[2,1,1]` winLoseList[0]=2/winbCount1（**精确命中 goal done-when 示例**）→ 点 match2 失败 `[2,1,0]` winCount1/winbCount1。Result `__jjbDebug.result` wins=3。
+- 视觉：battle(三态高亮全showcase)/result(大比分3完美通关)/home/overlay/select **五屏截图结构均不破**。
+
+**harness（停在 gate 前，交 hub 收口）**：phase 4 → runVerify **PASS**(build exit0) → synthesize 7 条 rubric（**正确 scope 到 P4**：RESULT_VAL/VAL_RESULT/VERDICTS 一致性 + DEMO result + 路由守卫；per-phase commit 隔离 diff 生效，无 P3 那种 baseline drift）→ `review --phase 4` **gate=PASS（mode=real，2 真 reviewer gpt55+gemini-fl，7/7 rubric 全 PASS 一致，真 HMAC 签名 req=chatcmpl-a90c54bf/0af3769a）**。evidence_source 仍悬空(同 P3 结构缺口，model-review 仍 advisory)。**未 record-gate / 未 --force / 未伪造签名**——交 hub 收口。
+
+**hub 收口（2026-06-08）**：独立完成代码核对（逻辑/边界/additive，git 实证 0 改 jijie2）+ build exit0 + browser-use 亲验 battle(三态高亮全展示)/result(大比分3·完美通关·战绩卡配色) 两屏高保真(五屏不破) + 验算 spoke 功能断言数值自洽 → `manual-override-phase-4.json`(reviewer 数 2<3 系 pareto-k2 配置上限) → `record-gate --gate-decision PASS` → status=completed, **next=5**。reviewer 真签名/verdict 未碰；未 forge/fake audit/--force。per-phase commit 入库。

@@ -8,6 +8,8 @@ import JJBHome from "./JJBHome";
 import JJBDrawn from "./JJBDrawn";
 import JJBOverlay from "./JJBOverlay";
 import JJBSelect from "./JJBSelect";
+import JJBBattle from "./JJBBattle";
+import JJBResult from "./JJBResult";
 import JijieControl from "../jijie2/JijieContro";
 import JijieData from "../jijie2/JijieData";
 
@@ -46,6 +48,14 @@ export default class JJBDesignBoot {
             }
             if (screen === "select") {
                 JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); // 选择面板（演示数据 + 真实图标）
+                return;
+            }
+            if (screen === "battle") {
+                JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); // 对战页（Verdict 三态判定 + JijieData 记分）
+                return;
+            }
+            if (screen === "result") {
+                JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); // 结算页（大比分 + 战绩卡，读 JijieData）
                 return;
             }
             // 默认：可交互首页
