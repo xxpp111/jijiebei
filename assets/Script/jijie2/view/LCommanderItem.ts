@@ -29,7 +29,7 @@ export default class LCommanderItem extends cc.Component {
 			return;
 		}
 
-		this.spHead = new URLSprite("images/commander/" + name + ".png", 33, 33);
+		this.spHead = new URLSprite("images/commander/" + name + ".png", 68, 68);
 		this.node.addChild(this.spHead);
 
 		this.cname = name;
@@ -47,7 +47,7 @@ export default class LCommanderItem extends cc.Component {
 		if (this.spHead) {
 			this.node.removeChild(this.spHead);
 		}
-		this.spHead = new URLSprite("images/commander/" + name + ".png", 33, 33);
+		this.spHead = new URLSprite("images/commander/" + name + ".png", 68, 68);
 		this.node.addChild(this.spHead);
 		this.cname = name;
 		this.updateSelect(false);

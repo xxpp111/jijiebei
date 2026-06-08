@@ -11,6 +11,7 @@ export default class ConfigData{
     static commanderList:CommanderInfo[];
     static commanderAbcList:CommanderInfo[];
     static factorMap1:{[key:string]:string[]};
+    static allFactor:string[];
     static factorMap2:{[key:string]:string[]};
 
     static init(text:string,maptext:string,commandertext:string,factortext:string,commanderabctext:string){
@@ -95,6 +96,7 @@ export default class ConfigData{
 
         this.factorMap1 = {};
         this.factorMap2 = {};
+        this.allFactor = [];
         var strs = factortext.split("\r\n");
         for(var i = 1;i<strs.length;i++){
             var strs2 = strs[i].split(",");
@@ -114,6 +116,7 @@ export default class ConfigData{
                 }
                 list.push(strs2[0]);
             }
+            this.allFactor.push(strs2[0]);
         }
     }
 }

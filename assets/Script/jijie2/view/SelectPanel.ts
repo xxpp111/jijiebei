@@ -60,7 +60,7 @@ export default class SelectPanel extends cc.Component {
         this.commanderAContainer.removeAllChildren();
         for (var i = 0; i < JijieData.randomCommanderPoorA.length; i++) {
             var x = (i % 6) * 100;
-            var y = i >= 6 ? 85 : 0;
+            var y = i >= 6 ? -75 : 0;
             usp = new URLSprite("images/commander/" + JijieData.randomCommanderPoorA[i] + ".png", 70, 75, x, y, i);
             this.commanderAContainer.addChild(usp);
             usp.on(cc.Node.EventType.MOUSE_DOWN, this.onCommanderDown, this);
@@ -69,7 +69,7 @@ export default class SelectPanel extends cc.Component {
         this.commanderBContainer.removeAllChildren();
         for (var i = 0; i < JijieData.randomCommanderPoorB.length; i++) {
             var x = (i % 3) * 100;
-            var y = i >= 3 ? 85 : 0;
+            var y = i >= 3 ? -75 : 0;
             usp = new URLSprite("images/commander/" + JijieData.randomCommanderPoorB[i] + ".png", 70, 75, x, y, 100 + i);
             this.commanderBContainer.addChild(usp);
             usp.on(cc.Node.EventType.MOUSE_DOWN, this.onCommanderDown, this);
@@ -117,8 +117,9 @@ export default class SelectPanel extends cc.Component {
                 item.init(cname);
                 item.node.x = x;
                 x += 55;
-                item.node.scaleX = item.node.scaleY = 1.5;
+                item.node.scale = 0.7;
                 this.commanderPickContainer.addChild(item.node);
+                item.node.on(cc.Node.EventType.MOUSE_UP, this.onPickClick, this);
             }
         }
 
@@ -136,7 +137,7 @@ export default class SelectPanel extends cc.Component {
         //监听开始
         this.btnStart.on(cc.Node.EventType.MOUSE_UP, this.onStartClick, this);
 
-        this.commanderPickContainer.on(cc.Node.EventType.MOUSE_UP, this.onPickClick, this);
+        // this.commanderPickContainer.on(cc.Node.EventType.MOUSE_UP, this.onPickClick, this);
 
 
         this.btnRandomCommander.active = JijieData.modeFeiqiu;
@@ -306,7 +307,8 @@ export default class SelectPanel extends cc.Component {
 
 
     private onPickClick(evt: cc.Event.EventMouse): void {
-        var item: CommanderItem = evt.target as CommanderItem;
+        var item: CommanderItem = evt.target.getComponent(CommanderItem) as CommanderItem;
+        if(!item) return;
         if (item == this.selectedItem) {
             this.selectedItem.updateSelect(false);
             this.selectedItem = null;

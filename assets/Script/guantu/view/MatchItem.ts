@@ -27,6 +27,15 @@ export default class MatchItem extends cc.Component {
     @property([FactorItem])
     item2: FactorItem[] = [null, null, null]
 
+    @property(FactorItem)
+    itemPlus0:FactorItem = null;
+    @property(FactorItem)
+    itemPlus1:FactorItem = null;
+    @property(cc.Node)
+    btnPlus0:cc.Node = null;
+    @property(cc.Node)
+    btnPlus1:cc.Node = null;
+
     @property(cc.Label)
     result: cc.Label = null;
 
@@ -78,7 +87,9 @@ export default class MatchItem extends cc.Component {
                 }
             }
         }
-        
+     
+        this.btnPlus0.on(cc.Node.EventType.MOUSE_UP,this.onPlusClick0,this);
+        this.btnPlus1.on(cc.Node.EventType.MOUSE_UP,this.onPlusClick1,this);
     }
 
     setData(data: MatchData) {
@@ -195,5 +206,19 @@ export default class MatchItem extends cc.Component {
             item.selectedFactor = null;
             item.loadSprite(null);
         }
+    }
+
+    onPlusClick0(){
+        // this.btnPlus0.active = false;
+        var index = Math.floor(Math.random() * ConfigData.allFactor.length);
+        this.itemPlus0.loadSprite(ConfigData.allFactor[index]);
+        ConfigData.allFactor.splice(index,1);
+    }
+
+    onPlusClick1(){
+        // this.btnPlus1.active = false;
+        var index = Math.floor(Math.random() * ConfigData.allFactor.length);
+        this.itemPlus1.loadSprite(ConfigData.allFactor[index]);
+        ConfigData.allFactor.splice(index,1);
     }
 }

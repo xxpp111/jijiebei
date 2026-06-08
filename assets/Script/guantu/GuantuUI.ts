@@ -307,11 +307,11 @@ export default class GuantuUI extends cc.Component {
                 var item = node.getComponent(MatchItem);
                 var r1 = item.cmd1.rank;
                 var r2 = item.cmd2.rank;
-                if (!r1 || !r2) {
+                if (!item.cmd1.picName || !item.cmd2.picName) {
                     this.showError(`第${i + 1}场比赛未选择指挥官`);
                     return;
                 }
-                if (this.rankArr.indexOf(r1) + this.rankArr.indexOf(r2) < 4) {
+                if (r1 && r2 && this.rankArr.indexOf(r1) + this.rankArr.indexOf(r2) < 4) {
                     this.showError(`第${i + 1}场比赛指挥官等级为${r1}${r2}`);
                     return;
                 }
