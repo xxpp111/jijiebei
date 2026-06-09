@@ -35,8 +35,12 @@ def make(name, cands, top, bot, stroke, sw, shadow):
     md.text((x, y), TEXT, font=f, fill=255)
     base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if shadow:
-        sh = Image.new("RGBA", (W, H), (0, 0, 0, 0)); ImageDraw.Draw(sh).text((x, y+3), TEXT, font=f, fill=(0, 0, 0, 150))
-        base = Image.alpha_composite(base, sh.filter(ImageFilter.GaussianBlur(5)))
+        if isinstance(shadow, tuple):  # 彩色外发光(居中大 blur，仿 design text-shadow 0 0 16px)
+            gl = Image.new("RGBA", (W, H), (0, 0, 0, 0)); ImageDraw.Draw(gl).text((x, y), TEXT, font=f, fill=shadow + (225,))
+            base = Image.alpha_composite(base, gl.filter(ImageFilter.GaussianBlur(15)))
+        else:  # 黑色投影
+            sh = Image.new("RGBA", (W, H), (0, 0, 0, 0)); ImageDraw.Draw(sh).text((x, y+3), TEXT, font=f, fill=(0, 0, 0, 150))
+            base = Image.alpha_composite(base, sh.filter(ImageFilter.GaussianBlur(5)))
     if stroke and sw > 0:
         st = Image.new("RGBA", (W, H), (0, 0, 0, 0)); ImageDraw.Draw(st).text((x, y), TEXT, font=f, fill=stroke+(255,), stroke_width=sw, stroke_fill=stroke+(255,))
         base = Image.alpha_composite(base, st)
@@ -47,7 +51,7 @@ def make(name, cands, top, bot, stroke, sw, shadow):
 CONFIGS = [
     ("metal-dark",    SERIF, (240,216,144), (199,154,62),  (58,44,16),     3, True),
     ("metal-light",   SERIF, (98,70,18),    (47,33,5),     (214,182,120),  1, False),
-    ("sc2-dark",      SANS,  (120,230,160), (70,200,130),  None,           0, True),
+    ("sc2-dark",      SANS,  (223,234,230), (205,219,213),  None,           0, (86,207,140)),
     ("sc2-light",     SANS,  (30,82,54),    (18,58,38),    None,           0, False),
     ("minimal-dark",  SANS,  (241,243,246), (205,210,218), None,           0, False),
     ("minimal-light", SANS,  (32,38,48),    (16,20,28),    None,           0, False),
