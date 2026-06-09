@@ -125,7 +125,7 @@ export default class JJBSelect {
             const sx = 50 + i * (colW + gap);
             const m = matches[i];
             const active = !live && i === 0; // DEMO 才有「选择中」装饰
-            JJBView.box(root, sx, slotsTop, colW, slotH, th.panelBg, th.panelEdge, 1);
+            JJBView.panel(root, sx, slotsTop, colW, slotH, th);
             if (active) JJBView.box(root, sx, slotsTop, colW, slotH, null, th.accent, 2); // 选择中外框
 
             // slot-head

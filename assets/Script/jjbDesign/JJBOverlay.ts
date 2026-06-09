@@ -29,8 +29,7 @@ export default class JJBOverlay {
         const top0 = 178, H = 120, gap = 14;
         DEMO_MATCHES.forEach((m, i) => {
             const Y = top0 + i * (H + gap);
-            JJBView.box(root, L, Y, W, H, th.panelBg, th.panelEdge, 1);
-            if (sc2) JJBView.cornerTicks(root, L, Y, W, H, th.accent, 14, 2);
+            JJBView.panel(root, L, Y, W, H, th);
             if (m.status === "live") JJBView.box(root, L, Y, W, H, null, th.accent, 2);
 
             // 场次 + 双打标

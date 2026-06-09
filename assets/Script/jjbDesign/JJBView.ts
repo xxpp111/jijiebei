@@ -130,19 +130,52 @@ export default class JJBView {
         return box;
     }
 
-    /** 全屏背景：① 真实整图底(GPT-image-2, mode 选 dark/light, 2 张共享) + 皮肤色调叠层/暗角。 */
+    /** 全屏背景：程序化渲染，对齐 design bg-grad(渐变) + bg-tex(sc2 网格/metal 斜纹/minimal 无) + 顶光晕 + bg-vignette(暗角)。弃 GPT-image 写实大图。 */
     static bg(parent: cc.Node, th: Theme): void {
-        const path = th.mode === "dark" ? "images/bg/jjb-bg-main" : "images/bg/jjb-bg-light";
-        JJBView.coverSprite(parent, 0, 0, 1280, 720, path);
-        const n = JJBView.placed(parent, 0, 0, 1280, 720);
-        const g = n.addComponent(cc.Graphics);
-        if (th.mode === "dark") {
-            g.fillColor = cc.color(th.bgB.r, th.bgB.g, th.bgB.b, 70); g.rect(0, -720, 1280, 720); g.fill();
-            g.fillColor = cc.color(th.accent.r, th.accent.g, th.accent.b, 16); g.ellipse(640, -150, 820, 420); g.fill();
-            g.fillColor = cc.color(0, 0, 0, 120); g.rect(0, -720, 1280, 150); g.fill();
-        } else {
-            g.fillColor = cc.color(255, 255, 255, 96); g.rect(0, -720, 1280, 720); g.fill();
-            g.fillColor = cc.color(th.bgB.r, th.bgB.g, th.bgB.b, 40); g.rect(0, -560, 1280, 160); g.fill();
+        // ⓪ overscan 纯色底：宽屏 canvas 在 1280×720 设计区之外会露出 XP 原场景写实背景，用 bgB 纯色铺满盖住
+        JJBView.box(parent, -360, -220, 2000, 1160, th.bgB);
+        // ① 渐变底（bgA 顶 → bgB 底，分段独立 box 避免 Graphics 多 fill 路径累积）
+        const SEG = 18;
+        for (let i = 0; i < SEG; i++) {
+            const t = i / (SEG - 1);
+            const col = cc.color(
+                Math.round(th.bgA.r + (th.bgB.r - th.bgA.r) * t),
+                Math.round(th.bgA.g + (th.bgB.g - th.bgA.g) * t),
+                Math.round(th.bgA.b + (th.bgB.b - th.bgA.b) * t), 255);
+            JJBView.box(parent, 0, Math.floor(720 * i / SEG), 1280, Math.ceil(720 / SEG) + 1, col);
+        }
+        // ② 皮肤纹理：sc2=44px 网格 / metal=118° 斜纹 / minimal=无
+        const tex = JJBView.placed(parent, 0, 0, 1280, 720).addComponent(cc.Graphics);
+        if (th.style === "sc2") {
+            tex.strokeColor = cc.color(th.accent.r, th.accent.g, th.accent.b, th.mode === "dark" ? 15 : 20);
+            tex.lineWidth = 1;
+            for (let x = 0; x <= 1280; x += 44) { tex.moveTo(x, 0); tex.lineTo(x, -720); }
+            for (let y = 0; y <= 720; y += 44) { tex.moveTo(0, -y); tex.lineTo(1280, -y); }
+            tex.stroke();
+        } else if (th.style === "metal") {
+            const dx = 382; // ≈ 720·tan(28°)，近似 118° 斜纹
+            tex.strokeColor = th.mode === "dark" ? cc.color(255, 255, 255, 7) : cc.color(21, 35, 58, 7);
+            tex.lineWidth = 1;
+            for (let x = -dx; x <= 1280; x += 7) { tex.moveTo(x, 0); tex.lineTo(x + dx, -720); }
+            tex.stroke();
+        }
+        // 顶部光晕（metal/sc2 暗色：accent 色径向高光）
+        if (th.mode === "dark" && th.style !== "minimal") {
+            const halo = JJBView.placed(parent, 0, 0, 1280, 720).addComponent(cc.Graphics);
+            halo.fillColor = cc.color(th.accent.r, th.accent.g, th.accent.b, 16);
+            halo.ellipse(640, -60, 480, 240); halo.fill();
+        }
+        // ③ 暗角（多层 rect stroke 由外向内 alpha 递减，近似 inset vignette）
+        const vg = JJBView.placed(parent, 0, 0, 1280, 720).addComponent(cc.Graphics);
+        const vc = th.mode === "dark" ? [0, 0, 0] : [108, 124, 120];
+        for (let i = 0; i < 7; i++) {
+            const a = (th.mode === "dark" ? 24 : 15) - i * 3;
+            if (a <= 0) break;
+            vg.strokeColor = cc.color(vc[0], vc[1], vc[2], a);
+            vg.lineWidth = 16;
+            const o = i * 13;
+            vg.rect(o, -(720 - o), 1280 - o * 2, 720 - o * 2);
+            vg.stroke();
         }
     }
 
@@ -164,6 +197,21 @@ export default class JJBView {
         g.moveTo(w, -h); g.lineTo(w - len, -h);
         g.moveTo(w, -h); g.lineTo(w, -h + len);
         g.stroke();
+        return n;
+    }
+
+    /** 卡片/面板：半透明底 + 皮肤专属边框（metal 切角12 / sc2 四角刻线 / minimal 直角）。替代裸 box 画「卡片级」容器，还原 design HUD 质感。 */
+    static panel(parent: cc.Node, left: number, top: number, w: number, h: number,
+                 th: Theme, fill?: cc.Color, edge?: cc.Color): cc.Node {
+        const f = fill === undefined ? th.panelBg : fill;
+        const e = edge === undefined ? th.panelEdge : edge;
+        let n: cc.Node;
+        if (th.style === "metal") {
+            n = JJBView.cutBox(parent, left, top, w, h, f, e, 1, 12); // 切角
+        } else {
+            n = JJBView.box(parent, left, top, w, h, f, e, 1);
+            if (th.style === "sc2") JJBView.cornerTicks(parent, left, top, w, h, th.accent, 14, 2); // 四角刻线
+        }
         return n;
     }
 }

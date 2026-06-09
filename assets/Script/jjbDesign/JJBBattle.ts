@@ -98,7 +98,7 @@ export default class JJBBattle {
             const rowTop = ROW_TOPS[i];
             const doubles = !!m.doubles;
             const isBoss = doubles || (typeof m.slot === "string" && m.slot.indexOf("BOSS") >= 0);
-            JJBView.box(root, 50, rowTop, 1180, H, th.panelBg, isBoss ? th.accent : th.panelEdge, isBoss ? 2 : 1);
+            JJBView.panel(root, 50, rowTop, 1180, H, th, undefined, isBoss ? th.accent : undefined);
 
             // match-no（+ 双打标）
             if (doubles) {

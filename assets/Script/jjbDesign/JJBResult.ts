@@ -50,7 +50,7 @@ export default class JJBResult {
         matches.forEach((m: any, i: number) => {
             const top = list0 + i * (rH + gap);
             const res = VAL_RESULT[wl[i]] || m.result || "win";
-            JJBView.box(root, listX, top, listW, rH, th.panelBg, th.panelEdge, 1);
+            JJBView.panel(root, listX, top, listW, rH, th);
             // 左侧胜负色条（v2 .rcard::before width 6：胜绿/带奖励蓝/失败红）
             const barCol = res === "bonus" ? th.bonus : (res === "lose" ? th.lose : th.win);
             JJBView.box(root, listX, top, 6, rH, barCol, null);

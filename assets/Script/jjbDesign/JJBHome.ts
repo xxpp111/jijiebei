@@ -51,12 +51,8 @@ export default class JJBHome {
 
     private static modeBtn(root: cc.Node, th: Theme, bx: number, by: number, w: number, h: number,
                            no: string, name: string, tag: string, idx: number, onClick: () => void): void {
-        if (th.style === "metal") {
-            JJBView.cutBox(root, bx, by, w, h, th.panelBg, th.panelEdge, 1, 15);
-            JJBView.box(root, bx, by, 4, h, th.accent); // 左侧金条
-        } else {
-            JJBView.box(root, bx, by, w, h, th.panelBg, th.panelEdge, 1);
-        }
+        JJBView.panel(root, bx, by, w, h, th); // 切角(metal)/四角刻线(sc2)/直角(minimal)
+        if (th.style === "metal") JJBView.box(root, bx, by, 4, h, th.accent); // 左侧金条
         JJBView.label(root, bx + 22, by + 28, 50, 34, no, 30, th.accent, HAlign.LEFT, 255, FONT_NUM);
         JJBView.label(root, bx + 74, by + 31, 220, 30, name, 23, th.ink);
         // 标签
