@@ -58,6 +58,25 @@ export default class JJBView {
         return n;
     }
 
+    /** 虚线描边矩形（忠实 design 占位槽 .drop/.avatar.ph：dashed 边 + 淡填充）。
+     *  cc.Graphics 2.4 无原生 setLineDash，故沿四边手画 dash 段后一次 stroke。 */
+    static dashBox(parent: cc.Node, left: number, top: number, w: number, h: number,
+                   fill?: cc.Color, edge?: cc.Color, lineW: number = 1, dash: number = 4, gap: number = 3): cc.Node {
+        const n = JJBView.placed(parent, left, top, w, h);
+        const g = n.addComponent(cc.Graphics);
+        if (fill) { g.rect(0, -h, w, h); g.fillColor = fill; g.fill(); }
+        if (edge) {
+            g.strokeColor = edge; g.lineWidth = lineW;
+            const step = dash + gap;
+            for (let x = 0; x < w; x += step) { g.moveTo(x, 0); g.lineTo(Math.min(x + dash, w), 0); }            // 顶
+            for (let x = 0; x < w; x += step) { g.moveTo(x, -h); g.lineTo(Math.min(x + dash, w), -h); }          // 底
+            for (let y = 0; y < h; y += step) { g.moveTo(0, -y); g.lineTo(0, -Math.min(y + dash, h)); }          // 左
+            for (let y = 0; y < h; y += step) { g.moveTo(w, -y); g.lineTo(w, -Math.min(y + dash, h)); }          // 右
+            g.stroke();
+        }
+        return n;
+    }
+
     /** 文本（左上锚点；overflow=NONE 自适应内容，向右下生长）。 */
     /** 文本。居中/右对齐用"LEFT+NONE 渲染 → 测内容宽 → 手动偏移"实现（避开 2.4 CLAMP/SHRINK 空白 bug）。 */
     static label(parent: cc.Node, left: number, top: number, w: number, h: number,

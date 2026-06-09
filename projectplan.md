@@ -169,3 +169,87 @@ design **v3 完整 handoff**（28MB tar.gz：README/chat1.md/theme.css/styles.cs
 **验证手法纠偏**：Playwright `page.screenshot` 对 Cocos WebGL 持续 rAF **超时**（等不到稳定帧）→ 改 **CDP `Page.captureScreenshot` return base64**（超限自动存 tool-results 文件 → python 正则提 `/9j/` 解码 jpg → Read）。sc2-dark home（金logo+放大lockup+mode-btn 104 实测）+ select live（填满）+ 端到端（home→select→battle→3判定→result，winCount=2 含带奖励不双计）；**0 errors**，椭圆 Mask 节点正常渲染。
 
 **剩余**：metal/minimal×light + battle/result/overlay 逐屏截图（token 驱动逻辑同，未逐一）；home 6 卡到页脚留白（有页脚锚底，非孤立，未调）；`?design=home` 在 danshua 下点模式进 select 后 URL 不变（正常单页导航，非 bug）。
+
+---
+
+## 本轮（v3 范本忠实复刻 + runtime 主题切换 + 占位虚线）
+
+**根因纠偏（用户 #25/#26）**：此前 select 是手算估值 → A/B 组做成纵向堆叠、删了 18 格自选、占位框实线。用户要求「按 claude design 范本，从 HTML 读精确布局值」。
+
+**① select 按 design 真实结构整体重做**（`JJBSelect.ts`）：读 `design/v3/project/theme.css` 精确 flex 值 — `.slots` grid3 列 → 每 slot（head + mapthumb aspect 475:85 + t-cmds 56×67 + t-facs 56×56 wrap）；`.pool` 横向（左 `.pool-factors` 固定 340 / 右 `.pool-cmd`：`.grp-row` **A 组+B 组横排** + `.grp-self` **18 格 avatar-grid 60×72 9列×2行**）；startbtn 右下。逻辑（targets/fillTarget/makeDraggable/updateDebug）保留。
+
+**② runtime 主题切换器**（`JJBDesignBoot.ts`）：canvas 级常驻 `jjbSwitcher`（3 风格×2 模式按钮，当前高亮）→ 点击 `applyTheme` 重渲当前屏（`reRenderCurrent`，JijieData 真实数据保留）。**置顶保活修复**：gameplay 导航 `fresh()` 新建 root 会盖住切换器 → 在 `fresh()` 末尾把已存在切换器 `setSiblingIndex` 重新置顶（实测 switcherIdx 4 > rootIdx 3）。
+
+**③ 占位框 dashed 化**（用户 #26 箭头指 `Style dashed #56cf8c66`）：`JJBView.dashBox`（Graphics 2.4 无原生虚线 → 沿四边手画 dash 段）+ `JJBTheme` 补 `dropBg` 淡填充 token（6 套 design 精确值，drop-edge 已有）；select 三处空占位（t-cmd/t-fac/18 格）实线 box → dashBox（dropBg 填充 + dropEdge 虚线）。
+
+**XP 解耦确认**（用户提醒）：jijie2 **零 working 改动**；唯一触点 = `JijieMain.ts` 2 行（import + `JJBDesignBoot.tryMount(this.node)`，line 39 注释），置于 XP 逻辑就绪后、try/catch 包裹失败回落老 UI。新代码全在独立 `jjbDesign/`，只读 JijieData public + 调 XP 现成 handler。
+
+**验证**（CDP 截图 + node 断言）：select metal-dark/sc2-dark 结构对（A/B 横排+18 格+地图比例+无重叠）；切换器 home metal→light、select metal→sc2 runtime 重渲对，导航后仍置顶；dashed 占位 sc2-dark 实测绿虚线+淡填充对上 #26；端到端 home→select(live 真实抽取)→battle(3 场真实数据)→3 判定(胜利/带奖励/失败)→result，大比分 **winCount=2 含带奖励不双计**；全程 **0 errors**。改动文件：JJBSelect / JJBDesignBoot / JJBView / JJBTheme（均 jjbDesign，未动 XP）。
+
+## 本轮修复（用户反馈：遮挡/页边距/拖拽/随机）
+
+1. **页边距≈0 根因 = 适配裁边**：Canvas 默认 FIXED_HEIGHT，浏览器/捕获窗口非 16:9 时左右各裁 ~34px，把 design 的 38px 页边距吃成 ~4px。`JJBDesignBoot.tryMount` 改 `cc.view.setDesignResolutionSize(1280,720, SHOW_ALL)`——OBS 浮层固定分辨率应整版完整显示（必要时黑边，bg overscan 顺带填满 letterbox 无黑边）。实测 visible 1211→1280，留白恢复。
+2. **切换器遮挡 meta**：右上切换器压住「当前选手」。`buildSwitcher` 起点 bx 936→**610**（各屏 logo 右端 ~463 与右侧 meta 左端 ~1052 的公共空隙，顶部中央），home/select 均不重叠。
+3. **拖拽手感**：功能本就正常（实测 A 组拖入第 2 场成功落格 slot1=阿塔尼斯）；`makeDraggable` 加抓取放大 `scale 1.12` pop 反馈 + 回弹复位缩放（grabScale 实测 1.12）。
+4. **因子/指挥官固定**：live 已用 XP 随机池（randomFactorPoor/CommanderPoorA/B）；standalone 之前用固定 demo → 加 `shuffle`（Fisher-Yates，运行时 Math.random）洗 FACTORS/GROUP_A/GROUP_B/POOL + active 槽预填也取洗牌后池，反映随机抽取。
+
+验证：home metal-dark + select sc2-light 实测，切换器顶部中央不遮挡、四周留白、拖拽落格 +pop、洗牌每次不同；0 errors。改动仅 JJBDesignBoot/JJBSelect/JJBView/JJBTheme（jjbDesign 内），XP 零改动。
+
+## 本轮修复（用户反馈：亮版标题 + 全金 logo）
+
+1. **亮版「集结杯」标题字重/颜色/高光**（对照 design styles.css 175-186）：之前深字在浅底光学偏细、metal-light 颜色偏暗、缺 design 的白色高光。`design/v2/gen-titles.py` 的 `make()` 加 `bold`（faux-bold：描边同色加粗补字重，metal/minimal→900、sc2→700）+ `hi`（白色 1px 高光下移 2px 垫底，浅底浮雕感，alpha .55/.5/.4）；亮版改 design 精确色（metal 渐变 #8a6516→#2f2105、sc2 实色 #123a26、minimal 实色 #11151c）。暗版配置不变（不回归）。重生成 6 张，仅 3 张亮版 PNG 实际变化。
+2. **全金 logo**（用户："所有 logo 都用金色浮雕"）：`JJBData.markFor` 改为所有皮肤×明暗统一返回 `logo-cm-gold`，删除不再用的 `MARK_LIGHT`（连带 metal/sc2/minimal-light 深色 logo 映射）。金色浮雕在三种浅底（minimal/sc2/metal-light）实测均清晰可读（浮雕暗边提供对比）。
+
+验证：minimal-light + sc2-light 首页实测——金 logo 浅底可读、标题加粗有高光、accent 配色正确；0 errors。改动仅 jjbDesign/* + brand 标题 PNG + gen-titles.py，XP 零改动。
+
+## 本轮（用户反馈 #29：槽位预留 + 边框 + 指挥官名字）
+
+1. **槽位提前留空（reserved）**：live 下三场的指挥官/因子槽不再用池子循环无意义预填，全部留 dashed 占位（指挥官/因子 hint），主播从随机池拖拽编排（"选因子"本意）；standalone 仅第 1 场（选择中）预填演示。BOSS 双打 cmdN 改 doubles-aware（live 数据模型单指挥官仍 1 槽，standalone BOSS 2 槽）。
+2. **边框（design .factor/.avatar/.filled）**：项目里的 `贴因子用的框架.png` 是斜纹高亮纹理非干净边框，弃用；按 design CSS 实现——新增 `framedCmd`/`framedFactor` helper：池子项黑底 + panelEdge 1px 边框 + 图内缩 1px；fillTarget 填充槽黑底 + **accent 1px 边框**（design .t-cmd.filled）。
+3. **指挥官名字小字（design .avatar-name）**：A/B 组池子头像 + 填充到场次槽的指挥官，底部加名字浮层（黑 200α 底 + 10px 白字居中）；18 格自选不加（design name={false}）；因子不加名字。DropTarget 加 `aux[]` 数组管理填充态的底/边框/名字节点（重填一并销毁）。
+4. **拖拽层级复位 bug 顺手修**：拖动置顶后回弹只还原位置不还原 siblingIndex → 池子项盖住自身名字浮层。makeDraggable 记录 `homeIdx`，回弹 tween 完成后 `setSiblingIndex(homeIdx)` 复位。
+
+验证（live ?auto=0 sc2-dark）：三场槽位全 reserved dashed；A/B 组带边框+名字；拖 A 组首位→第 1 场成功填充（accent 边框+名字浮层，selectedCommanderList 同步写入）；回弹后池子名字浮层不被盖（root 末位非池子头像）；两次进入洗牌/抽取结果不同（XP 随机正常）；0 errors。XP 零改动。
+
+---
+
+## 全方位调研（2 Explore + dynamic workflow 5 agents，~70万tokens）：XP×jjbDesign×design 三方对账
+
+### 核心真相
+1. **"因子不能再选" = 槽位有限 + 开始校验，不是锁池子**。每场槽数动态（LMatchItem.updateStart:91-144 fcount 公式，含每场1锁定因子）：8因子=2/3/3（手选1/2/2）、10因子=3/3/4（手选2/2/3）、12因子=4/4/5名义但 factor4 是幽灵槽（场景 active=False+激活代码注释）实际3/3/3=9。**因子池=手选槽数恒等式**（8因子池5、10因子7、12因子9、随机0）——拖完正好用光。
+2. **selectedFactorList/selectedCommanderList 是 vestigial**：XP 全目录零读取（仅声明/清空/push null；容量公式 mfc*3-2 在8因子还差1，随机模式算出-2 也没人在意）。XP 真实数据全在老 UI 组件 LFactorItem.factorName / LCommanderItem.cname。jjbDesign 写入无害但不形成数据桥，唯一读者是自己的 sessionMatches()。
+3. **showResultEnd 链路安全**：JJLog 两函数体是注释掉的 AS3 遗留=no-op；writeLog 所需字段（playerName/mfc/modeIsRandom/winCount）新前端全部正确维护。无数据断裂，缺的是规则功能（校验/B≤1）。
+4. **老校验三规则**（SelectPanel.onStartClick:238-291）：逐场指挥官非空→活跃因子槽全满→B组≤1（仅 mfc>2 且非 onePick；8因子时"自选"强制计B）。错误红字 txtError，不弹窗。
+5. **手选一败终局**：modeIsRandom falsy 时输一场立即 showResultLose；只有随机抽签打满3场。JJBBattle 现在无条件打满3场=静默改赛制。onMode 未设 modeIsRandom=false（首局 undefined 碰巧 falsy）。
+6. **随机二分**：标准模式"随机抽签"（JJUI.onRandomClick 自动填充直接 toBattle）在新前端不可达；"随机模式"（onClickSuiji，第6按钮）guard 正确可达。拯救/极难 toStart 自调 toSelect，guard 正确。
+7. **design 意图**：factor-sel=已拖入当前场（上浮3px+accent 3px外圈+✓角标）/dim=未选（opacity.4+saturate.55）；选满/取消/锁定因子=设计空白（chat1.md L23 拖拽手感明确推迟）；双打=土豆前瞻预留，XP 无双指挥官（spCommander2 全注释），不冲突。
+
+### 差距矩阵（18条：9 must-fix / 7 should-fix / 1 nice / 1 N-A）
+must-fix：GAP-01 槽数动态化(M,是校验前置) / 02 锁定因子显示(S) / 03 开始校验(S,禁按 selectedFactorList null 计数) / 04 B≤1(S) / 06 一败终局+modeIsRandom 防御(S,需土豆确认赛制) / 07 极难16人池横排溢出屏外(S) / 10 自选指挥官机制(M,简化为自选区全量可拖) / 15 主题切换丢状态：battle 清空判定+select 不恢复已选(S) / 16 选手名输入纯装饰 playerName 恒"选手"(M,需 EditBox)。
+should-fix：05 selected* 契约固化 / 08 池 sel/dim 反馈 / 09 取消重选 / 11 模式文案错(拯救/极难/随机全显错) / 12 随机抽签入口(需土豆定去留) / 14 六模式端到端+3个未暴露模式(极难②/单指挥官A/非酋)去留 / 17 浮层接真数据+OBS 跨窗口架构。
+nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：13 双打。
+
+### 路线（结论：先 XP 逻辑结合，后 Claude Design v4 细化，顺序不可倒）
+理由：9 must-fix 全是规则/数据问题且全部可在 jjbDesign 层闭环（XP 零消费 selected*、JJConfigData 可只读 import=无外部依赖）；设计稿在这些点本就空白（规则真相在 XP 代码里，设计师从未拿到，v3 select 屏建立在"每场3因子、无锁定"的错误假设上）；反序会让设计师在同一错误假设上再出一版图。
+- 第1批 bug止血(~1天)：GAP-15/06/07/11/05
+- 第2批 规则核心(~2天)：GAP-01→02→03→04→16（03 硬依赖 01 槽数表）
+- 第3批 玩法补全(~2天)：GAP-10→08→09→14 验收+土豆拍板未暴露模式
+- 第4批 回 Claude Design：带着真实规则-界面需求清单（锁定因子样式/校验提示/取消交互/sel-dim 动效/浮层 OBS 形态/随机抽签 UI）申请 v4
+待土豆决策：①赛制（一败终局 vs 打满3场）②随机抽签玩法去留 ③极难②/单指挥官A/非酋3模式去留 ④浮层 OBS 采集形态。
+
+---
+
+## 用户决策落地（OBS 调研 + 批1 止血完成）
+
+**决策敲定**：①单刷打满3场（不沿用 XP 一败终局）②随机抽签保留（排批3）③极难暂不上 home（按钮摘除，XP 路径保留，溢出降级）④浮层必须动态 ⑤双打=官突独立新模式（基于官方突变+随机额外因子+预选地图+2人，XP 无此模式，待土豆细节，批4后排期）。
+
+**OBS 调研**（两源交叉：obs-browser GitHub + obsproject kb）：浏览器源=CEF（完整 Web API；`--enable-gpu` 可开硬件加速）；**Interact 交互**为 OBS 标准能力（右键源→交互，弹窗直接操作网页）；另有 Browser Docks。**浮层架构定稿=单窗口**：OBS 浏览器源指向应用 URL（单页面实例零同步），主播经 Interact 操作 select/battle，对局中页面切 overlay 形态（动态+大字版，缩小放底部仍可读→批4 v4 设计核心需求）。待实测：OBS Interact 内 Cocos 拖拽手感、B站直播姬浏览器源交互（兜底=直播姬窗口捕获 Chrome）。
+
+**批1 止血（全部完成+验证）**：
+1. battle 切主题不清记分：`JJBBattle` live 仅未初始化才置 `winLoseList=[]`；新局重置上移 onMode。实测判[1,2]切主题 preserved=true。
+2. select 切主题恢复已选：`JJBSelect` build 末回读 selected* 调 fillTarget 恢复。实测拖菲尼克斯→切 sc2→slot0 恢复。
+3. modeIsRandom=false 防御 + 注释记录"打满3场"赛制；onMode 统一重置 selectedCommanderList=[null×3]/selectedFactorList=[null×9]/winLoseList=[]（9 格契约固化，覆盖 XP mfc*3-2 预填）；JJBData 补"禁按 length/null 计数判选满"红线。实测随机模式 selCmd 3null/selFac len9。
+4. home 摘"极难模式"：MODES 5 项（随机编号 05）+ handlers 摘 onClickHard。实测 5 按钮。
+5. 三屏模式文案 `modeLabel()`（按 modeSuiji/Zhengjiu/VeryHard/Feiqiu/OnePick flags+modeIsRandom 推导）。实测随机模式显"随机模式 · 抽取"（旧错显"10 因子 · 手选"）。
+
+全程 0 errors。改动：JJBBattle/JJBSelect/JJBDesignBoot/JJBData/JJBResult（均 jjbDesign），XP 零改动。下一步=批2 规则核心（GAP-01 槽数动态化→02 锁定因子→03 开始校验→04 B≤1→16 选手名 EditBox）。

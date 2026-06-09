@@ -2,6 +2,7 @@
 // 思路（最大化分工 / 不改 XP 代码）：XP 正常 init 后，本控制器隐藏老 jjUI（留作逻辑引擎），
 // 叠加新视图；点击直接调用 XP 已写好的 InitPanel 处理函数 + 读 JijieData 渲染。
 // 用法：localhost:7777/?design=home&style=metal&mode=dark   （&auto=0 可自动点第0个模式，便于截图/验证）
+// 主题：右上角常驻切换器（精修金属/星际2质感/极简 × 暗/亮，6 套 runtime 切换，重渲染当前屏，JijieData 数据保留）。
 import { getTheme, Theme } from "./JJBTheme";
 import JJBView from "./JJBView";
 import JJBHome from "./JJBHome";
@@ -17,6 +18,9 @@ export default class JJBDesignBoot {
     private static stage: cc.Node;
     private static th: Theme;
     private static root: cc.Node;
+    private static curStyle: string = "metal";
+    private static curMode: string = "dark";
+    private static curScreen: string = "home";
 
     /** XP 逻辑就绪后调用；仅 ?design=... 时挂载新前端。任何异常都吞掉，不影响正常游戏。 */
     static tryMount(stage: cc.Node): void {
@@ -29,8 +33,14 @@ export default class JJBDesignBoot {
             const jj = stage.getChildByName("jjUI");
             if (jj) jj.active = false; // 老 UI 隐藏但存活，XP 逻辑照常运行不报错
 
+            // OBS 浮层固定 1280×720：用 SHOW_ALL 保证整版完整可见（窗口非 16:9 时加黑边而非裁内容）。
+            // 否则默认 FIXED_HEIGHT 在非 16:9 窗口会裁掉左右各约 34px，让 design 的 38px 页边距看起来像 0。
+            try { cc.view.setDesignResolutionSize(1280, 720, cc.ResolutionPolicy.SHOW_ALL); } catch (e) { /* noop */ }
+
             JJBDesignBoot.stage = stage;
-            JJBDesignBoot.th = getTheme(q["style"] || "metal", q["mode"] || "dark");
+            JJBDesignBoot.curStyle = q["style"] || "metal";
+            JJBDesignBoot.curMode = q["mode"] || "dark";
+            JJBDesignBoot.th = getTheme(JJBDesignBoot.curStyle, JJBDesignBoot.curMode);
 
             // 先加载拉丁字体，就绪后再渲染（避免 Label 用 fallback 画完缓存、字体后到不重绘）
             JJBDesignBoot.loadFontsThen(() => JJBDesignBoot.render(q));
@@ -44,27 +54,15 @@ export default class JJBDesignBoot {
     private static render(q: { [k: string]: string }): void {
         try {
             const screen = q["design"];
-            if (screen === "overlay") {
-                JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); // 常驻浮层（演示数据 + 真实图标）
-                return;
+            if (screen === "overlay") { JJBDesignBoot.curScreen = "overlay"; JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
+            else if (screen === "select") { JJBDesignBoot.curScreen = "select"; JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); }
+            else if (screen === "battle") { JJBDesignBoot.curScreen = "battle"; JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult()); }
+            else if (screen === "result") { JJBDesignBoot.curScreen = "result"; JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
+            else {
+                JJBDesignBoot.showHome();
+                if (q["auto"] !== undefined && q["auto"] !== "") JJBDesignBoot.onMode(parseInt(q["auto"], 10) || 0);
             }
-            if (screen === "select") {
-                JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); // 选择面板（standalone=DEMO；点开始→对战）
-                return;
-            }
-            if (screen === "battle") {
-                JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult()); // 对战页（Verdict 三态判定 + JijieData 记分）
-                return;
-            }
-            if (screen === "result") {
-                JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); // 结算页（大比分 + 战绩卡，读 JijieData）
-                return;
-            }
-            // 默认：可交互首页
-            JJBDesignBoot.showHome();
-            if (q["auto"] !== undefined && q["auto"] !== "") {
-                JJBDesignBoot.onMode(parseInt(q["auto"], 10) || 0);
-            }
+            JJBDesignBoot.buildSwitcher(); // 屏 build 后建切换器并置顶（盖在当前屏之上）
         } catch (e) {
             cc.warn("[JJBDesignBoot] render 失败: " + e);
         }
@@ -104,10 +102,17 @@ export default class JJBDesignBoot {
     private static fresh(): cc.Node {
         if (JJBDesignBoot.root && cc.isValid(JJBDesignBoot.root)) JJBDesignBoot.root.destroy();
         JJBDesignBoot.root = JJBView.root1280(JJBDesignBoot.stage);
+        // 切换器常驻 canvas：gameplay 导航新建 root 会排到其上方盖住它，这里把已存在的切换器重新置顶保活
+        try {
+            const cv = cc.Canvas.instance ? cc.Canvas.instance.node : JJBDesignBoot.stage;
+            const sw = cv && cv.getChildByName("jjbSwitcher");
+            if (sw && cc.isValid(sw)) sw.setSiblingIndex(cv.childrenCount - 1);
+        } catch (e) { /* noop */ }
         return JJBDesignBoot.root;
     }
 
     private static showHome(): void {
+        JJBDesignBoot.curScreen = "home";
         JJBHome.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (i) => JJBDesignBoot.onMode(i));
     }
 
@@ -116,11 +121,19 @@ export default class JJBDesignBoot {
         try {
             const ip: any = JijieControl.jjUI.initPanel;
             if (ip && ip.txtName) ip.txtName.string = "选手";
-            const handlers = ["onClick2", "onClick3", "onClick13", "onClick4", "onClickHard", "onClickSuiji"];
+            // 赛制（土豆确认 2026-06）：单刷一律打满 3 场——不沿用老 UI「modeIsRandom=falsy 输一场即终局」语义。
+            // 显式置 false 防多局残留（XP initStart 不重置该 flag）；「随机抽签」快捷路径接入时再置 true。
+            JijieData.modeIsRandom = false;
+            const handlers = ["onClick2", "onClick3", "onClick13", "onClick4", "onClickSuiji"]; // 极难(onClickHard)暂不上 home（土豆决策），XP 代码路径保留
             const fn = handlers[i] || "onClick3";
             ip[fn](null); // 直接调用 XP 手写的处理函数，零改动复用其逻辑（toStart 随机抽取）
             // 标准 8/10/12 因子模式 toStart 后停在 status=1（手选/随机二选一），补调 public toSelect 抽取因子/指挥官池。
             if (JijieData.status < 2) JijieControl.toSelect();
+            // jjbDesign 契约固化：selected* 重置为 3/9 格全 null（覆盖 toSelect 预填的 mfc*3-2 个 null + 清上局残留）；
+            // 新一局记分清零统一在此（battle 屏重渲染不再清，见 JJBBattle）。
+            JijieData.selectedCommanderList = [null, null, null];
+            JijieData.selectedFactorList = new Array(9).fill(null);
+            JijieData.winLoseList = [];
         } catch (e) {
             cc.warn("[JJBDesignBoot] onMode 调 XP 逻辑出错: " + e);
         }
@@ -142,13 +155,58 @@ export default class JJBDesignBoot {
 
     /** 端到端导航（同一会话内重建节点树，数据连续，不刷新页面）。 */
     private static goSelect(): void {
+        JJBDesignBoot.curScreen = "select";
         JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
     }
     private static goBattle(): void {
+        JJBDesignBoot.curScreen = "battle";
         JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult());
     }
     private static goResult(): void {
+        JJBDesignBoot.curScreen = "result";
         JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
+    }
+
+    /** 右上角常驻主题切换器：3 风格 + 2 模式按钮，当前高亮；点击 runtime 切 + 重渲当前屏。 */
+    private static buildSwitcher(): void {
+        const canvas = cc.Canvas.instance ? cc.Canvas.instance.node : JJBDesignBoot.stage;
+        if (!canvas) return;
+        const old = canvas.getChildByName("jjbSwitcher");
+        if (old && cc.isValid(old)) old.destroy();
+        const th = JJBDesignBoot.th;
+        const sw = new cc.Node("jjbSwitcher");
+        sw.parent = canvas; sw.setAnchorPoint(0.5, 0.5); sw.setContentSize(1280, 720); sw.setPosition(0, 0);
+        sw.setSiblingIndex(canvas.childrenCount - 1); // 置顶，盖在当前屏之上
+        const CT = cc.Label.HorizontalAlign.CENTER;
+        const mk = (left: number, w: number, label: string, on: boolean, cb: () => void) => {
+            JJBView.box(sw, left, 12, w, 28, on ? th.accent : th.panelBg, on ? th.accent : th.panelEdge, 1);
+            JJBView.label(sw, left, 18, w, 18, label, 13, on ? th.onAccent : th.muted, CT);
+            JJBView.hit(sw, left, 12, w, 28, cb);
+        };
+        // 顶部留白区（各屏 logo/标题 右端 ~463 与右侧 meta 左端 ~1052 之间的公共空隙），避免压住「当前选手」等 meta
+        let bx = 610;
+        const styles: Array<[string, string]> = [["metal", "金属"], ["sc2", "星际2"], ["minimal", "极简"]];
+        styles.forEach((it) => { mk(bx, 62, it[1], JJBDesignBoot.curStyle === it[0], () => JJBDesignBoot.applyTheme(it[0], "")); bx += 64; });
+        bx += 12;
+        const modes: Array<[string, string]> = [["dark", "暗"], ["light", "亮"]];
+        modes.forEach((it) => { mk(bx, 44, it[1], JJBDesignBoot.curMode === it[0], () => JJBDesignBoot.applyTheme("", it[0])); bx += 46; });
+    }
+
+    private static applyTheme(style: string, mode: string): void {
+        if (style) JJBDesignBoot.curStyle = style;
+        if (mode) JJBDesignBoot.curMode = mode;
+        JJBDesignBoot.th = getTheme(JJBDesignBoot.curStyle, JJBDesignBoot.curMode);
+        JJBDesignBoot.reRenderCurrent();   // 用新 th 重渲当前屏（fresh 重建 root，JijieData 真实数据保留）
+        JJBDesignBoot.buildSwitcher();     // 屏重建后重建切换器并置顶（反映高亮 + 新皮肤配色）
+    }
+
+    private static reRenderCurrent(): void {
+        const s = JJBDesignBoot.curScreen;
+        if (s === "overlay") JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
+        else if (s === "select") JJBDesignBoot.goSelect();
+        else if (s === "battle") JJBDesignBoot.goBattle();
+        else if (s === "result") JJBDesignBoot.goResult();
+        else JJBDesignBoot.showHome();
     }
 
     private static parseQuery(): { [k: string]: string } {

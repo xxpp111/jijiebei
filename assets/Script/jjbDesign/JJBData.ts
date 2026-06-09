@@ -21,9 +21,21 @@ export const MODES = [
     { no: "02", name: "10 因子模式", tag: "进阶" },
     { no: "03", name: "12 因子模式", tag: "高难" },
     { no: "04", name: "拯救模式", tag: "限时" },
-    { no: "05", name: "极难模式", tag: "残局" },
-    { no: "06", name: "随机模式", tag: "抽取" },
+    { no: "05", name: "随机模式", tag: "抽取" },
+    // 极难挑战（XP onClickHard）暂不上 home（土豆决策保留后上）；上线前需先修指挥官池 16 人横排溢出。
 ];
+
+/** live 模式文案：按 XP flags 推导（拯救/随机等非标准模式 modelFactorCount 推不出正确名字）。 */
+export function modeLabel(): string {
+    const d: any = JijieData;
+    if (d.modeSuiji) return "随机模式 · 抽取";
+    if (d.modeIsZhengjiu) return "拯救模式 · 10 因子";
+    if (d.modeIsVeryHard) return "极难挑战";
+    if (d.modeFeiqiu) return "非酋模式";
+    if (d.modeIsOnePick) return "单指挥官挑战";
+    const f = d.modelFactorCount === 2 ? 8 : (d.modelFactorCount === 4 ? 12 : 10);
+    return f + " 因子 · " + (d.modeIsRandom ? "随机" : "手选");
+}
 
 // 选择面板用（真实资源名）。因子池 / 指挥官 A·B 组 / 自选 18 格（6 真 + 12 占位）。
 export const FACTORS = ["暴风雪", "核弹打击", "丧尸大战", "虚空裂隙", "岩浆爆发", "相互摧毁"];
@@ -37,20 +49,15 @@ export const POOL: (string | null)[] = [
 // 拉丁/数字字体（设计 --font-num）。中文不用它（走系统字）。需 JJBDesignBoot 注入 Google Fonts。
 export const FONT_NUM = "Oswald";
 
-// CM 联名字标（已导入 resources/images/brand/）。用户决策：dark 模式三皮肤统一金色 dM（强化金色联名突出）。
+// CM 联名字标（已导入 resources/images/brand/）。用户决策：所有皮肤×明暗统一用金色浮雕 dM（金色联名是品牌核心）。
 export const MARK: { [k: string]: string } = {
     metal: "images/brand/logo-cm-gold",
     sc2: "images/brand/logo-cm-gold",
     minimal: "images/brand/logo-cm-gold",
 };
-// v2：亮色专属字标（深金属重映射，白底可读 + 保留浮雕）。Lockup 按 mode 取明/暗。
-export const MARK_LIGHT: { [k: string]: string } = {
-    metal: "images/brand/logo-cm-metal-light",
-    sc2: "images/brand/logo-cm-sc2-light",
-    minimal: "images/brand/logo-cm-minimal-light",
-};
 export function markFor(style: string, mode: string): string {
-    return (mode === "light" ? MARK_LIGHT : MARK)[style] || MARK["metal"];
+    // 所有主题（含亮版）统一金色浮雕 logo；mode 参数保留兼容调用方但不再分流。
+    return MARK[style] || MARK["metal"];
 }
 
 // 演示对局（真实游戏图标名，resources 里均存在）——后续接 XP 真实 JijieData。
@@ -70,6 +77,9 @@ export const VAL_RESULT = ["lose", "win", "bonus"]; // 反查：index = winLoseL
 // ===== 真实会话桥（方案 A：jjbDesign 自驱读写 JijieData public static；0 改 jijie2） =====
 // jjbDesign 自有扁平因子布局：每场 1 指挥官 + FAC_PER_MATCH 因子槽。
 // selectedCommanderList[场idx]、selectedFactorList[场idx*FAC_PER_MATCH+槽idx]。
+// 契约（调研确认）：这两个数组在 XP(jijie2) 全目录零读取（vestigial），语义归 jjbDesign 所有；
+// 由 JJBDesignBoot.onMode 固化为 3/9 格全 null 起始（覆盖 XP toSelect 预填的 mfc*3-2 个 null——8因子=4 与实际槽数不符）。
+// 红线：禁止按这两个数组的 length 或 null 计数判断"选满"——按槽位表逐格判断（见 GAP-01 槽数动态化）。
 // 这两个数组在 XP TS 代码中是 vestigial(无任何读取/真实写入)，jjbDesign 写入不损坏 XP 结构。
 export const FAC_PER_MATCH = 3;
 export function facFlatIdx(slot: number, idx: number): number { return slot * FAC_PER_MATCH + idx; }

@@ -2,7 +2,7 @@
 // 大比分 = 获胜场数 = JijieData.winCount（XP 语义：winCount 已含带奖励胜，不再 +winbCount，避免双计）+ 战绩卡列表。
 // 双源（方案 A）：standalone(?design=result)=DEMO winLoseList 预置；真实会话=读 battle 累加的真实记分与抽取阵容。0 改 jijie2 源码。
 import { Theme } from "./JJBTheme";
-import { DEMO_MATCHES, markFor, EVENT, FONT_NUM, RESULT_LABEL, RESULT_VAL, VAL_RESULT, jjbLive, sessionMatches } from "./JJBData";
+import { DEMO_MATCHES, markFor, EVENT, FONT_NUM, RESULT_LABEL, RESULT_VAL, VAL_RESULT, jjbLive, sessionMatches, modeLabel } from "./JJBData";
 import JJBView from "./JJBView";
 import JijieData from "../jijie2/JijieData"; // 只读写 public static（goal 允许；不改源码）
 
@@ -23,9 +23,8 @@ export default class JJBResult {
         const titleW = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 42, tWd = Math.round(tH * titleW / 200);
         JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
-        const fcount = dAny.modelFactorCount === 2 ? 8 : (dAny.modelFactorCount === 4 ? 12 : 10);
         JJBView.label(root, 760, 30, 470, 20, live ? ("当前选手  " + (dAny.playerName || "选手")) : "当前选手  Potato_01", 15, th.muted, HA.RIGHT);
-        JJBView.label(root, 760, 54, 470, 20, live ? ("比赛模式  " + fcount + " 因子 · 手选") : "比赛模式  8 因子 · 手选", 15, th.ink, HA.RIGHT);
+        JJBView.label(root, 760, 54, 470, 20, live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选", 15, th.ink, HA.RIGHT);
 
         // ---------- 记分（standalone 用 DEMO 预置；真实会话沿用 battle 累加的 winLoseList） ----------
         if (!live) JijieData.winLoseList = DEMO_MATCHES.map((m: any) => RESULT_VAL[m.result]);
