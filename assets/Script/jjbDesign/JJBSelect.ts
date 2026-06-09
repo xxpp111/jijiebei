@@ -3,10 +3,11 @@
 // 双源（方案 A）：standalone(?design=select)=DEMO + 完整拖拽；真实会话(home→select)=真实 mapList/随机池，写 JijieData.selected*。
 // 吸附判定复用 jijie2 SelectPanel.checkHit(<30px)。0 改 jijie2 源码。
 import { Theme } from "./JJBTheme";
-import { EVENT, DEMO_MATCHES, FACTORS, GROUP_A, GROUP_B, POOL, markFor, FONT_NUM, jjbLive, sessionMatches, FAC_PER_MATCH, facFlatIdx, modeLabel } from "./JJBData";
+import { EVENT, DEMO_MATCHES, FACTORS, GROUP_A, GROUP_B, POOL, markFor, FONT_NUM, jjbLive, sessionMatches, manualSlots, facFlatIdx, modeLabel } from "./JJBData";
 import JJBView from "./JJBView";
 import SelectPanel from "../jijie2/view/SelectPanel"; // 只读复用静态 checkHit（<30px 吸附判定）
 import JijieData from "../jijie2/JijieData";           // 真实会话下读写 public static（goal 允许；不改源码）
+import ConfigData from "../jijie2/data/JJConfigData";  // 只读 commanderList（name→组别，B组≤1 校验对齐 XP checkBCount）
 
 const HA = cc.Label.HorizontalAlign;
 const BLACK = cc.color(0, 0, 0);          // 槽位/图标黑底（design .filled/.factor background:#000）
@@ -45,6 +46,14 @@ export default class JJBSelect {
         const selection: any = { slots: [{ cmds: [], factors: [] }, { cmds: [], factors: [] }, { cmds: [], factors: [] }] };
         const targets: DropTarget[] = [];
 
+        // GAP-01：每场手选槽数计划（live 镜像 XP updateStart；standalone DEMO 维持 3）。
+        const slotsPlan: number[] = live ? [manualSlots(0), manualSlots(1), manualSlots(2)] : [3, 3, 3];
+        // GAP-04：name→组别（只读 XP 配置，对齐 checkBCount 的 commanderList 查表语义——
+        // 不按池子来源判组，拯救等模式 A 池里混入的 B 组指挥官按 XP 同样计 B）。
+        const groupMap: { [n: string]: string } = {};
+        try { (ConfigData.commanderList || []).forEach((arr: any[]) => { groupMap[arr[0]] = arr[1]; }); } catch (e) { /* noop */ }
+        let lastError = "";
+
         const updateDebug = () => {
             try {
                 const w: any = window;
@@ -54,8 +63,35 @@ export default class JJBSelect {
                     slots: selection.slots.map((s: any) => ({ cmds: s.cmds.slice(), factors: s.factors.slice() })),
                     selectedCommanderList: live ? (dAny.selectedCommanderList || []).slice() : undefined,
                     selectedFactorList: live ? (dAny.selectedFactorList || []).slice() : undefined,
+                    slotsPlan: slotsPlan.slice(),
+                    lockFactors: live ? (dAny.modeSuiji ? [] : (dAny.lockFactorList || []).slice()) : undefined,
+                    poolFactorCount: factorPool.length,
+                    poolIdentity: live ? (factorPool.length === slotsPlan[0] + slotsPlan[1] + slotsPlan[2]) : undefined,
+                    error: lastError,
                 };
             } catch (e) { /* noop */ }
+        };
+
+        // GAP-03 开始校验（live；镜像 XP SelectPanel.onStartClick 三规则，按 jjbDesign 本地 selection 判定）。
+        const validate = (): string => {
+            for (let i = 0; i < 3; i++) {
+                if (!selection.slots[i].cmds[0]) return "第" + (i + 1) + "场指挥官未选择";
+            }
+            for (let i = 0; i < 3; i++) {
+                for (let k = 0; k < slotsPlan[i]; k++) {
+                    if (!selection.slots[i].factors[k]) return "第" + (i + 1) + "场因子" + (k + 1) + "未选择";
+                }
+            }
+            // GAP-04 B组≤1：触发条件精确对齐 XP（mfc>2 且非 onePick；8因子 mfc==2 不终检）。
+            if (!dAny.modeIsOnePick && dAny.modelFactorCount > 2) {
+                let b = 0;
+                for (let i = 0; i < 3; i++) {
+                    const c = selection.slots[i].cmds[0];
+                    if (c && groupMap[c] === "B") b++;
+                }
+                if (b > 1) return "B组指挥官只能选1个";
+            }
+            return "";
         };
 
         // 填充某个目标槽（前置预填、拖拽命中均走此一处）。真实会话同步写 JijieData.selected*。
@@ -85,6 +121,7 @@ export default class JJBSelect {
 
         // 让池子项可拖：TOUCH 拖动 → 抬手 checkHit 找最近匹配槽 → 命中填槽，否则回弹。
         const makeDraggable = (item: cc.Node, kind: string, name: string) => {
+            item.name = "jjbItem_" + kind + "_" + name; // 便于自动化定位
             const homeX = item.x, homeY = item.y;
             const homeIdx = item.getSiblingIndex(); // 还原用：拖动会置顶，回弹后复位到原层级（否则盖住自身名字浮层）
             let gx = 0, gy = 0, dragging = false;
@@ -173,22 +210,35 @@ export default class JJBSelect {
                 let hint: cc.Node = null;
                 if (!filled) { JJBView.dashBox(root, cxx, ty, 56, 67, th.dropBg, th.dropEdge, 1.5); hint = JJBView.label(root, cxx, ty + 26, 56, 16, "指挥官", 11, th.muted, HA.CENTER); }
                 const hit = JJBView.placed(root, cxx, ty, 56, 67);
+                hit.name = "jjbSlot_cmd_" + i + "_" + k; // 便于自动化定位
                 const t: DropTarget = { kind: "cmd", slot: i, idx: k, left: cxx, top: ty, w: 56, h: 67, hit, hint, fill: null, aux: [], value: null };
                 targets.push(t);
                 if (filled) fillTarget(t, prefill);
             }
-            // t-facs（52×52 wrap 5 列）
-            const facN = live ? FAC_PER_MATCH : Math.max(3, m.factors.length);
+            // t-facs（52×52 wrap 5 列）。live 行首先渲染锁定因子固定格（GAP-02：filled 同款 + 「锁定」角标，
+            // 不可拖不可清除，不入 targets；modeSuiji 整行无因子格），后接 GAP-01 动态手选槽。
             const facTop = ty + 75;
+            let cell = 0;
+            const lockName: string = (live && !dAny.modeSuiji) ? (dAny.lockFactorList || [])[i] : null;
+            if (lockName) {
+                const lxx = sx + 14;
+                JJBView.box(root, lxx, facTop, 52, 52, BLACK, th.accent, 1);
+                JJBView.sprite(root, lxx + 1, facTop + 1, 50, 50, "images/factor/" + lockName);
+                JJBView.box(root, lxx, facTop + 38, 34, 14, th.accent, null);
+                JJBView.label(root, lxx, facTop + 40, 34, 12, "锁定", 9, th.onAccent, HA.CENTER);
+                cell = 1;
+            }
+            const facN = live ? slotsPlan[i] : Math.max(3, m.factors.length);
             for (let k = 0; k < facN; k++) {
-                const fxx = sx + 14 + (k % 5) * 58;
-                const fyy = facTop + Math.floor(k / 5) * 58;
+                const fxx = sx + 14 + ((cell + k) % 5) * 58;
+                const fyy = facTop + Math.floor((cell + k) / 5) * 58;
                 // live：槽位留空(reserved)，主播拖拽编排；standalone：仅 active 场预填演示
                 const prefill = (!live && active) ? (factorPool[k] || m.factors[k]) : null;
                 const filled = !!prefill;
                 let hint: cc.Node = null;
                 if (!filled) { JJBView.dashBox(root, fxx, fyy, 52, 52, th.dropBg, th.dropEdge, 1.5); if (k === 0 && (live || !active)) hint = JJBView.label(root, fxx, fyy + 18, 52, 14, "因子", 11, th.muted, HA.CENTER); }
                 const hit = JJBView.placed(root, fxx, fyy, 52, 52);
+                hit.name = "jjbSlot_factor_" + i + "_" + k; // 便于自动化定位
                 const t: DropTarget = { kind: "factor", slot: i, idx: k, left: fxx, top: fyy, w: 52, h: 52, hit, hint, fill: null, aux: [], value: null };
                 targets.push(t);
                 if (filled) fillTarget(t, prefill);
@@ -200,6 +250,7 @@ export default class JJBSelect {
         // 左：因子池（design .pool-factors 固定 340，.factor 66×66 wrap 4 列）
         JJBView.label(root, PAD, poolTop, 120, 18, "FACTORS", 13, th.accent, HA.LEFT, 255, FONT_NUM);
         JJBView.label(root, PAD + 84, poolTop - 4, 200, 26, "选择因子", 20, th.ink);
+        if (live && factorPool.length === 0) JJBView.label(root, PAD, poolTop + 32, 330, 20, "随机模式 · 本局无需配置因子", 14, th.muted);
         factorPool.forEach((f, i) => {
             const fx = PAD + (i % 4) * 74, fy = poolTop + 26 + Math.floor(i / 4) * 74;
             const item = framedFactor(fx, fy, 66, 66, f);
@@ -229,7 +280,22 @@ export default class JJBSelect {
         if (th.style === "metal") JJBView.cutBox(root, bx, by, bw, 48, th.accent, null, 0, 12);
         else JJBView.box(root, bx, by, bw, 48, th.accent, null);
         JJBView.label(root, bx, by + 13, bw, 26, "比赛开始 ▶", 21, th.onAccent, HA.CENTER);
-        const startHit = JJBView.hit(root, bx, by, bw, 48, () => { if (onStart) onStart(); });
+        // GAP-03：不通过 → startbtn 左侧红字（th.lose 色；design 暂无此元素，先用 token 红字）+ 不导航。
+        let errNode: cc.Node = null;
+        const showError = (msg: string) => {
+            lastError = msg;
+            if (errNode && cc.isValid(errNode)) { errNode.destroy(); errNode = null; }
+            if (msg) errNode = JJBView.label(root, bx - 630, by + 15, 620, 22, msg, 16, th.lose, HA.RIGHT);
+            updateDebug();
+        };
+        const startHit = JJBView.hit(root, bx, by, bw, 48, () => {
+            if (live) {
+                const err = validate();
+                showError(err);
+                if (err) return;
+            }
+            if (onStart) onStart();
+        });
         startHit.name = "jjbStart"; // 便于自动化点击断言定位
 
         // 主题切换 reRenderCurrent 重建本屏时回读 JijieData.selected* 恢复已选视觉（数据在、节点树是新的）。

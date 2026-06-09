@@ -65,7 +65,13 @@ export default class JJBResult {
             (m.cmds || []).forEach((c: string, k: number) => JJBView.coverSprite(root, midX + k * 64, top + 13, 58, 70, "images/commander/" + c));
             const cmdCount = (m.cmds || []).length || 1;
             const facX = midX + cmdCount * 58 + (cmdCount - 1) * 8 + 16;
-            (m.factors || []).forEach((f: string, k: number) => JJBView.sprite(root, facX + k * 52, top + 25, 46, 46, "images/factor/" + f));
+            (m.factors || []).forEach((f: string, k: number) => {
+                JJBView.sprite(root, facX + k * 52, top + 25, 46, 46, "images/factor/" + f);
+                if (live && m.lock && k === 0) {
+                    JJBView.box(root, facX, top + 59, 32, 13, th.accent, null);
+                    JJBView.label(root, facX, top + 61, 32, 11, "锁定", 8, ON_STATE, HA.CENTER);
+                }
+            });
             // rcard-badge（v2：22px/900 放大）
             const bw = res === "bonus" ? 108 : 92;
             let bfill = th.win, bcol: cc.Color = ON_STATE;

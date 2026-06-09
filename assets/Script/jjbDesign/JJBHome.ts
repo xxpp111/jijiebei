@@ -8,7 +8,8 @@ const HAlign = cc.Label.HorizontalAlign;
 
 export default class JJBHome {
 
-    static build(root: cc.Node, th: Theme, onMode?: (i: number) => void): void {
+    static build(root: cc.Node, th: Theme, onMode?: (i: number) => void,
+                 nameInit?: string, onName?: (s: string) => void): void {
         JJBView.bg(root, th);
 
         // ---------- 联名 lockup（lg，放大强化 CM×集结杯）----------
@@ -25,11 +26,37 @@ export default class JJBHome {
         JJBView.label(root, 46, 152, 700, 28, EVENT.sub, 20, th.muted);
         JJBView.label(root, 46, 182, 900, 24, EVENT.org + "　·　B站主播「" + EVENT.host + "」", 16, th.muted);
 
-        // ---------- 选手输入 ----------
+        // ---------- 选手输入（GAP-16：cc.EditBox 真实输入，web 平台 DOM overlay 自动跟随节点）----------
         JJBView.label(root, 46, 226, 100, 28, "参赛选手", 20, th.ink);
         JJBView.box(root, 158, 218, 470, 54, th.panelBg, th.panelEdge, 1);
-        JJBView.label(root, 176, 235, 300, 24, "请输入选手 ID", 17, th.muted);
-        JJBView.box(root, 298, 232, 2, 26, th.accent); // caret
+        const ebNode = JJBView.placed(root, 172, 227, 442, 38);
+        ebNode.name = "jjbName"; // 便于自动化定位
+        // 程序化 EditBox：textLabel/placeholderLabel 须手工建并指派（编辑器外创建为空时，失焦后文本不可见）
+        const mkLbl = (txt: string, color: cc.Color): cc.Label => {
+            const n = new cc.Node();
+            n.parent = ebNode;
+            n.setAnchorPoint(0, 1);
+            n.setPosition(6, -7);
+            const l = n.addComponent(cc.Label);
+            l.string = txt;
+            l.fontSize = 17;
+            l.lineHeight = 24;
+            l.horizontalAlign = HAlign.LEFT;
+            l.verticalAlign = cc.Label.VerticalAlign.TOP;
+            l.overflow = cc.Label.Overflow.NONE;
+            n.color = color;
+            return l;
+        };
+        const eb = ebNode.addComponent(cc.EditBox);
+        eb.inputMode = cc.EditBox.InputMode.SINGLE_LINE;
+        eb.returnType = cc.EditBox.KeyboardReturnType.DONE;
+        eb.maxLength = 20;
+        eb.textLabel = mkLbl("", th.ink);
+        eb.placeholderLabel = mkLbl("请输入选手 ID", th.muted);
+        eb.string = nameInit || "";
+        const report = () => { if (onName) onName(eb.string); };
+        ebNode.on("text-changed", report);
+        ebNode.on("editing-did-ended", report);
 
         // ---------- 比赛模式 ----------
         JJBView.label(root, 46, 300, 120, 18, "SELECT MODE", 13, th.accent, HAlign.LEFT, 255, FONT_NUM);

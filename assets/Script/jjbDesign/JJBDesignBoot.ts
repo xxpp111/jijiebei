@@ -21,6 +21,7 @@ export default class JJBDesignBoot {
     private static curStyle: string = "metal";
     private static curMode: string = "dark";
     private static curScreen: string = "home";
+    private static playerInput: string = ""; // GAP-16：home EditBox 输入值（主题切换重建后恢复）
 
     /** XP 逻辑就绪后调用；仅 ?design=... 时挂载新前端。任何异常都吞掉，不影响正常游戏。 */
     static tryMount(stage: cc.Node): void {
@@ -54,10 +55,10 @@ export default class JJBDesignBoot {
     private static render(q: { [k: string]: string }): void {
         try {
             const screen = q["design"];
-            if (screen === "overlay") { JJBDesignBoot.curScreen = "overlay"; JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
-            else if (screen === "select") { JJBDesignBoot.curScreen = "select"; JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); }
-            else if (screen === "battle") { JJBDesignBoot.curScreen = "battle"; JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult()); }
-            else if (screen === "result") { JJBDesignBoot.curScreen = "result"; JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
+            if (screen === "overlay") { JJBDesignBoot.setScreen("overlay"); JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
+            else if (screen === "select") { JJBDesignBoot.setScreen("select"); JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); }
+            else if (screen === "battle") { JJBDesignBoot.setScreen("battle"); JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult()); }
+            else if (screen === "result") { JJBDesignBoot.setScreen("result"); JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
             else {
                 JJBDesignBoot.showHome();
                 if (q["auto"] !== undefined && q["auto"] !== "") JJBDesignBoot.onMode(parseInt(q["auto"], 10) || 0);
@@ -66,6 +67,12 @@ export default class JJBDesignBoot {
         } catch (e) {
             cc.warn("[JJBDesignBoot] render 失败: " + e);
         }
+    }
+
+    /** curScreen 唯一写入口（同步暴露给自动化断言）。 */
+    private static setScreen(s: string): void {
+        JJBDesignBoot.curScreen = s;
+        try { const w: any = window; w.__jjbDebug = w.__jjbDebug || {}; w.__jjbDebug.screen = s; } catch (e) { /* noop */ }
     }
 
     /** 注入 Google Fonts（拉丁：Oswald/Rajdhani/Share Tech Mono），就绪或超时后回调渲染。中文走系统字。 */
@@ -112,15 +119,18 @@ export default class JJBDesignBoot {
     }
 
     private static showHome(): void {
-        JJBDesignBoot.curScreen = "home";
-        JJBHome.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (i) => JJBDesignBoot.onMode(i));
+        JJBDesignBoot.setScreen("home");
+        JJBHome.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (i) => JJBDesignBoot.onMode(i),
+            JJBDesignBoot.playerInput, (s) => { JJBDesignBoot.playerInput = s; });
     }
 
     /** 点击模式 → 调 XP 的 InitPanel 真实逻辑（设 JijieData + toStart 随机抽取）→ 确保 toSelect 后进选择面板。 */
     private static onMode(i: number): void {
         try {
             const ip: any = JijieControl.jjUI.initPanel;
-            if (ip && ip.txtName) ip.txtName.string = "选手";
+            // GAP-16：把 home EditBox 真实输入写进 XP 老输入框，XP onClickX 自己读它写 JijieData.playerName（零语义漂移）
+            const nm = (JJBDesignBoot.playerInput || "").trim();
+            if (ip && ip.txtName) ip.txtName.string = nm || "选手";
             // 赛制（土豆确认 2026-06）：单刷一律打满 3 场——不沿用老 UI「modeIsRandom=falsy 输一场即终局」语义。
             // 显式置 false 防多局残留（XP initStart 不重置该 flag）；「随机抽签」快捷路径接入时再置 true。
             JijieData.modeIsRandom = false;
@@ -155,15 +165,15 @@ export default class JJBDesignBoot {
 
     /** 端到端导航（同一会话内重建节点树，数据连续，不刷新页面）。 */
     private static goSelect(): void {
-        JJBDesignBoot.curScreen = "select";
+        JJBDesignBoot.setScreen("select");
         JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
     }
     private static goBattle(): void {
-        JJBDesignBoot.curScreen = "battle";
+        JJBDesignBoot.setScreen("battle");
         JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult());
     }
     private static goResult(): void {
-        JJBDesignBoot.curScreen = "result";
+        JJBDesignBoot.setScreen("result");
         JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
     }
 

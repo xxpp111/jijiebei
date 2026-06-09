@@ -84,10 +84,33 @@ export const VAL_RESULT = ["lose", "win", "bonus"]; // 反查：index = winLoseL
 export const FAC_PER_MATCH = 3;
 export function facFlatIdx(slot: number, idx: number): number { return slot * FAC_PER_MATCH + idx; }
 
-// 屏用 match 视图模型（与 DEMO_MATCHES 同形：slot/map/cmds/factors/result，可选 doubles）。
+/** GAP-01 槽数动态化：每场「手选」因子槽数（不含锁定因子）。
+ *  纯函数镜像 XP LMatchItem.updateStart 的 fcount 规则（fcount 含锁定因子，手选 = min(fcount-1, 3)；
+ *  12因子场3 fcount=5 的 factor4 是幽灵槽——场景 active=false 且激活代码被注释，物理上限 3 = 9 格契约）。
+ *  对账表：8因子=1/2/2、10因子=2/2/3、12因子=3/3/3、拯救=2/2/3、随机=0/0/0、非酋=1/1/1。
+ *  恒等式（交叉断言用）：因子池数（随机因子数7/10/13 = 5/7/9）= 三场手选槽数之和。 */
+export function manualSlots(slotIdx: number): number {
+    const d: any = JijieData;
+    if (d.modeSuiji) return 0;   // 随机模式：因子槽全隐藏（连锁定因子都不显示）
+    if (d.modeFeiqiu) return 1;  // 非酋：仅 factor1
+    let f = d.modelFactorCount;
+    if (slotIdx === 2) {
+        f++;
+        if (d.modeIsVeryHard) f = 4;
+        if (d.modeIsOnePick && d.modelFactorCount === 3) f = 3;
+    } else if (slotIdx === 1) {
+        if (d.modelFactorCount === 2) f++;
+        if (d.modeIsVeryHard) f = 3;
+    } else {
+        if (d.modeIsVeryHard) f = 3;
+    }
+    return Math.min(f - 1, 3);
+}
+
+// 屏用 match 视图模型（与 DEMO_MATCHES 同形：slot/map/cmds/factors/result，可选 doubles/lock）。
 export interface MatchVM {
     slot: string; map: string; cmds: string[]; factors: string[];
-    result?: string; doubles?: boolean;
+    result?: string; doubles?: boolean; lock?: string;
 }
 
 /** 是否处于真实会话：home→select 跑过 XP toStart+toSelect（status>=2 且抽出 3 张地图）。 */
@@ -96,13 +119,14 @@ export function jjbLive(): boolean {
     return !!(d && d.status >= 2 && Array.isArray(d.mapList) && d.mapList.length >= 3);
 }
 
-/** 把真实 JijieData 整理成 3 场视图模型：map/lock 来自抽取结果，cmds/factors 来自已写入的 selected*。 */
+/** 把真实 JijieData 整理成 3 场视图模型：map/lock 来自抽取结果，cmds/factors 来自已写入的 selected*。
+ *  GAP-02：lock 单独透出（battle/result 给首因子加锁定标识）；随机模式 XP 隐藏锁定因子，此处同样不混入。 */
 export function sessionMatches(): MatchVM[] {
     const d: any = JijieData;
     const out: MatchVM[] = [];
     for (let i = 0; i < 3; i++) {
         const cmd: string = (d.selectedCommanderList || [])[i];
-        const lock: string = (d.lockFactorList || [])[i];
+        const lock: string = d.modeSuiji ? null : (d.lockFactorList || [])[i]; // 随机模式：锁定因子不显示（对齐 XP updateStart）
         const fac: string[] = lock ? [lock] : []; // 锁定因子(自动) 打头
         for (let k = 0; k < FAC_PER_MATCH; k++) {
             const v = (d.selectedFactorList || [])[facFlatIdx(i, k)];
@@ -116,6 +140,7 @@ export function sessionMatches(): MatchVM[] {
             factors: fac,
             result: (typeof wl === "number") ? VAL_RESULT[wl] : undefined,
             doubles: false,
+            lock: lock || undefined,
         });
     }
     return out;

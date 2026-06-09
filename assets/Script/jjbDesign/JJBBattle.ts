@@ -117,10 +117,16 @@ export default class JJBBattle {
             // match-cmds（avatar big 70×84）
             (m.cmds || []).forEach((c: string, k: number) => JJBView.coverSprite(root, 480 + k * 78, rowTop + 16, 70, 84, "images/commander/" + c));
 
-            // match-factors（50×50）
+            // match-factors（50×50）；live 首位是锁定因子（sessionMatches lock 打头）→ 加「锁定」角标以示区分（GAP-02）
             const cmdCount = (m.cmds || []).length || 1;
             const facX = 480 + cmdCount * 70 + (cmdCount - 1) * 8 + 20;
-            (m.factors || []).forEach((f: string, k: number) => JJBView.sprite(root, facX + k * 62, rowTop + 30, 56, 56, "images/factor/" + f));
+            (m.factors || []).forEach((f: string, k: number) => {
+                JJBView.sprite(root, facX + k * 62, rowTop + 30, 56, 56, "images/factor/" + f);
+                if (live && m.lock && k === 0) {
+                    JJBView.box(root, facX, rowTop + 72, 34, 14, th.accent, null);
+                    JJBView.label(root, facX, rowTop + 74, 34, 12, "锁定", 9, ON_STATE, HA.CENTER);
+                }
+            });
 
             // verdict
             drawVerdict(i);
