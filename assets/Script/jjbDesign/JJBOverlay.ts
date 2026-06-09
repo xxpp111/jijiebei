@@ -1,7 +1,7 @@
 // 集结杯 × CM — 常驻浮层（全屏直播记分板）。忠实还原 design/v1 Overlay + theme.css .ovf-*。
 // 真实游戏图标：地图横幅 / 指挥官头像 / 因子图标（resources/images/*）。数据暂用演示，后续接 XP。
 import { Theme } from "./JJBTheme";
-import { EVENT, DEMO_MATCHES, MARK, FONT_NUM } from "./JJBData";
+import { EVENT, DEMO_MATCHES, markFor, FONT_NUM } from "./JJBData";
 import JJBView from "./JJBView";
 
 const HA = cc.Label.HorizontalAlign;
@@ -15,11 +15,11 @@ export default class JJBOverlay {
         const L = 56, R = 1224, W = R - L; // 内容区
 
         // ---------- 头部 ----------
-        JJBView.sprite(root, L, 38, 75, 60, MARK[th.style] || MARK["metal"]);
+        JJBView.sprite(root, L, 38, 75, 60, markFor(th.style, th.mode));
         JJBView.box(root, L + 94, 46, 2, 46, th.accent);
         const tw = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 56, tWd = Math.round(tH * tw / 200);
-        JJBView.sprite(root, L + 114, 36, tWd, tH, "images/brand/jjb-title-" + th.style);
+        JJBView.sprite(root, L + 114, 36, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         JJBView.label(root, L + 116, 96, 320, 18, EVENT.en, 13, th.accent, HA.LEFT, 255, FONT_NUM);
         JJBView.label(root, 900, 36, 324, 56, "1 / 3", 46, th.accent, HA.RIGHT, 255, FONT_NUM);
         JJBView.label(root, 900, 100, 324, 20, "当前获胜", 14, th.muted, HA.RIGHT);

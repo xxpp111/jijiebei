@@ -1,7 +1,7 @@
 // 集结杯 × CM — 首页（程序化还原 design/v1 首页；token 驱动可切风格/明暗）
 // onMode(i): 点击第 i 个模式按钮的回调（由 JJBDesignBoot 接到 XP 真实逻辑）。
 import { Theme } from "./JJBTheme";
-import { EVENT, MODES, MARK, FONT_NUM } from "./JJBData";
+import { EVENT, MODES, markFor, FONT_NUM } from "./JJBData";
 import JJBView from "./JJBView";
 
 const HAlign = cc.Label.HorizontalAlign;
@@ -12,13 +12,13 @@ export default class JJBHome {
         JJBView.bg(root, th);
 
         // ---------- 联名 lockup（lg） ----------
-        const markPath = MARK[th.style] || MARK["metal"];
+        const markPath = markFor(th.style, th.mode);
         JJBView.sprite(root, 50, 34, 110, 88, markPath);
         JJBView.box(root, 178, 46, 3, 64, th.accent);
         // 标题艺术字整图（PIL 预渲染，含金属渐变/衬线/字距，替代 Label）
         const titleW = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 72, tW = Math.round(tH * titleW / 200);
-        JJBView.sprite(root, 196, 26, tW, tH, "images/brand/jjb-title-" + th.style);
+        JJBView.sprite(root, 196, 26, tW, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         JJBView.label(root, 201, 102, 260, 18, EVENT.en, 13, th.accent, HAlign.LEFT, 255, FONT_NUM);
 
         // ---------- 副标 / 主办 ----------

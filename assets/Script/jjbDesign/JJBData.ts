@@ -43,6 +43,15 @@ export const MARK: { [k: string]: string } = {
     sc2: "images/brand/logo-cm-silver",
     minimal: "images/brand/logo-cm-vector",
 };
+// v2：亮色专属字标（深金属重映射，白底可读 + 保留浮雕）。Lockup 按 mode 取明/暗。
+export const MARK_LIGHT: { [k: string]: string } = {
+    metal: "images/brand/logo-cm-metal-light",
+    sc2: "images/brand/logo-cm-sc2-light",
+    minimal: "images/brand/logo-cm-minimal-light",
+};
+export function markFor(style: string, mode: string): string {
+    return (mode === "light" ? MARK_LIGHT : MARK)[style] || MARK["metal"];
+}
 
 // 演示对局（真实游戏图标名，resources 里均存在）——后续接 XP 真实 JijieData。
 // status: win 胜利 / live 进行中 / wait 待战（浮层用）。result: win/bonus/lose（对战/结算三态判定，对齐 design MATCHES）。

@@ -5,7 +5,7 @@
 // XP 语义（jijie2/LMatchItem 权威）：胜利 winCount++/totalCount++；带奖励 winCount++/winbCount++/totalCount++；失败 totalCount++。
 //   即 winCount 已含带奖励=总获胜场数。0 改 jijie2 源码（只读写 public static + 调 public showResultEnd）。
 import { Theme } from "./JJBTheme";
-import { DEMO_MATCHES, MARK, EVENT, RESULT_LABEL, RESULT_VAL, jjbLive, sessionMatches } from "./JJBData";
+import { DEMO_MATCHES, markFor, EVENT, RESULT_LABEL, RESULT_VAL, jjbLive, sessionMatches } from "./JJBData";
 import JJBView from "./JJBView";
 import JijieData from "../jijie2/JijieData";       // 只读写 public static（goal 允许；不改源码）
 import JijieControl from "../jijie2/JijieContro";   // 调 public showResultEnd（XP 比赛结束钩子）
@@ -28,10 +28,10 @@ export default class JJBBattle {
         const matches: any[] = live ? sessionMatches() : DEMO_MATCHES;
 
         // ---------- TopBar（与选择面板同款） ----------
-        JJBView.sprite(root, 50, 30, 52, 42, MARK[th.style] || MARK["metal"]);
+        JJBView.sprite(root, 50, 30, 52, 42, markFor(th.style, th.mode));
         const titleW = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 42, tWd = Math.round(tH * titleW / 200);
-        JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style);
+        JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         const fcount = dAny.modelFactorCount === 2 ? 8 : (dAny.modelFactorCount === 4 ? 12 : 10);
         JJBView.label(root, 760, 30, 470, 20, live ? ("当前选手  " + (dAny.playerName || "选手")) : "当前选手  Potato_01", 15, th.muted, HA.RIGHT);
         JJBView.label(root, 760, 54, 470, 20, live ? ("比赛模式  " + fcount + " 因子 · 手选") : "比赛模式  8 因子 · 手选", 15, th.ink, HA.RIGHT);

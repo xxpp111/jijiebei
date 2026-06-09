@@ -4,7 +4,7 @@
 //   · 真实会话(home→select 跑过 XP toStart+toSelect)=渲染真实 mapList/随机池，拖拽/预填写真实 JijieData.selectedCommanderList/selectedFactorList。
 // 吸附判定复用 jijie2 SelectPanel.checkHit(<30px)。0 改 jijie2 源码。
 import { Theme } from "./JJBTheme";
-import { EVENT, DEMO_MATCHES, FACTORS, GROUP_A, GROUP_B, POOL, MARK, FONT_NUM, jjbLive, sessionMatches, FAC_PER_MATCH, facFlatIdx } from "./JJBData";
+import { EVENT, DEMO_MATCHES, FACTORS, GROUP_A, GROUP_B, POOL, markFor, FONT_NUM, jjbLive, sessionMatches, FAC_PER_MATCH, facFlatIdx } from "./JJBData";
 import JJBView from "./JJBView";
 import SelectPanel from "../jijie2/view/SelectPanel"; // 只读复用静态 checkHit（<30px 吸附判定）
 import JijieData from "../jijie2/JijieData";           // 真实会话下读写 public static（goal 允许；不改源码）
@@ -108,10 +108,10 @@ export default class JJBSelect {
         };
 
         // ---------- TopBar（lockup sm + meta） ----------
-        JJBView.sprite(root, 50, 30, 52, 42, MARK[th.style] || MARK["metal"]);
+        JJBView.sprite(root, 50, 30, 52, 42, markFor(th.style, th.mode));
         const titleW = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 42, tWd = Math.round(tH * titleW / 200);
-        JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style);
+        JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         const fcount = dAny.modelFactorCount === 2 ? 8 : (dAny.modelFactorCount === 4 ? 12 : 10);
         const playerStr = live ? ("当前选手  " + (dAny.playerName || "选手")) : "当前选手  Potato_01";
         const modeStr = live ? ("比赛模式  " + fcount + " 因子 · 手选") : "比赛模式  8 因子 · 手选";

@@ -22,7 +22,8 @@ export default class JJBDesignBoot {
     static tryMount(stage: cc.Node): void {
         try {
             const q = JJBDesignBoot.parseQuery();
-            if (!q["design"]) return;
+            // 去旗标默认接管：普通 URL 即进新 UI(首页)成生产入口；?design=<screen> 仍可单屏预览；?design=off 逃生回落老 UI。
+            if (q["design"] === "off") return;
 
             cc.debug.setDisplayStats(false);
             const jj = stage.getChildByName("jjUI");
@@ -34,7 +35,9 @@ export default class JJBDesignBoot {
             // 先加载拉丁字体，就绪后再渲染（避免 Label 用 fallback 画完缓存、字体后到不重绘）
             JJBDesignBoot.loadFontsThen(() => JJBDesignBoot.render(q));
         } catch (e) {
-            cc.warn("[JJBDesignBoot] 挂载失败，不影响正常游戏: " + e);
+            // Y1 可见降级：默认接管后挂载失败不黑屏——升 error(生产可见) + 恢复老 jjUI 兜底。
+            cc.error("[JJBDesignBoot] 挂载失败，回落老 UI: " + e);
+            try { const jj = stage.getChildByName("jjUI"); if (jj) jj.active = true; } catch (e2) { /* noop */ }
         }
     }
 
