@@ -152,3 +152,20 @@
 **验证真相纠偏**：之前反复「卡 Cocos splash」= **browser-use 自身 WebGL 渲染/截图故障**（截不出 canvas 实时帧，多次返回 byte 完全相同的 splash 缓存帧），**非代码问题**。换 **Playwright** 铁证：scene=danshua、JJBDesignRoot **84 节点立即渲染**、**0 errors**、背景 **0 全屏 Sprite（前18节点=1280×41渐变段 + 3个1280×720 网格/光晕/暗角，纯 Graphics）**、卡片四角刻线渲染、宽屏露边盖住、`__jjbDebug.select.live:true`（真实抽取 菲尼克斯/斯图科夫/阿塔尼斯+因子已接入）。sc2 **dark+light 双模式**均与 design #17/#18 一致；金属 logo + 绿/深绿标题质感到位。
 
 **剩余（地基续）**：① light 标题色微调（sc2-light 目标 #123a26，当前≈#1a5c3a 已贴近，可选）② 端到端点击实测（select 抽取→battle 三场判定→result 大比分，验「分配因子」手感）③ 数据 PR（fix/jjdata-factor-score-backfill 待 XP 给 derivative2002 写权限 → push+gh pr create）④ design/v2 稿入库 ⑤ cutover 动态回归（删旗标已做，全模式真机+OBS 16:9 回归留部署窗口）。
+
+## v3 精修完成（2026-06-09 · 完整 handoff 逐项复刻 + 三强化 + select 填满）
+
+design **v3 完整 handoff**（28MB tar.gz：README/chat1.md/theme.css/styles.css/screens.jsx/spec.jsx/data.jsx/assets，handoff URL 触发 tar.gz 下载而非网页）已解压入库 `design/v3/`。据此逐项复刻（commit `bf9e0e3` 代码 + `29fe3c6` 入库）。
+
+**三强化（用户反馈：Logo 金色 / 联名明显 / 字体容器更大）**：
+- **全金 logo**：`JJBData.MARK` dark 三皮肤统一 `logo-cm-gold`（light 仍各自深色版保白底可读）。
+- **联名放大**：`JJBHome` lockup logo 88→100 / 标题 72→84 / 竖线 64→74 / en 13→16（超 v3 lg）；mode-btn 88→**104** / no 33 / name 25；页边距 50→38。
+- **容器字大**：Battle factor 50→56、Result rcard 96→104、Overlay 大比分 46→58。
+
+**select 布局空白修复**（用户截图问题：真实会话下半大白）：`JJBSelect` 三场槽放大（slotH 222→300，地图/指挥官/因子放大）+ 池区放大（factor/指挥官 66→74）+ live 自选空区换「从 A/B 组拖拽」提示 + 比赛开始 live 上移 596（消除孤立空白）+ topbar 页边距 38。
+
+**背景**：`JJBView.bg` sc2 网格 alpha 15/20→13/15（5%）+ 椭圆 Mask 遮罩（中心实四周淡，对齐 design radial mask）；metal 斜纹确认 28° from vertical = CSS 118°（注释修正，dx 不变）。
+
+**验证手法纠偏**：Playwright `page.screenshot` 对 Cocos WebGL 持续 rAF **超时**（等不到稳定帧）→ 改 **CDP `Page.captureScreenshot` return base64**（超限自动存 tool-results 文件 → python 正则提 `/9j/` 解码 jpg → Read）。sc2-dark home（金logo+放大lockup+mode-btn 104 实测）+ select live（填满）+ 端到端（home→select→battle→3判定→result，winCount=2 含带奖励不双计）；**0 errors**，椭圆 Mask 节点正常渲染。
+
+**剩余**：metal/minimal×light + battle/result/overlay 逐屏截图（token 驱动逻辑同，未逐一）；home 6 卡到页脚留白（有页脚锚底，非孤立，未调）；`?design=home` 在 danshua 下点模式进 select 后 URL 不变（正常单页导航，非 bug）。
