@@ -140,3 +140,15 @@
 **P5 收口（2026-06-09 · 真代码审查 = 修 harness 盲审）**：read-only subagent 逐行审 P5 未提交 diff + 通读 jjbDesign/jijie2 边界 → **🔴 0 must-fix bug**；🟡 Y1（tryMount catch-all，cutover 强制前置）+ Y2（selectedFactorList 稀疏数组，vestigial 无害不阻塞）；🟢 G1-G10 全 PASS（winCount 对齐 LMatchItem 权威 / jijie2 0改 git 实证 / onMode 各模式恰好 toSelect 一次 / JJBDrawn 删除 0 残留 / showResultEnd+JJLog 安全 / 稀疏 winLoseList filter 幂等 / 异步 cc.isValid 守护 / 事件无泄漏 / live-standalone 三屏一致双防护）。**总评 P5 可安全提交**。全模式真机回归（极难/拯救/随机）代码层已静态确证（G3），动态回归留 cutover 前。
 
 **待启动（地基好 + 和 XP 对齐部署窗口后）**：单刷 cutover（去 `JJBDesignBoot.ts:25` 旗标默认接管 + 改 title=集结杯 + 清场景旧文本 + 全模式回归）——🔴 **强制前置 Y1**：删旗标的同一 PR 必须给 `JJBDesignBoot.tryMount` 的 catch-all（行36-38，现仅 `cc.warn` 吞异常）加可见降级/上报 + 挂载失败回落老 jjUI 兜底，否则 cutover 后任何挂载异常=直播开赛黑屏静默无报错（真代码审查 Y1）；双打官突+n 引擎（独立 ≥3 phase 立项）；XP 重 build+重部署。
+
+## v2 落地 + 风格整改完成（2026-06-09 · 最大设计债清偿）
+
+**v2 Claude Design handoff 落地**（commit 78de115）：6 套标题图按皮肤×明暗重出（PIL 衬线/黑体+渐变）、亮色 logo（logo-cm-*-light）、去旗标默认接管（`JJBDesignBoot` 改 `q["design"]==="off"` 才退出 + Y1 catch 加 cc.error+jjUI 兜底）、结算战绩卡放大对齐 v2。
+
+**风格整改**（commit d2262ee · 清偿「皮肤专属视觉 Cocos 未还原」最大债）：
+- `JJBView.bg` 弃写实大图 → 程序化（18段渐变 + sc2 44px网格/metal 118°斜纹 + 顶部光晕 + 暗角）；新增 **overscan 纯色底** 盖住宽屏 canvas 在 1280×720 之外露出的 XP 原场景写实背景
+- `JJBView.panel` 卡片 helper（metal 切角12 / sc2 四角L刻线 / minimal 直角）；5 屏卡片（Home 模式按钮/Battle 场卡/Result 战绩卡/Select 场卡/Overlay 场卡）统一用 panel
+
+**验证真相纠偏**：之前反复「卡 Cocos splash」= **browser-use 自身 WebGL 渲染/截图故障**（截不出 canvas 实时帧，多次返回 byte 完全相同的 splash 缓存帧），**非代码问题**。换 **Playwright** 铁证：scene=danshua、JJBDesignRoot **84 节点立即渲染**、**0 errors**、背景 **0 全屏 Sprite（前18节点=1280×41渐变段 + 3个1280×720 网格/光晕/暗角，纯 Graphics）**、卡片四角刻线渲染、宽屏露边盖住、`__jjbDebug.select.live:true`（真实抽取 菲尼克斯/斯图科夫/阿塔尼斯+因子已接入）。sc2 **dark+light 双模式**均与 design #17/#18 一致；金属 logo + 绿/深绿标题质感到位。
+
+**剩余（地基续）**：① light 标题色微调（sc2-light 目标 #123a26，当前≈#1a5c3a 已贴近，可选）② 端到端点击实测（select 抽取→battle 三场判定→result 大比分，验「分配因子」手感）③ 数据 PR（fix/jjdata-factor-score-backfill 待 XP 给 derivative2002 写权限 → push+gh pr create）④ design/v2 稿入库 ⑤ cutover 动态回归（删旗标已做，全模式真机+OBS 16:9 回归留部署窗口）。
