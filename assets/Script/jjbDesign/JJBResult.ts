@@ -60,7 +60,7 @@ export default class JJBResult {
             if (m.doubles) { JJBView.box(root, padL, top + 58, 44, 20, null, th.accent, 1); JJBView.label(root, padL, top + 61, 44, 16, "双打", 12, th.accent, HA.CENTER); }
             // rcard-map（thumb 248×64）
             const mapX = padL + 116 + 16;
-            JJBView.coverSprite(root, mapX, top + 16, 248, 64, "images/maps/" + m.map);
+            JJBView.coverSprite(root, mapX, top + 30, 248, 44, "images/maps/" + m.map);
             // rcard-mid（cmds 58×70 + facs 46×46）
             const midX = mapX + 248 + 22;
             (m.cmds || []).forEach((c: string, k: number) => JJBView.coverSprite(root, midX + k * 64, top + 13, 58, 70, "images/commander/" + c));

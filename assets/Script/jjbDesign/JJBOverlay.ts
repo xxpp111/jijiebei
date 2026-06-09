@@ -39,7 +39,7 @@ export default class JJBOverlay {
                 JJBView.label(root, L + 24, Y + 68, 52, 18, "双打", 12, th.accent, HA.CENTER);
             }
             // 地图横幅（含烤进去的地图名艺术字）— cover 等比不压扁
-            JJBView.coverSprite(root, 220, Y + (H - 64) / 2, 288, 64, "images/maps/" + m.map);
+            JJBView.coverSprite(root, 220, Y + (H - 51) / 2, 288, 51, "images/maps/" + m.map);
             // 指挥官头像
             let cx = 540;
             m.cmds.forEach((c) => { JJBView.sprite(root, cx, Y + (H - 78) / 2, 64, 78, "images/commander/" + c); cx += 72; });
