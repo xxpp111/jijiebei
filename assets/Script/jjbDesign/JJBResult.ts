@@ -46,7 +46,7 @@ export default class JJBResult {
         JJBView.label(root, 440, 274, 400, 24, wins === 3 ? "完美通关" : "本局战绩", 17, th.muted, HA.CENTER);
 
         // ---------- 战绩卡列表（v2：max-width 1040 居中 → x[120,1160]，卡 96px + 左侧胜负色条 + 放大）----------
-        const listX = 120, listW = 1040, rH = 96, gap = 14, list0 = 314;
+        const listX = 120, listW = 1040, rH = 104, gap = 12, list0 = 300;
         matches.forEach((m: any, i: number) => {
             const top = list0 + i * (rH + gap);
             const res = VAL_RESULT[wl[i]] || m.result || "win";
@@ -56,7 +56,7 @@ export default class JJBResult {
             JJBView.box(root, listX, top, 6, rH, barCol, null);
             const padL = listX + 30;
             // rcard-no（slot 24px + 双打标）
-            JJBView.label(root, padL, top + (m.doubles ? 24 : 36), 116, 30, m.slot, 24, th.ink, HA.LEFT);
+            JJBView.label(root, padL, top + (m.doubles ? 26 : 38), 116, 32, m.slot, 27, th.ink, HA.LEFT);
             if (m.doubles) { JJBView.box(root, padL, top + 58, 44, 20, null, th.accent, 1); JJBView.label(root, padL, top + 61, 44, 16, "双打", 12, th.accent, HA.CENTER); }
             // rcard-map（thumb 248×64）
             const mapX = padL + 116 + 16;

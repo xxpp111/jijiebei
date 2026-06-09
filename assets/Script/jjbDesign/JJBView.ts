@@ -144,16 +144,27 @@ export default class JJBView {
                 Math.round(th.bgA.b + (th.bgB.b - th.bgA.b) * t), 255);
             JJBView.box(parent, 0, Math.floor(720 * i / SEG), 1280, Math.ceil(720 / SEG) + 1, col);
         }
-        // ② 皮肤纹理：sc2=44px 网格 / metal=118° 斜纹 / minimal=无
-        const tex = JJBView.placed(parent, 0, 0, 1280, 720).addComponent(cc.Graphics);
+        // ② 皮肤纹理：sc2=44px 网格(椭圆遮罩→中心实四周淡,对齐 design radial mask) / metal=118° 斜纹 / minimal=无
         if (th.style === "sc2") {
-            tex.strokeColor = cc.color(th.accent.r, th.accent.g, th.accent.b, th.mode === "dark" ? 15 : 20);
-            tex.lineWidth = 1;
-            for (let x = 0; x <= 1280; x += 44) { tex.moveTo(x, 0); tex.lineTo(x, -720); }
-            for (let y = 0; y <= 720; y += 44) { tex.moveTo(0, -y); tex.lineTo(1280, -y); }
-            tex.stroke();
+            // 网格 accent@5%；椭圆 Mask 裁到中心区，近似 design radial 遮罩(中心30%实→边缘92%透明)
+            const maskNode = new cc.Node("jjbGridMask");
+            maskNode.parent = parent;
+            maskNode.setAnchorPoint(0.5, 0.5);
+            maskNode.setContentSize(1280 * 0.92, 720 * 0.84);
+            maskNode.setPosition(0, 72); // design 中心(640,288)=(50%,40%) → root 局部(0,72)
+            const mask = maskNode.addComponent(cc.Mask);
+            mask.type = cc.Mask.Type.ELLIPSE;
+            const gn = new cc.Node();
+            gn.parent = maskNode; gn.setAnchorPoint(0.5, 0.5); gn.setPosition(0, 0);
+            const g = gn.addComponent(cc.Graphics);
+            g.strokeColor = cc.color(th.accent.r, th.accent.g, th.accent.b, th.mode === "dark" ? 14 : 16);
+            g.lineWidth = 1;
+            for (let x = 0; x <= 1280; x += 44) { const lx = x - 640; g.moveTo(lx, 288); g.lineTo(lx, -432); }
+            for (let y = 0; y <= 720; y += 44) { const ly = 288 - y; g.moveTo(-640, ly); g.lineTo(640, ly); }
+            g.stroke();
         } else if (th.style === "metal") {
-            const dx = 382; // ≈ 720·tan(28°)，近似 118° 斜纹
+            const tex = JJBView.placed(parent, 0, 0, 1280, 720).addComponent(cc.Graphics);
+            const dx = 382; // 720·tan(28°)：斜纹偏垂直 28° = CSS repeating-linear-gradient(118°)
             tex.strokeColor = th.mode === "dark" ? cc.color(255, 255, 255, 7) : cc.color(21, 35, 58, 7);
             tex.lineWidth = 1;
             for (let x = -dx; x <= 1280; x += 7) { tex.moveTo(x, 0); tex.lineTo(x + dx, -720); }

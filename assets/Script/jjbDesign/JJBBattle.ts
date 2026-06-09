@@ -119,7 +119,7 @@ export default class JJBBattle {
             // match-factors（50×50）
             const cmdCount = (m.cmds || []).length || 1;
             const facX = 480 + cmdCount * 70 + (cmdCount - 1) * 8 + 20;
-            (m.factors || []).forEach((f: string, k: number) => JJBView.sprite(root, facX + k * 60, rowTop + 33, 50, 50, "images/factor/" + f));
+            (m.factors || []).forEach((f: string, k: number) => JJBView.sprite(root, facX + k * 62, rowTop + 30, 56, 56, "images/factor/" + f));
 
             // verdict
             drawVerdict(i);

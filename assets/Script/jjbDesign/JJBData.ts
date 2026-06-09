@@ -37,11 +37,11 @@ export const POOL: (string | null)[] = [
 // 拉丁/数字字体（设计 --font-num）。中文不用它（走系统字）。需 JJBDesignBoot 注入 Google Fonts。
 export const FONT_NUM = "Oswald";
 
-// CM 联名字标（已导入 resources/images/brand/）。按风格取色版本。
+// CM 联名字标（已导入 resources/images/brand/）。用户决策：dark 模式三皮肤统一金色 dM（强化金色联名突出）。
 export const MARK: { [k: string]: string } = {
     metal: "images/brand/logo-cm-gold",
-    sc2: "images/brand/logo-cm-silver",
-    minimal: "images/brand/logo-cm-vector",
+    sc2: "images/brand/logo-cm-gold",
+    minimal: "images/brand/logo-cm-gold",
 };
 // v2：亮色专属字标（深金属重映射，白底可读 + 保留浮雕）。Lockup 按 mode 取明/暗。
 export const MARK_LIGHT: { [k: string]: string } = {

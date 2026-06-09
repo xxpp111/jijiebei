@@ -21,7 +21,7 @@ export default class JJBOverlay {
         const tH = 56, tWd = Math.round(tH * tw / 200);
         JJBView.sprite(root, L + 114, 36, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         JJBView.label(root, L + 116, 96, 320, 18, EVENT.en, 13, th.accent, HA.LEFT, 255, FONT_NUM);
-        JJBView.label(root, 900, 36, 324, 56, "1 / 3", 46, th.accent, HA.RIGHT, 255, FONT_NUM);
+        JJBView.label(root, 880, 30, 344, 66, "1 / 3", 58, th.accent, HA.RIGHT, 255, FONT_NUM);
         JJBView.label(root, 900, 100, 324, 20, "当前获胜", 14, th.muted, HA.RIGHT);
         JJBView.box(root, L, 150, W, 2, th.panelEdge);
 
