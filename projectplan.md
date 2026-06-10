@@ -323,3 +323,13 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 **验证证据**：Cocos web-mobile build exit 0；Playwright 默认回归 `/tmp/jjb-doubles-default-final.json` 为 21/21 PASS、console errors 全 0，覆盖 `?doubles=1` 双打默认链路、主题切换保留选择/判定、单刷 8 因子手选全流程、10 因子 B≤1、随机抽签直达 battle。配置三连改均已临时改配置、重 build、跑断言后恢复默认：`/tmp/jjb-doubles-config-matches3.json` 8/8 PASS，`/tmp/jjb-doubles-config-extra5.json` 7/7 PASS，`/tmp/jjb-doubles-config-cmd1.json` 7/7 PASS，console errors 均 0。`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
 
 **占位假设**：双打当前为骨架规则，指挥官池不分 A/B 组；当 matches=3 且 extraFactors=3、factorPoolSize=6 时，测试按“池项可复用拖入多槽”的占位交互验证配置生效。后续产品确定不可复用或玩家/地图细则后，只改 `JJBDoubles.ts` 配置与校验策略即可继续收敛。
+
+---
+
+## 阶段收口（2026-06-10）+ v4 细节修缮 brief
+
+**本阶段成果（commit 链 250d185→e5e776f 共 7 笔）**：批1 止血 → 批2 规则核心（5 gap）→ 批3 玩法补全（5 gap）→ 新旧版本行为对比（零偏差）→ 双打官突骨架（全参数化）→ 双打三轮配置（XP 原型考古实证：非酋模式=双打残骸，spCommander2/6人池/一键随机/指挥官2校验）。单刷收口、双打骨架就绪。
+
+**下一阶段 = v4 细节修缮（设计先行）**：需求 brief 已写 `design/v4-brief.md`，交 Claude Design 出设计后 TS 复刻。核心需求：①因子游戏边框（CM 项目现成素材 border-normal-mutatorframe 普通绿框 / border-gold-grandmaster 金色强化框，语义见 CM/tmp/design-handoff-announce-202606/mutator-reference.md）②指挥官边框（游戏选人界面微圆角+亮光长方形）③全局导航控制条（屏幕回切+重新随机+回主界面，含误触保护）④兜底转正（锁定格/校验红字/二选层/清槽提示/sel 动效）⑤浮层 OBS 底部横条形态（1280×200~240，缩至1/3可读）。
+
+**待确认**：赛事是否启用 CM 金色强化因子（决定金框两态是否需要）；重新随机的 XP 侧实现注意 onRandomClick splice 污染（考古已记录）。
