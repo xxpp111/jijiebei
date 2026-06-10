@@ -4,6 +4,7 @@
 // 用法：localhost:7777/?design=home&style=metal&mode=dark   （&auto=0 可自动点第0个模式，便于截图/验证）
 // 主题：右上角常驻切换器（精修金属/星际2质感/极简 × 暗/亮，6 套 runtime 切换，重渲染当前屏，JijieData 数据保留）。
 import { getTheme, Theme } from "./JJBTheme";
+import { facFlatIdx } from "./JJBData";
 import JJBView from "./JJBView";
 import JJBHome from "./JJBHome";
 import JJBOverlay from "./JJBOverlay";
@@ -22,6 +23,7 @@ export default class JJBDesignBoot {
     private static curMode: string = "dark";
     private static curScreen: string = "home";
     private static playerInput: string = ""; // GAP-16：home EditBox 输入值（主题切换重建后恢复）
+    private static autoPath: string = "";    // 自动化旗标 ?path=manual|random：标准模式二选层自动选路
 
     /** XP 逻辑就绪后调用；仅 ?design=... 时挂载新前端。任何异常都吞掉，不影响正常游戏。 */
     static tryMount(stage: cc.Node): void {
@@ -41,6 +43,7 @@ export default class JJBDesignBoot {
             JJBDesignBoot.stage = stage;
             JJBDesignBoot.curStyle = q["style"] || "metal";
             JJBDesignBoot.curMode = q["mode"] || "dark";
+            JJBDesignBoot.autoPath = q["path"] || "";
             JJBDesignBoot.th = getTheme(JJBDesignBoot.curStyle, JJBDesignBoot.curMode);
 
             // 先加载拉丁字体，就绪后再渲染（避免 Label 用 fallback 画完缓存、字体后到不重绘）
@@ -55,9 +58,9 @@ export default class JJBDesignBoot {
     private static render(q: { [k: string]: string }): void {
         try {
             const screen = q["design"];
-            if (screen === "overlay") { JJBDesignBoot.setScreen("overlay"); JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
+            if (screen === "overlay") { JJBDesignBoot.goOverlay(); }
             else if (screen === "select") { JJBDesignBoot.setScreen("select"); JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); }
-            else if (screen === "battle") { JJBDesignBoot.setScreen("battle"); JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult()); }
+            else if (screen === "battle") { JJBDesignBoot.goBattle(); }
             else if (screen === "result") { JJBDesignBoot.setScreen("result"); JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
             else {
                 JJBDesignBoot.showHome();
@@ -124,20 +127,59 @@ export default class JJBDesignBoot {
             JJBDesignBoot.playerInput, (s) => { JJBDesignBoot.playerInput = s; });
     }
 
-    /** 点击模式 → 调 XP 的 InitPanel 真实逻辑（设 JijieData + toStart 随机抽取）→ 确保 toSelect 后进选择面板。 */
+    /** 点击模式 → 调 XP 的 InitPanel 真实逻辑（设 JijieData + toStart 随机抽取）。
+     *  标准 8/10/12 因子停在 status=1 → 弹「手选阵容/随机抽签」二选层（GAP-12，对齐老 UI btnSelect/btnRandom）；
+     *  拯救/随机模式 toStart 内部已自调 toSelect → 直进选择面板。 */
     private static onMode(i: number): void {
+        try { (window as any).__jjbDebug = { screen: JJBDesignBoot.curScreen }; } catch (e) { /* noop */ } // 新局清残留 debug
         try {
             const ip: any = JijieControl.jjUI.initPanel;
             // GAP-16：把 home EditBox 真实输入写进 XP 老输入框，XP onClickX 自己读它写 JijieData.playerName（零语义漂移）
             const nm = (JJBDesignBoot.playerInput || "").trim();
             if (ip && ip.txtName) ip.txtName.string = nm || "选手";
             // 赛制（土豆确认 2026-06）：单刷一律打满 3 场——不沿用老 UI「modeIsRandom=falsy 输一场即终局」语义。
-            // 显式置 false 防多局残留（XP initStart 不重置该 flag）；「随机抽签」快捷路径接入时再置 true。
+            // 显式置 false 防多局残留（XP initStart 不重置该 flag）；「随机抽签」路径由 XP onRandomClick 置 true。
             JijieData.modeIsRandom = false;
             const handlers = ["onClick2", "onClick3", "onClick13", "onClick4", "onClickSuiji"]; // 极难(onClickHard)暂不上 home（土豆决策），XP 代码路径保留
             const fn = handlers[i] || "onClick3";
             ip[fn](null); // 直接调用 XP 手写的处理函数，零改动复用其逻辑（toStart 随机抽取）
-            // 标准 8/10/12 因子模式 toStart 后停在 status=1（手选/随机二选一），补调 public toSelect 抽取因子/指挥官池。
+        } catch (e) {
+            cc.warn("[JJBDesignBoot] onMode 调 XP 逻辑出错: " + e);
+        }
+        if (JijieData.status < 2) {
+            // 标准模式：XP 原版此处二选（手选/随机抽签）
+            if (JJBDesignBoot.autoPath === "manual") { JJBDesignBoot.startManual(); return; }
+            if (JJBDesignBoot.autoPath === "random") { JJBDesignBoot.startRandom(); return; }
+            JJBDesignBoot.showPathChoice();
+        } else {
+            JJBDesignBoot.startManual(); // 拯救/随机模式：XP 已 toSelect，固化契约后直进
+        }
+    }
+
+    /** 标准模式二选层：手选阵容 / 随机抽签（叠在 home 屏之上，遮罩挡底层点击）。 */
+    private static showPathChoice(): void {
+        const root = JJBDesignBoot.root, th = JJBDesignBoot.th;
+        if (!root || !cc.isValid(root)) { JJBDesignBoot.startManual(); return; }
+        const CT = cc.Label.HorizontalAlign.CENTER;
+        const dim = JJBView.box(root, 0, 0, 1280, 720, cc.color(0, 0, 0, 165));
+        dim.on(cc.Node.EventType.MOUSE_UP, () => { /* 吞底层点击 */ });
+        JJBView.panel(root, 430, 256, 420, 208, th);
+        JJBView.label(root, 430, 286, 420, 30, "选择出战方式", 22, th.ink, CT);
+        const mkBtn = (left: number, label: string, name: string, cb: () => void) => {
+            if (th.style === "metal") JJBView.cutBox(root, left, 348, 180, 56, th.accent, null, 0, 10);
+            else JJBView.box(root, left, 348, 180, 56, th.accent, null);
+            JJBView.label(root, left, 364, 180, 26, label, 19, th.onAccent, CT);
+            const hit = JJBView.hit(root, left, 348, 180, 56, cb);
+            hit.name = name;
+        };
+        mkBtn(456, "手选阵容", "jjbPathManual", () => JJBDesignBoot.startManual());
+        mkBtn(648, "随机抽签", "jjbPathRandom", () => JJBDesignBoot.startRandom());
+    }
+
+    /** 手选路径：modeIsRandom=false → toSelect 抽池 → 固化 9 格契约 → 进选择面板。 */
+    private static startManual(): void {
+        try {
+            JijieData.modeIsRandom = false;
             if (JijieData.status < 2) JijieControl.toSelect();
             // jjbDesign 契约固化：selected* 重置为 3/9 格全 null（覆盖 toSelect 预填的 mfc*3-2 个 null + 清上局残留）；
             // 新一局记分清零统一在此（battle 屏重渲染不再清，见 JJBBattle）。
@@ -145,22 +187,58 @@ export default class JJBDesignBoot {
             JijieData.selectedFactorList = new Array(9).fill(null);
             JijieData.winLoseList = [];
         } catch (e) {
-            cc.warn("[JJBDesignBoot] onMode 调 XP 逻辑出错: " + e);
+            cc.warn("[JJBDesignBoot] startManual 调 XP 逻辑出错: " + e);
         }
-        // 暴露给自动化验证（确认 XP 逻辑确实产出了真实数据）
-        try {
-            (window as any).__jjbDebug = {
-                player: JijieData.playerName,
-                factorCount: JijieData.modelFactorCount,
-                status: JijieData.status,
-                maps: (JijieData.mapList || []).slice(),
-                lockFactors: (JijieData.lockFactorList || []).slice(),
-                randomFactorPoor: (JijieData.randomFactorPoor || []).slice(),
-                randomCommanderPoorA: (JijieData.randomCommanderPoorA || []).slice(),
-                randomCommanderPoorB: (JijieData.randomCommanderPoorB || []).slice(),
-            };
-        } catch (e) { /* noop */ }
+        JJBDesignBoot.exposeDebug();
         JJBDesignBoot.goSelect();
+    }
+
+    /** GAP-12 随机抽签：调 XP public onRandomClick（置 modeIsRandom=true + 抽 3 指挥官/全部因子写进
+     *  隐藏老 UI 组件字段 + 内部 toBattle 到 status=3）→ 镜像写回 9 格契约（新 battle 屏才渲染得出）。
+     *  已知 XP 副作用（与线上老 UI 行为一致，单局无影响）：onRandomClick 直接 splice ConfigData.commanderList
+     *  抽走 3 人——本前端单局流程（result 后无"再来一局"，刷新开新局）不受影响；后续加局内重开时需注意。 */
+    private static startRandom(): void {
+        try {
+            const jjUI: any = JijieControl.jjUI;
+            jjUI.onRandomClick(null); // XP：抽取 + 填老 UI 组件 + toBattle（status=3）
+            JijieData.selectedCommanderList = [null, null, null];
+            JijieData.selectedFactorList = new Array(9).fill(null);
+            for (let m = 1; m <= 3; m++) {
+                const match: any = jjUI["map" + m];
+                if (!match) continue;
+                JijieData.selectedCommanderList[m - 1] = match.spCommander ? (match.spCommander.cname || null) : null;
+                for (let f = 1; f <= 3; f++) {
+                    const fct = match["factor" + f];
+                    if (fct && fct.node && fct.node.active && fct.factorName) {
+                        JijieData.selectedFactorList[facFlatIdx(m - 1, f - 1)] = fct.factorName;
+                    }
+                }
+            }
+            JijieData.winLoseList = [];
+        } catch (e) {
+            cc.warn("[JJBDesignBoot] startRandom 调 XP 逻辑出错: " + e);
+        }
+        JJBDesignBoot.exposeDebug();
+        JJBDesignBoot.goBattle();
+    }
+
+    /** 暴露给自动化验证（确认 XP 逻辑确实产出了真实数据）。 */
+    private static exposeDebug(): void {
+        try {
+            const w: any = window;
+            w.__jjbDebug = w.__jjbDebug || {};
+            w.__jjbDebug.player = JijieData.playerName;
+            w.__jjbDebug.factorCount = JijieData.modelFactorCount;
+            w.__jjbDebug.status = JijieData.status;
+            w.__jjbDebug.modeIsRandom = JijieData.modeIsRandom;
+            w.__jjbDebug.maps = (JijieData.mapList || []).slice();
+            w.__jjbDebug.lockFactors = (JijieData.lockFactorList || []).slice();
+            w.__jjbDebug.randomFactorPoor = (JijieData.randomFactorPoor || []).slice();
+            w.__jjbDebug.randomCommanderPoorA = (JijieData.randomCommanderPoorA || []).slice();
+            w.__jjbDebug.randomCommanderPoorB = (JijieData.randomCommanderPoorB || []).slice();
+            w.__jjbDebug.selectedCommanderList = (JijieData.selectedCommanderList || []).slice();
+            w.__jjbDebug.selectedFactorList = (JijieData.selectedFactorList || []).slice();
+        } catch (e) { /* noop */ }
     }
 
     /** 端到端导航（同一会话内重建节点树，数据连续，不刷新页面）。 */
@@ -170,11 +248,16 @@ export default class JJBDesignBoot {
     }
     private static goBattle(): void {
         JJBDesignBoot.setScreen("battle");
-        JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult());
+        JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult(), () => JJBDesignBoot.goOverlay());
     }
     private static goResult(): void {
         JJBDesignBoot.setScreen("result");
         JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
+    }
+    /** GAP-17 浮层（OBS 浏览器源+Interact 单窗口）：battle ↔ overlay 互切，主题切换器照常。 */
+    private static goOverlay(): void {
+        JJBDesignBoot.setScreen("overlay");
+        JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
     }
 
     /** 右上角常驻主题切换器：3 风格 + 2 模式按钮，当前高亮；点击 runtime 切 + 重渲当前屏。 */
@@ -212,7 +295,7 @@ export default class JJBDesignBoot {
 
     private static reRenderCurrent(): void {
         const s = JJBDesignBoot.curScreen;
-        if (s === "overlay") JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
+        if (s === "overlay") JJBDesignBoot.goOverlay();
         else if (s === "select") JJBDesignBoot.goSelect();
         else if (s === "battle") JJBDesignBoot.goBattle();
         else if (s === "result") JJBDesignBoot.goResult();

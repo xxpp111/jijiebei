@@ -20,7 +20,7 @@ const V_DEFS = [{ res: "win", w: 70 }, { res: "bonus", w: 87 }, { res: "lose", w
 
 export default class JJBBattle {
 
-    static build(root: cc.Node, th: Theme, onDone?: () => void): void {
+    static build(root: cc.Node, th: Theme, onDone?: () => void, onOverlay?: () => void): void {
         JJBView.bg(root, th);
 
         const live = jjbLive();
@@ -136,6 +136,14 @@ export default class JJBBattle {
         JJBView.box(root, 50, 646, 1180, 2, th.panelEdge);
         JJBView.label(root, 50, 662, 700, 22, EVENT.org + "　·　主播「" + EVENT.host + "」", 15, th.ink, HA.LEFT);
         JJBView.label(root, 600, 662, 630, 22, EVENT.links[0].k + " " + EVENT.links[0].v + "　　B站主播 " + EVENT.host, 15, th.muted, HA.RIGHT);
+
+        // ---------- 直播浮层入口（右上角，经 JJBDesignBoot 切 overlay，GAP-17）----------
+        if (onOverlay) {
+            JJBView.box(root, 1078, 110, 146, 30, null, th.panelEdge, 1);
+            JJBView.label(root, 1078, 116, 146, 18, "直播浮层 ▣", 13, th.muted, HA.CENTER);
+            const ovHit = JJBView.hit(root, 1078, 110, 146, 30, onOverlay);
+            ovHit.name = "jjbToOverlay";
+        }
 
         recompute();
         updateDebug(); // 初始即暴露记分（standalone=DEMO 三态；真实会话=全 0）

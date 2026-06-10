@@ -21,9 +21,17 @@ interface DropTarget {
     left: number; top: number; w: number; h: number;
     hit: cc.Node;       // 透明热点（与池子拖拽项同为左上锚点，喂给 checkHit）
     hint: cc.Node;      // "指挥官"/"因子" 占位提示（命中后隐藏）
+    dash: cc.Node;      // 虚线占位框（清槽后无条件重画，防节点累积）
     fill: cc.Node;      // 已填充图标
     aux: cc.Node[];     // 已填充时的底/边框/名字浮层（重填时一并销毁）
     value: string;
+}
+
+// 池子项注册（GAP-08 sel 已用反馈：上浮3px + accent 外圈 + ✓ 角标）。
+interface PoolItem {
+    node: cc.Node; kind: string; name: string;
+    left: number; top: number; w: number; h: number;
+    marks: cc.Node[]; lifted: boolean;
 }
 
 export default class JJBSelect {
@@ -95,11 +103,15 @@ export default class JJBSelect {
         };
 
         // 填充某个目标槽（前置预填、拖拽命中均走此一处）。真实会话同步写 JijieData.selected*。
+        let lastFillAt = 0; // 拖拽释放瞬间槽 hit 也会收到 MOUSE_UP（touch/mouse 双事件流）——350ms 窗口内不当成清槽点击
         const fillTarget = (t: DropTarget, name: string) => {
             if (t.fill && cc.isValid(t.fill)) t.fill.destroy();
             (t.aux || []).forEach((n) => { if (cc.isValid(n)) n.destroy(); });
             t.aux = [];
-            if (t.hint && cc.isValid(t.hint)) t.hint.active = false;
+            if (t.dash && cc.isValid(t.dash)) t.dash.destroy();
+            t.dash = null;
+            if (t.hint && cc.isValid(t.hint)) t.hint.destroy();
+            t.hint = null;
             // design .t-cmd/.t-fac.filled：黑底 + 1px accent 边框 + 图（内缩 1px 露边框）；指挥官加底部名字浮层(.avatar-name)
             t.aux.push(JJBView.box(root, t.left, t.top, t.w, t.h, BLACK, th.accent, 1));
             t.fill = t.kind === "factor"
@@ -116,7 +128,64 @@ export default class JJBSelect {
                 if (t.kind === "cmd") JijieData.selectedCommanderList[t.slot] = name;        // 每场 1 指挥官
                 else JijieData.selectedFactorList[facFlatIdx(t.slot, t.idx)] = name;          // 扁平 场*3+槽
             }
+            lastFillAt = Date.now();
+            refreshPool();
             updateDebug();
+        };
+
+        // 槽占位（dashed 虚线 + hint）。清槽后无条件重画——standalone 预填槽 build 时没画过，不依赖底层残留。
+        const drawPlaceholder = (t: DropTarget) => {
+            if (t.dash && cc.isValid(t.dash)) t.dash.destroy();
+            if (t.hint && cc.isValid(t.hint)) t.hint.destroy();
+            t.dash = JJBView.dashBox(root, t.left, t.top, t.w, t.h, th.dropBg, th.dropEdge, 1.5);
+            t.hint = t.kind === "cmd"
+                ? JJBView.label(root, t.left, t.top + 26, t.w, 16, "指挥官", 11, th.muted, HA.CENTER)
+                : (t.idx === 0 ? JJBView.label(root, t.left, t.top + 18, t.w, 14, "因子", 11, th.muted, HA.CENTER) : null);
+        };
+
+        // GAP-09 取消重选：点击已填槽=清空（destroy fill/aux → 重画占位 → selection/JijieData 置 null → 池 sel 重算）。
+        const clearTarget = (t: DropTarget) => {
+            if (!t.value) return;
+            if (t.fill && cc.isValid(t.fill)) t.fill.destroy();
+            t.fill = null;
+            (t.aux || []).forEach((n) => { if (cc.isValid(n)) n.destroy(); });
+            t.aux = [];
+            drawPlaceholder(t);
+            t.value = null;
+            const slot = selection.slots[t.slot];
+            (t.kind === "factor" ? slot.factors : slot.cmds)[t.idx] = null;
+            if (live) {
+                if (t.kind === "cmd") JijieData.selectedCommanderList[t.slot] = null;
+                else JijieData.selectedFactorList[facFlatIdx(t.slot, t.idx)] = null;
+            }
+            refreshPool();
+            updateDebug();
+        };
+
+        // GAP-08 池 sel 已用反馈（design theme.css .factor-sel：上浮3px + accent 外圈 + ✓角标）。
+        // 名字被任何槽使用→sel 态；未使用→常态。不做整池 dim（多场同屏需保持未用项正常可见）。
+        const poolItems: PoolItem[] = [];
+        const refreshPool = () => {
+            const u: { [n: string]: boolean } = {};
+            selection.slots.forEach((s: any) => {
+                (s.cmds || []).forEach((c: string) => { if (c) u[c] = true; });
+                (s.factors || []).forEach((f: string) => { if (f) u[f] = true; });
+            });
+            poolItems.forEach((p) => {
+                const used = !!u[p.name];
+                if (used === p.lifted) return;
+                p.marks.forEach((n) => { if (cc.isValid(n)) n.destroy(); });
+                p.marks = [];
+                p.lifted = used;
+                if (!(p.node as any)._jjbDragging) p.node.y += used ? 3 : -3; // 拖拽中由回弹 tween 兜住目标位
+                if (used) {
+                    const mk = JJBView.box(root, p.left - 2, p.top - 5, p.w + 4, p.h + 4, null, th.accent, 2); // 外圈（含上浮 -3）
+                    mk.name = "jjbSelMark_" + p.name;
+                    p.marks.push(mk);
+                    p.marks.push(JJBView.box(root, p.left + p.w - 12, p.top - 13, 20, 20, th.accent, null));
+                    p.marks.push(JJBView.label(root, p.left + p.w - 12, p.top - 11, 20, 15, "✓", 12, th.onAccent, HA.CENTER));
+                }
+            });
         };
 
         // 让池子项可拖：TOUCH 拖动 → 抬手 checkHit 找最近匹配槽 → 命中填槽，否则回弹。
@@ -124,12 +193,15 @@ export default class JJBSelect {
             item.name = "jjbItem_" + kind + "_" + name; // 便于自动化定位
             const homeX = item.x, homeY = item.y;
             const homeIdx = item.getSiblingIndex(); // 还原用：拖动会置顶，回弹后复位到原层级（否则盖住自身名字浮层）
+            const pi: PoolItem = { node: item, kind, name, left: item.x + 640, top: 360 - item.y, w: item.width, h: item.height, marks: [], lifted: false };
+            poolItems.push(pi);
             let gx = 0, gy = 0, dragging = false;
             item.on(cc.Node.EventType.TOUCH_START, (e: cc.Event.EventTouch) => {
                 cc.Tween.stopAllByTarget(item);
                 const lp = root.convertToNodeSpaceAR(e.getLocation());
                 gx = item.x - lp.x; gy = item.y - lp.y;
                 dragging = true;
+                (item as any)._jjbDragging = true;
                 item.setSiblingIndex(root.childrenCount - 1); // 拖动时置顶
                 item.opacity = 235;
                 item.scale = 1.12; // 抓取放大反馈（"拿起"手感）
@@ -150,27 +222,63 @@ export default class JJBSelect {
                     if (SelectPanel.checkHit(item, t.hit)) { hit = t; break; }
                 }
                 if (hit) fillTarget(hit, name);
-                cc.tween(item).to(0.14, { x: homeX, y: homeY, scale: 1 }).call(() => { if (cc.isValid(item)) item.setSiblingIndex(homeIdx); }).start(); // 回池原位 + 复位缩放 + 复位层级（名字浮层重新盖在上）
+                // 回池原位（sel 态含上浮 3px）+ 复位缩放 + 复位层级（名字浮层重新盖在上）
+                cc.tween(item).to(0.14, { x: homeX, y: homeY + (pi.lifted ? 3 : 0), scale: 1 })
+                    .call(() => { (item as any)._jjbDragging = false; if (cc.isValid(item)) item.setSiblingIndex(homeIdx); }).start();
             };
             item.on(cc.Node.EventType.TOUCH_END, onEnd);
             item.on(cc.Node.EventType.TOUCH_CANCEL, onEnd);
         };
 
-        // 池子带框头像（design .avatar：黑底 + panel-edge 边框 + 可选名字浮层 .avatar-name）。图内缩 1px 露边框，返回可拖拽 sprite。
-        const framedCmd = (left: number, top: number, w: number, h: number, cmd: string, withName: boolean): cc.Node => {
-            JJBView.box(root, left, top, w, h, BLACK, th.panelEdge, 1);
-            const node = JJBView.coverSprite(root, left + 1, top + 1, w - 2, h - 2, "images/commander/" + cmd);
-            if (withName) {
-                JJBView.box(root, left + 1, top + h - 16, w - 2, 15, NAMEBG, null);
-                JJBView.label(root, left + 1, top + h - 15, w - 2, 13, cmd, 10, cc.Color.WHITE, HA.CENTER);
+        // 池子项容器（design .avatar/.factor）：黑底+边框+cover 图+可选名字浮层装进单容器，
+        // 拖动/上浮/置顶整体移动（修拖动时只有图动、框名留在原地的割裂感）。容器即 makeDraggable/checkHit 对象。
+        const framedItem = (left: number, top: number, w: number, h: number, resPath: string, name: string): cc.Node => {
+            const item = JJBView.placed(root, left, top, w, h);
+            const g = item.addComponent(cc.Graphics);
+            g.rect(0, -h, w, h);
+            g.fillColor = BLACK; g.fill();
+            g.strokeColor = th.panelEdge; g.lineWidth = 1; g.stroke();
+            // cover 图（内缩 1px 露边框）
+            const mk = new cc.Node();
+            mk.parent = item; mk.setAnchorPoint(0.5, 0.5);
+            mk.setContentSize(w - 2, h - 2); mk.setPosition(w / 2, -h / 2);
+            const mask = mk.addComponent(cc.Mask);
+            mask.type = cc.Mask.Type.RECT;
+            const inner = new cc.Node();
+            inner.parent = mk; inner.setAnchorPoint(0.5, 0.5); inner.setPosition(0, 0);
+            const sp = inner.addComponent(cc.Sprite);
+            sp.sizeMode = cc.Sprite.SizeMode.CUSTOM; sp.trim = false;
+            cc.resources.load(resPath, cc.SpriteFrame, (err: Error, sf: cc.SpriteFrame) => {
+                if (err || !sf || !cc.isValid(inner)) return;
+                sp.spriteFrame = sf;
+                const os = sf.getOriginalSize();
+                const sc = Math.max((w - 2) / os.width, (h - 2) / os.height);
+                inner.setContentSize(os.width * sc, os.height * sc);
+            });
+            if (name) { // 名字浮层 .avatar-name
+                const nb = new cc.Node();
+                nb.parent = item; nb.setAnchorPoint(0, 1); nb.setPosition(1, -(h - 16));
+                const ng = nb.addComponent(cc.Graphics);
+                ng.rect(0, -15, w - 2, 15); ng.fillColor = NAMEBG; ng.fill();
+                const nl = new cc.Node();
+                nl.parent = item; nl.setAnchorPoint(0, 1);
+                const lab = nl.addComponent(cc.Label);
+                lab.string = name; lab.fontSize = 10; lab.lineHeight = 12;
+                lab.horizontalAlign = HA.LEFT; lab.verticalAlign = cc.Label.VerticalAlign.TOP;
+                lab.overflow = cc.Label.Overflow.NONE; lab.enableWrapText = false;
+                nl.color = cc.Color.WHITE;
+                const anyL: any = lab;
+                if (typeof anyL._forceUpdateRenderData === "function") anyL._forceUpdateRenderData(true);
+                let tw = nl.width;
+                if (!tw || tw < 1) { tw = 0; for (let i = 0; i < name.length; i++) tw += name.charCodeAt(i) > 255 ? 10 : 5.5; }
+                nl.setPosition(1 + (w - 2 - tw) / 2, -(h - 15)); // 居中（同 JJBView.label 测宽 trick）
             }
-            return node;
+            return item;
         };
-        // 池子带框因子（design .factor：黑底 + panel-edge 边框）。
-        const framedFactor = (left: number, top: number, w: number, h: number, f: string): cc.Node => {
-            JJBView.box(root, left, top, w, h, BLACK, th.panelEdge, 1);
-            return JJBView.sprite(root, left + 1, top + 1, w - 2, h - 2, "images/factor/" + f);
-        };
+        const framedCmd = (left: number, top: number, w: number, h: number, cmd: string, withName: boolean): cc.Node =>
+            framedItem(left, top, w, h, "images/commander/" + cmd, withName ? cmd : null);
+        const framedFactor = (left: number, top: number, w: number, h: number, f: string): cc.Node =>
+            framedItem(left, top, w, h, "images/factor/" + f, null);
 
         // ---------- TopBar（lockup sm + meta，design padding 38）----------
         JJBView.sprite(root, 38, 28, 56, 46, markFor(th.style, th.mode));
@@ -206,14 +314,13 @@ export default class JJBSelect {
                 const cxx = sx + 14 + k * 62;
                 // live：槽位留空(reserved)，主播从池子拖拽编排；standalone：仅 active 场预填做演示
                 const prefill = (!live && active) ? (cmdAll[k] || m.cmds[k]) : null;
-                const filled = !!prefill;
-                let hint: cc.Node = null;
-                if (!filled) { JJBView.dashBox(root, cxx, ty, 56, 67, th.dropBg, th.dropEdge, 1.5); hint = JJBView.label(root, cxx, ty + 26, 56, 16, "指挥官", 11, th.muted, HA.CENTER); }
-                const hit = JJBView.placed(root, cxx, ty, 56, 67);
-                hit.name = "jjbSlot_cmd_" + i + "_" + k; // 便于自动化定位
-                const t: DropTarget = { kind: "cmd", slot: i, idx: k, left: cxx, top: ty, w: 56, h: 67, hit, hint, fill: null, aux: [], value: null };
+                const t: DropTarget = { kind: "cmd", slot: i, idx: k, left: cxx, top: ty, w: 56, h: 67, hit: null, hint: null, dash: null, fill: null, aux: [], value: null };
+                drawPlaceholder(t);
+                t.hit = JJBView.placed(root, cxx, ty, 56, 67);
+                t.hit.name = "jjbSlot_cmd_" + i + "_" + k; // 便于自动化定位
+                t.hit.on(cc.Node.EventType.MOUSE_UP, () => { if (Date.now() - lastFillAt > 350) clearTarget(t); }); // GAP-09 点击清槽
                 targets.push(t);
-                if (filled) fillTarget(t, prefill);
+                if (prefill) fillTarget(t, prefill);
             }
             // t-facs（52×52 wrap 5 列）。live 行首先渲染锁定因子固定格（GAP-02：filled 同款 + 「锁定」角标，
             // 不可拖不可清除，不入 targets；modeSuiji 整行无因子格），后接 GAP-01 动态手选槽。
@@ -234,14 +341,13 @@ export default class JJBSelect {
                 const fyy = facTop + Math.floor((cell + k) / 5) * 58;
                 // live：槽位留空(reserved)，主播拖拽编排；standalone：仅 active 场预填演示
                 const prefill = (!live && active) ? (factorPool[k] || m.factors[k]) : null;
-                const filled = !!prefill;
-                let hint: cc.Node = null;
-                if (!filled) { JJBView.dashBox(root, fxx, fyy, 52, 52, th.dropBg, th.dropEdge, 1.5); if (k === 0 && (live || !active)) hint = JJBView.label(root, fxx, fyy + 18, 52, 14, "因子", 11, th.muted, HA.CENTER); }
-                const hit = JJBView.placed(root, fxx, fyy, 52, 52);
-                hit.name = "jjbSlot_factor_" + i + "_" + k; // 便于自动化定位
-                const t: DropTarget = { kind: "factor", slot: i, idx: k, left: fxx, top: fyy, w: 52, h: 52, hit, hint, fill: null, aux: [], value: null };
+                const t: DropTarget = { kind: "factor", slot: i, idx: k, left: fxx, top: fyy, w: 52, h: 52, hit: null, hint: null, dash: null, fill: null, aux: [], value: null };
+                drawPlaceholder(t);
+                t.hit = JJBView.placed(root, fxx, fyy, 52, 52);
+                t.hit.name = "jjbSlot_factor_" + i + "_" + k; // 便于自动化定位
+                t.hit.on(cc.Node.EventType.MOUSE_UP, () => { if (Date.now() - lastFillAt > 350) clearTarget(t); }); // GAP-09 点击清槽
                 targets.push(t);
-                if (filled) fillTarget(t, prefill);
+                if (prefill) fillTarget(t, prefill);
             }
         }
 
@@ -253,9 +359,7 @@ export default class JJBSelect {
         if (live && factorPool.length === 0) JJBView.label(root, PAD, poolTop + 32, 330, 20, "随机模式 · 本局无需配置因子", 14, th.muted);
         factorPool.forEach((f, i) => {
             const fx = PAD + (i % 4) * 74, fy = poolTop + 26 + Math.floor(i / 4) * 74;
-            const item = framedFactor(fx, fy, 66, 66, f);
-            if (!live && i < 3) { JJBView.box(root, fx - 2, fy - 2, 70, 70, null, th.accent, 2); JJBView.box(root, fx + 50, fy - 9, 20, 20, th.accent, null); JJBView.label(root, fx + 50, fy - 7, 20, 15, "✓", 12, th.onAccent, HA.CENTER); }
-            makeDraggable(item, "factor", f);
+            makeDraggable(framedFactor(fx, fy, 66, 66, f), "factor", f); // 已用 ✓ sel 态由 refreshPool 统一渲染
         });
         // 右：指挥官区 — grp-row（A 组 + B 组横向并排，design .grp-row gap30 / .avatar-row 70×84）
         const cmdX = PAD + 340 + 26; // 404
@@ -264,14 +368,28 @@ export default class JJBSelect {
         const bGrpX = cmdX + cmdPoolA.length * 76 + 24; // B 组接 A 组后（gap24）
         JJBView.label(root, bGrpX, poolTop, 200, 22, "B 组指挥官", 16, th.ink);
         cmdPoolB.forEach((c, i) => makeDraggable(framedCmd(bGrpX + i * 76, poolTop + 26, 66, 80, c, true), "cmd", c));
-        // grp-self（自选指挥官 18 格，design .avatar-grid 60×72 9列×2行）
+        // grp-self（自选指挥官，design .avatar-grid 60×72 9列×2行）
+        // GAP-10 live：渲染 JJConfigData.commanderList 全量（ban 后）减已入 A/B/C 池者，全部带框可拖
+        // （合并 XP「拖自选图标+点选」两步，消灭其"没点选→加载 自选.png"的宽松漏洞）；
+        // 显示条件镜像 XP SelectPanel.updateSelect（拯救/随机/极难①/非酋无自选区）。
+        // B 组占用经 groupMap 计入 A4 校验；8因子(mfc==2)按 XP 不终检（checkBCount 强制计 B 仅影响 updateBCount 路径）。
         const selfTop = poolTop + 26 + 80 + 18; // 484
         JJBView.label(root, cmdX, selfTop, 200, 22, "自选指挥官", 16, th.ink);
-        JJBView.label(root, cmdX + 150, selfTop + 3, 440, 16, live ? "随机池已抽取 · 拖入上方场次槽位编排" : "18 位全解锁 · 双打可放 2 位", 13, th.muted);
-        const selfList: (string | null)[] = live ? cmdAll.concat(new Array(Math.max(0, 18 - cmdAll.length)).fill(null)) : shuffle(POOL);
-        selfList.slice(0, 18).forEach((c, i) => {
+        const selfPool: string[] = (() => {
+            if (!live) return shuffle(POOL.filter(Boolean) as string[]);
+            const show = !dAny.modeSuiji && !dAny.modeIsZhengjiu && (!dAny.modeIsVeryHard || dAny.modeIsVeryHard2) && !dAny.modeFeiqiu;
+            if (!show) return [];
+            const inPool: { [n: string]: boolean } = {};
+            cmdAll.forEach((c) => { inPool[c] = true; });
+            ((dAny.randomCommanderPoorC || []) as string[]).forEach((c) => { inPool[c] = true; });
+            try { return (ConfigData.commanderList || []).map((arr: any[]) => arr[0] as string).filter((c: string) => !inPool[c]); } catch (e) { return []; }
+        })();
+        JJBView.label(root, cmdX + 150, selfTop + 3, 440, 16,
+            live ? (selfPool.length ? "全量可选 · 拖入场次槽位（B 组占用合并计数）" : "本模式无自选区") : "18 位全解锁 · 双打可放 2 位", 13, th.muted);
+        const selfCells: (string | null)[] = live ? selfPool : selfPool.concat(new Array(Math.max(0, 18 - selfPool.length)).fill(null));
+        selfCells.slice(0, 18).forEach((c, i) => {
             const ax = cmdX + (i % 9) * 70, ay = selfTop + 28 + Math.floor(i / 9) * 74;
-            if (c) makeDraggable(framedCmd(ax, ay, 60, 72, c, false), "cmd", c);
+            if (c) makeDraggable(framedCmd(ax, ay, 60, 72, c, true), "cmd", c);
             else { JJBView.dashBox(root, ax, ay, 60, 72, th.dropBg, th.dropEdge, 1); JJBView.label(root, ax, ay + 26, 60, 18, "+", 20, th.muted, HA.CENTER); }
         });
 
@@ -309,6 +427,7 @@ export default class JJBSelect {
             });
         }
 
+        refreshPool();  // standalone 预填发生在池子项注册之前，统一兜底重算 sel 态
         updateDebug(); // 初始（含预填/恢复）即暴露选择状态
     }
 }
