@@ -4,17 +4,22 @@
 >
 > 交付方式与 v3 相同：HTML/CSS handoff（theme.css token 体系沿用），工程侧用 TypeScript/Cocos 程序化复刻，不直接嵌入 HTML。
 
-## 0. 现状与素材输入
+## 0. 现状与素材输入（本目录平铺，文件名自描述）
 
-- 现状截图：随 brief 附（battle 双打 sc2-dark / select 双打 metal-dark 等）。
-- **游戏边框素材（已有 png，可直接用/参考重绘）**：
-  - `border-normal-mutatorframe.png`（71×73）：星际2游戏内**普通因子标准边框**（黑框+绿色有机描边，ui_coop_ingame_mutatorframe）。
-  - `border-gold-grandmaster.png`（126×126）：**金色强化因子**识别框（中空金色方框）。
-  - 游戏内合作任务选人界面截图：指挥官头像为**微圆角长方形 + 阴影 + 亮光描边**（选中态蓝色发光、特殊态紫色发光）。
+| 文件 | 说明 |
+|---|---|
+| `asset-border-factor-normal-ingame-mutatorframe.png` | 71×73，星际2游戏内**普通因子标准边框**（黑框+绿色有机描边，ui_coop_ingame_mutatorframe），可直接用/参考重绘 |
+| `asset-border-factor-gold-grandmaster.png` | 126×126，**金色强化因子**识别框（中空金色方框） |
+| `ref-sc2-ingame-commander-select-borders.png` | 游戏内合作任务选人界面：指挥官头像**微圆角长方形+阴影+亮光描边**（选中蓝色发光、特殊紫色发光）——§2 的质感参考 |
+| `current-select-single-8factor-metal-dark.png` | 现状：单刷选择屏（含已拖入指挥官+✓sel 态、行首锁定因子格、右下校验红字、自选全量区）——§1/2/4 的现状 |
+| `current-select-doubles-3matches-metal-dark.png` | 现状：双打三轮选择屏（每场 2 指挥官槽+2 官突锁定格+3 额外因子槽） |
+| `current-battle-doubles-sc2-dark.png` | 现状：双打对战屏（双头像+官突角标+判定三按钮） |
+| `current-dialog-pathchoice-manual-or-random-metal-dark.png` | 现状：标准模式「手选阵容/随机抽签」二选层（兜底面板，待正式化）——§4.3 |
+| `current-overlay-fullscreen-needs-bottombar-metal-dark.png` | 现状：直播浮层全屏版（缩小后不可读，需§5 底部横条新形态） |
 
 ## 1. 因子边框系统（核心需求）
 
-- 所有因子图标（池子 66×66/74×74、槽位 52×52、battle 56×56、result 46×46、浮层 52×52）统一加**游戏同款边框**：普通因子用 mutatorframe 绿框语义；如赛事启用 CM 金色强化因子，金色版用 grandmaster 金框区分（待产品确认，设计请预留两态）。
+- 所有因子图标（池子 66×66/74×74、槽位 52×52、battle 56×56、result 46×46、浮层 52×52）统一加**游戏同款边框**：普通因子用 mutatorframe 绿框语义；**赛事已确认会使用 CM 金色强化因子——金色版用 grandmaster 金框区分，普通/金色两态都必须设计**。
 - 边框需适配 6 主题 × 明暗（绿框在浅底的可读性处理）。
 - 与现有状态系统兼容：sel（上浮+✓+accent 外圈）、dim、官突/锁定角标如何与边框叠加，请给出状态矩阵。
 
