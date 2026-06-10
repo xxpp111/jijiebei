@@ -3,13 +3,13 @@
 import { MatchVM, VAL_RESULT } from "./JJBData";
 
 export const DOUBLES_CONFIG = {
-    matches: 1,                         // 场数：改成 3 时四屏/结算/校验应自动跟随
-    maps: ["湮灭快车"],                 // 预选地图
-    mutators: ["风暴英雄", "虚空裂隙"], // 官方突变打底因子，按锁定样式渲染但标「官突」
-    cmdsPerMatch: 2,                    // 每场指挥官数
+    matches: 3,                         // 场数（用户定：三轮，与 XP 双打原型一致[非酋模式残骸：3场×2指挥官]）
+    maps: ["湮灭快车", "克哈裂痕", "往日神庙"], // 预选地图（长度>=matches；赛前按当期官突改）
+    mutators: ["风暴英雄", "虚空裂隙"], // 官方突变打底因子，按锁定样式渲染但标「官突」（赛前按当期官突改）
+    cmdsPerMatch: 2,                    // 每场指挥官数（两位玩家各 1）
     extraFactors: 3,                    // 每场额外随机因子槽数
-    factorPoolSize: 6,                  // 额外因子池大小
-    cmdPoolSize: 8,                     // 指挥官池大小
+    factorPoolSize: 9,                  // 额外因子池大小 = matches*extraFactors（池=槽恒等式，对齐 XP 设计哲学：拖完正好用光）
+    cmdPoolSize: 6,                     // 指挥官池大小 = matches*cmdsPerMatch（同上恒等式；XP 原型即 A4+B2=6 精确匹配）
     scoring: "per-match",
 };
 
