@@ -22,6 +22,7 @@ export const MODES = [
     { no: "03", name: "12 因子模式", tag: "高难" },
     { no: "04", name: "拯救模式", tag: "限时" },
     { no: "05", name: "随机模式", tag: "抽取" },
+    { no: "06", name: "双打模式", tag: "官突" },
     // 极难挑战（XP onClickHard）暂不上 home（土豆决策保留后上）；上线前需先修指挥官池 16 人横排溢出。
 ];
 
@@ -145,4 +146,3 @@ export function sessionMatches(): MatchVM[] {
     }
     return out;
 }
-

@@ -302,3 +302,24 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 - 有意差异：新版 5 按钮；新版自选指挥官直接拖全量区（合并老版「拖自选图标+点选」）；新版手选打满 3 场；视觉不纳入。
 - 疑似新版偏差：未发现覆盖范围内的玩法偏差。
 - 老版怪癖：12 因子 `factor4` 存在但 inactive；老版 home 仍暴露极难2/单指挥官A/非酋等额外入口。
+
+## 双打（官突）模式骨架实施计划（2026-06-10）
+
+**目标**：新增 jjbDesign 自管双打会话，不走 XP `jijie2` 状态机；规则全部收敛到 `DOUBLES_CONFIG`，后续改配置即可调整 matches/maps/mutators/cmdsPerMatch/extraFactors/poolSize/scoring。复用 home → select → battle → result + overlay 四屏展示，不改 XP 领地。
+
+**执行步骤**：
+1. 新增 `assets/Script/jjbDesign/JJBDoubles.ts`：定义 `DOUBLES_CONFIG`、静态会话状态、`start/reset/doublesLive/doublesMatches/setCommander/setFactor/clear* / setVerdict / debug`。
+2. Home/Boot：`MODES` 增加第 6 个「双打模式 · 官突」；`?doubles=1` 直进双打 select；第 6 按钮走 `JJBDoubles.start()`，不调 XP handler。
+3. Select 三分支：`doublesLive() ? doublesMatches() : jjbLive() ? sessionMatches() : DEMO`；双打按配置渲染 matches 个场次、`cmdsPerMatch` 指挥官槽、mutators 官突锁定格、`extraFactors` 额外因子槽、单组指挥官池与因子池；校验为指挥官/额外因子逐槽必填，无 B 组限制。
+4. Battle/Result/Overlay 三分支：双打读写 `JJBDoubles.winLoseList`，大比分分母用 `DOUBLES_CONFIG.matches`，双打角标/双头像/多因子自然渲染。
+5. 验证：默认配置端到端、配置三连改（matches 1→3、extraFactors 3→5、cmdsPerMatch 2→1）、主题切换不丢状态、单刷 8 因子手选 + 随机抽签回归、Cocos build、`git diff -- assets/Script/jijie2/` 为空。
+
+## 双打（官突）模式骨架完成记录（2026-06-10）
+
+**交付内容**：新增 `assets/Script/jjbDesign/JJBDoubles.ts`，双打会话完全由 jjbDesign 自管；`DOUBLES_CONFIG` 当前默认值为 matches=1、maps=["湮灭快车"]、mutators=["风暴英雄","虚空裂隙"]、cmdsPerMatch=2、extraFactors=3、factorPoolSize=6、cmdPoolSize=8、scoring="per-match"。Home 增加第 6 个「双打模式 · 官突」，`?doubles=1` 直进双打 select；select/battle/result/overlay 均按 `doublesLive() ? doublesMatches() : jjbLive() ? sessionMatches() : DEMO` 新增双打分支，未重排单刷 XP 分支。
+
+**规则与 UI 骨架**：双打 select 按配置渲染场次数、每场指挥官槽数、官突 mutator 锁定格、额外因子槽、因子池和单组指挥官池；开始校验为逐场 `cmdsPerMatch` 个指挥官非空 + `extraFactors` 槽全满，无 B 组限制。battle/result/overlay 读写 `JJBDoubles.winLoseList`，大比分分母取 `DOUBLES_CONFIG.matches`，胜/带奖励/失败仍按单刷三态语义，带奖励不双计。`window.__jjbDebug.doubles` 暴露 config/live/selection/winLoseList。
+
+**验证证据**：Cocos web-mobile build exit 0；Playwright 默认回归 `/tmp/jjb-doubles-default-final.json` 为 21/21 PASS、console errors 全 0，覆盖 `?doubles=1` 双打默认链路、主题切换保留选择/判定、单刷 8 因子手选全流程、10 因子 B≤1、随机抽签直达 battle。配置三连改均已临时改配置、重 build、跑断言后恢复默认：`/tmp/jjb-doubles-config-matches3.json` 8/8 PASS，`/tmp/jjb-doubles-config-extra5.json` 7/7 PASS，`/tmp/jjb-doubles-config-cmd1.json` 7/7 PASS，console errors 均 0。`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
+
+**占位假设**：双打当前为骨架规则，指挥官池不分 A/B 组；当 matches=3 且 extraFactors=3、factorPoolSize=6 时，测试按“池项可复用拖入多槽”的占位交互验证配置生效。后续产品确定不可复用或玩家/地图细则后，只改 `JJBDoubles.ts` 配置与校验策略即可继续收敛。

@@ -11,6 +11,7 @@ import JJBOverlay from "./JJBOverlay";
 import JJBSelect from "./JJBSelect";
 import JJBBattle from "./JJBBattle";
 import JJBResult from "./JJBResult";
+import JJBDoubles from "./JJBDoubles";
 import JijieControl from "../jijie2/JijieContro";
 import JijieData from "../jijie2/JijieData";
 
@@ -57,6 +58,11 @@ export default class JJBDesignBoot {
 
     private static render(q: { [k: string]: string }): void {
         try {
+            if (q["doubles"] === "1") {
+                JJBDesignBoot.startDoubles();
+                JJBDesignBoot.buildSwitcher();
+                return;
+            }
             const screen = q["design"];
             if (screen === "overlay") { JJBDesignBoot.goOverlay(); }
             else if (screen === "select") { JJBDesignBoot.setScreen("select"); JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); }
@@ -132,6 +138,11 @@ export default class JJBDesignBoot {
      *  拯救/随机模式 toStart 内部已自调 toSelect → 直进选择面板。 */
     private static onMode(i: number): void {
         try { (window as any).__jjbDebug = { screen: JJBDesignBoot.curScreen }; } catch (e) { /* noop */ } // 新局清残留 debug
+        if (i === 5) {
+            JJBDesignBoot.startDoubles();
+            return;
+        }
+        JJBDoubles.reset();
         try {
             const ip: any = JijieControl.jjUI.initPanel;
             // GAP-16：把 home EditBox 真实输入写进 XP 老输入框，XP onClickX 自己读它写 JijieData.playerName（零语义漂移）
@@ -154,6 +165,12 @@ export default class JJBDesignBoot {
         } else {
             JJBDesignBoot.startManual(); // 拯救/随机模式：XP 已 toSelect，固化契约后直进
         }
+    }
+
+    private static startDoubles(): void {
+        try { (window as any).__jjbDebug = { screen: JJBDesignBoot.curScreen }; } catch (e) { /* noop */ }
+        JJBDoubles.start();
+        JJBDesignBoot.goSelect();
     }
 
     /** 标准模式二选层：手选阵容 / 随机抽签（叠在 home 屏之上，遮罩挡底层点击）。 */

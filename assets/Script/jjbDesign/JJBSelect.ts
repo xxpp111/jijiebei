@@ -4,6 +4,7 @@
 // 吸附判定复用 jijie2 SelectPanel.checkHit(<30px)。0 改 jijie2 源码。
 import { Theme } from "./JJBTheme";
 import { EVENT, DEMO_MATCHES, FACTORS, GROUP_A, GROUP_B, POOL, markFor, FONT_NUM, jjbLive, sessionMatches, manualSlots, facFlatIdx, modeLabel } from "./JJBData";
+import JJBDoubles, { DOUBLES_CONFIG, doublesLive, doublesMatches, doublesModeLabel } from "./JJBDoubles";
 import JJBView from "./JJBView";
 import SelectPanel from "../jijie2/view/SelectPanel"; // 只读复用静态 checkHit（<30px 吸附判定）
 import JijieData from "../jijie2/JijieData";           // 真实会话下读写 public static（goal 允许；不改源码）
@@ -39,23 +40,25 @@ export default class JJBSelect {
     static build(root: cc.Node, th: Theme, onStart?: () => void): void {
         JJBView.bg(root, th);
 
-        const live = jjbLive();
+        const doubles = doublesLive();
+        const live = !doubles && jjbLive();
         const dAny: any = JijieData;
         // 数据源：真实会话→真实抽取；否则→DEMO。
         // standalone 洗牌：演示因子/指挥官同样走随机抽取逻辑（不写死这几个）；真实会话直接用 XP 随机池。
         const shuffle = (arr: string[]): string[] => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
-        const matches: any[] = live ? sessionMatches() : DEMO_MATCHES;
-        const factorPool: string[] = live ? (dAny.randomFactorPoor || []).filter((f: string) => !!f) : shuffle(FACTORS);
-        const cmdPoolA: string[] = live ? (dAny.randomCommanderPoorA || []).filter((c: string) => c && c !== "自选") : shuffle(GROUP_A);
-        const cmdPoolB: string[] = live ? (dAny.randomCommanderPoorB || []).filter((c: string) => c && c !== "自选") : shuffle(GROUP_B);
+        const matches: any[] = doubles ? doublesMatches() : (live ? sessionMatches() : DEMO_MATCHES);
+        const factorPool: string[] = doubles ? JJBDoubles.factorPool.slice() : (live ? (dAny.randomFactorPoor || []).filter((f: string) => !!f) : shuffle(FACTORS));
+        const cmdPoolA: string[] = doubles ? JJBDoubles.commanderPool.slice() : (live ? (dAny.randomCommanderPoorA || []).filter((c: string) => c && c !== "自选") : shuffle(GROUP_A));
+        const cmdPoolB: string[] = doubles ? [] : (live ? (dAny.randomCommanderPoorB || []).filter((c: string) => c && c !== "自选") : shuffle(GROUP_B));
         const cmdAll = cmdPoolA.concat(cmdPoolB);
 
         // 本地选择状态（standalone 仅本地；真实会话同时写 JijieData）。
-        const selection: any = { slots: [{ cmds: [], factors: [] }, { cmds: [], factors: [] }, { cmds: [], factors: [] }] };
+        const selection: any = { slots: [] };
+        for (let i = 0; i < matches.length; i++) selection.slots.push({ cmds: [], factors: [] });
         const targets: DropTarget[] = [];
 
         // GAP-01：每场手选槽数计划（live 镜像 XP updateStart；standalone DEMO 维持 3）。
-        const slotsPlan: number[] = live ? [manualSlots(0), manualSlots(1), manualSlots(2)] : [3, 3, 3];
+        const slotsPlan: number[] = doubles ? matches.map(() => DOUBLES_CONFIG.extraFactors) : (live ? [manualSlots(0), manualSlots(1), manualSlots(2)] : matches.map((m: any) => Math.max(3, (m.factors || []).length)));
         // GAP-04：name→组别（只读 XP 配置，对齐 checkBCount 的 commanderList 查表语义——
         // 不按池子来源判组，拯救等模式 A 池里混入的 B 组指挥官按 XP 同样计 B）。
         const groupMap: { [n: string]: string } = {};
@@ -68,6 +71,7 @@ export default class JJBSelect {
                 w.__jjbDebug = w.__jjbDebug || {};
                 w.__jjbDebug.select = {
                     live: live,
+                    doubles: doubles,
                     slots: selection.slots.map((s: any) => ({ cmds: s.cmds.slice(), factors: s.factors.slice() })),
                     selectedCommanderList: live ? (dAny.selectedCommanderList || []).slice() : undefined,
                     selectedFactorList: live ? (dAny.selectedFactorList || []).slice() : undefined,
@@ -75,21 +79,32 @@ export default class JJBSelect {
                     lockFactors: live ? (dAny.modeSuiji ? [] : (dAny.lockFactorList || []).slice()) : undefined,
                     poolFactorCount: factorPool.length,
                     poolIdentity: live ? (factorPool.length === slotsPlan[0] + slotsPlan[1] + slotsPlan[2]) : undefined,
+                    mutators: doubles ? (DOUBLES_CONFIG.mutators || []).slice() : undefined,
+                    config: doubles ? JJBDoubles.debugSnapshot().config : undefined,
                     error: lastError,
                 };
+                if (doubles) JJBDoubles.exposeDebug();
             } catch (e) { /* noop */ }
         };
 
         // GAP-03 开始校验（live；镜像 XP SelectPanel.onStartClick 三规则，按 jjbDesign 本地 selection 判定）。
         const validate = (): string => {
-            for (let i = 0; i < 3; i++) {
-                if (!selection.slots[i].cmds[0]) return "第" + (i + 1) + "场指挥官未选择";
+            const matchLen = matches.length;
+            for (let i = 0; i < matchLen; i++) {
+                const cmdNeed = doubles ? DOUBLES_CONFIG.cmdsPerMatch : 1;
+                for (let k = 0; k < cmdNeed; k++) {
+                    if (!selection.slots[i].cmds[k]) {
+                        if (doubles && cmdNeed > 1) return "第" + (i + 1) + "场指挥官" + (k + 1) + "未选择";
+                        return "第" + (i + 1) + "场指挥官未选择";
+                    }
+                }
             }
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < matchLen; i++) {
                 for (let k = 0; k < slotsPlan[i]; k++) {
                     if (!selection.slots[i].factors[k]) return "第" + (i + 1) + "场因子" + (k + 1) + "未选择";
                 }
             }
+            if (doubles) return "";
             // GAP-04 B组≤1：触发条件精确对齐 XP（mfc>2 且非 onePick；8因子 mfc==2 不终检）。
             if (!dAny.modeIsOnePick && dAny.modelFactorCount > 2) {
                 let b = 0;
@@ -124,7 +139,10 @@ export default class JJBSelect {
             t.value = name;
             const slot = selection.slots[t.slot];
             (t.kind === "factor" ? slot.factors : slot.cmds)[t.idx] = name;
-            if (live) {
+            if (doubles) {
+                if (t.kind === "cmd") JJBDoubles.setCommander(t.slot, t.idx, name);
+                else JJBDoubles.setFactor(t.slot, t.idx, name);
+            } else if (live) {
                 if (t.kind === "cmd") JijieData.selectedCommanderList[t.slot] = name;        // 每场 1 指挥官
                 else JijieData.selectedFactorList[facFlatIdx(t.slot, t.idx)] = name;          // 扁平 场*3+槽
             }
@@ -154,7 +172,10 @@ export default class JJBSelect {
             t.value = null;
             const slot = selection.slots[t.slot];
             (t.kind === "factor" ? slot.factors : slot.cmds)[t.idx] = null;
-            if (live) {
+            if (doubles) {
+                if (t.kind === "cmd") JJBDoubles.clearCommander(t.slot, t.idx);
+                else JJBDoubles.clearFactor(t.slot, t.idx);
+            } else if (live) {
                 if (t.kind === "cmd") JijieData.selectedCommanderList[t.slot] = null;
                 else JijieData.selectedFactorList[facFlatIdx(t.slot, t.idx)] = null;
             }
@@ -285,35 +306,39 @@ export default class JJBSelect {
         const titleW = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 42, tWd = Math.round(tH * titleW / 200);
         JJBView.sprite(root, 104, 30, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
-        const playerStr = live ? ("当前选手  " + (dAny.playerName || "选手")) : "当前选手  Potato_01";
-        const modeStr = live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选";
+        const playerStr = live ? ("当前选手  " + (dAny.playerName || "选手")) : (doubles ? "当前选手  双打队伍" : "当前选手  Potato_01");
+        const modeStr = doubles ? ("比赛模式  " + doublesModeLabel()) : (live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选");
         JJBView.label(root, 762, 30, 480, 20, playerStr, 15, th.muted, HA.RIGHT);
         JJBView.label(root, 762, 54, 480, 20, modeStr, 15, th.ink, HA.RIGHT);
 
         // ---------- 三场槽 grid 3 列（design .slots：head + mapthumb 475:85 + t-cmds + t-facs）----------
         const PAD = 38;
-        const slotsTop = 96, colW = 389, gap = 18, slotH = 248;
-        for (let i = 0; i < 3; i++) {
-            const sx = PAD + i * (colW + gap);
+        const slotsTop = 96;
+        const singleDoubles = doubles && matches.length === 1;
+        const colW = singleDoubles ? 560 : 389;
+        const gap = 18;
+        const slotH = 248;
+        for (let i = 0; i < matches.length; i++) {
+            const sx = singleDoubles ? Math.round((1280 - colW) / 2) : PAD + (i % 3) * (colW + gap);
             const m = matches[i];
-            const active = !live && i === 0;
+            const active = !live && !doubles && i === 0;
             JJBView.panel(root, sx, slotsTop, colW, slotH, th);
             if (active) JJBView.box(root, sx, slotsTop, colW, slotH, null, th.accent, 2);
             // slot-head
             JJBView.label(root, sx + 14, slotsTop + 13, 120, 24, m.slot, 19, th.accent);
             JJBView.label(root, sx + 110, slotsTop + 16, 180, 20, m.map, 15, th.muted);
-            if (!live && (m as any).doubles) { JJBView.box(root, sx + colW - 90, slotsTop + 13, 44, 22, null, th.accent, 1); JJBView.label(root, sx + colW - 90, slotsTop + 16, 44, 16, "双打", 12, th.accent, HA.CENTER); }
+            if ((doubles || (!live && (m as any).doubles))) { JJBView.box(root, sx + colW - 90, slotsTop + 13, 44, 22, null, th.accent, 1); JJBView.label(root, sx + colW - 90, slotsTop + 16, 44, 16, "双打", 12, th.accent, HA.CENTER); }
             if (active) { JJBView.box(root, sx + colW - 60, slotsTop + 13, 50, 22, th.accent, null); JJBView.label(root, sx + colW - 60, slotsTop + 17, 50, 16, "选择中", 12, th.onAccent, HA.CENTER); }
             // 地图横幅（design aspect 475:85）
             const mapW = colW - 28, mapH = Math.round(mapW * 85 / 475);
             JJBView.coverSprite(root, sx + 14, slotsTop + 42, mapW, mapH, "images/maps/" + m.map);
             // t-cmds（56×67）— doubles(BOSS双打) 留 2 个指挥官位
             const ty = slotsTop + 42 + mapH + 12;
-            const cmdN = (m as any).doubles ? 2 : 1;
+            const cmdN = doubles ? DOUBLES_CONFIG.cmdsPerMatch : ((m as any).doubles ? 2 : 1);
             for (let k = 0; k < cmdN; k++) {
                 const cxx = sx + 14 + k * 62;
                 // live：槽位留空(reserved)，主播从池子拖拽编排；standalone：仅 active 场预填做演示
-                const prefill = (!live && active) ? (cmdAll[k] || m.cmds[k]) : null;
+                const prefill = (!live && !doubles && active) ? (cmdAll[k] || m.cmds[k]) : null;
                 const t: DropTarget = { kind: "cmd", slot: i, idx: k, left: cxx, top: ty, w: 56, h: 67, hit: null, hint: null, dash: null, fill: null, aux: [], value: null };
                 drawPlaceholder(t);
                 t.hit = JJBView.placed(root, cxx, ty, 56, 67);
@@ -326,8 +351,20 @@ export default class JJBSelect {
             // 不可拖不可清除，不入 targets；modeSuiji 整行无因子格），后接 GAP-01 动态手选槽。
             const facTop = ty + 75;
             let cell = 0;
-            const lockName: string = (live && !dAny.modeSuiji) ? (dAny.lockFactorList || [])[i] : null;
-            if (lockName) {
+            if (doubles) {
+                const mutators = (DOUBLES_CONFIG.mutators || []).slice();
+                mutators.forEach((lockName: string, mi: number) => {
+                    const lxx = sx + 14 + (cell % 5) * 58;
+                    const lyy = facTop + Math.floor(cell / 5) * 58;
+                    JJBView.box(root, lxx, lyy, 52, 52, BLACK, th.accent, 1);
+                    JJBView.sprite(root, lxx + 1, lyy + 1, 50, 50, "images/factor/" + lockName);
+                    JJBView.box(root, lxx, lyy + 38, 34, 14, th.accent, null);
+                    JJBView.label(root, lxx, lyy + 40, 34, 12, "官突", 9, th.onAccent, HA.CENTER);
+                    cell++;
+                });
+            }
+            const lockName: string = (!doubles && live && !dAny.modeSuiji) ? (dAny.lockFactorList || [])[i] : null;
+            if (!doubles && lockName) {
                 const lxx = sx + 14;
                 JJBView.box(root, lxx, facTop, 52, 52, BLACK, th.accent, 1);
                 JJBView.sprite(root, lxx + 1, facTop + 1, 50, 50, "images/factor/" + lockName);
@@ -335,12 +372,12 @@ export default class JJBSelect {
                 JJBView.label(root, lxx, facTop + 40, 34, 12, "锁定", 9, th.onAccent, HA.CENTER);
                 cell = 1;
             }
-            const facN = live ? slotsPlan[i] : Math.max(3, m.factors.length);
+            const facN = slotsPlan[i];
             for (let k = 0; k < facN; k++) {
                 const fxx = sx + 14 + ((cell + k) % 5) * 58;
                 const fyy = facTop + Math.floor((cell + k) / 5) * 58;
                 // live：槽位留空(reserved)，主播拖拽编排；standalone：仅 active 场预填演示
-                const prefill = (!live && active) ? (factorPool[k] || m.factors[k]) : null;
+                const prefill = (!live && !doubles && active) ? (factorPool[k] || m.factors[k]) : null;
                 const t: DropTarget = { kind: "factor", slot: i, idx: k, left: fxx, top: fyy, w: 52, h: 52, hit: null, hint: null, dash: null, fill: null, aux: [], value: null };
                 drawPlaceholder(t);
                 t.hit = JJBView.placed(root, fxx, fyy, 52, 52);
@@ -355,7 +392,7 @@ export default class JJBSelect {
         const poolTop = slotsTop + slotH + 16; // 96+248+16 = 360
         // 左：因子池（design .pool-factors 固定 340，.factor 66×66 wrap 4 列）
         JJBView.label(root, PAD, poolTop, 120, 18, "FACTORS", 13, th.accent, HA.LEFT, 255, FONT_NUM);
-        JJBView.label(root, PAD + 84, poolTop - 4, 200, 26, "选择因子", 20, th.ink);
+        JJBView.label(root, PAD + 84, poolTop - 4, 240, 26, doubles ? "额外因子" : "选择因子", 20, th.ink);
         if (live && factorPool.length === 0) JJBView.label(root, PAD, poolTop + 32, 330, 20, "随机模式 · 本局无需配置因子", 14, th.muted);
         factorPool.forEach((f, i) => {
             const fx = PAD + (i % 4) * 74, fy = poolTop + 26 + Math.floor(i / 4) * 74;
@@ -363,19 +400,26 @@ export default class JJBSelect {
         });
         // 右：指挥官区 — grp-row（A 组 + B 组横向并排，design .grp-row gap30 / .avatar-row 70×84）
         const cmdX = PAD + 340 + 26; // 404
-        JJBView.label(root, cmdX, poolTop, 200, 22, "A 组指挥官", 16, th.ink);
-        cmdPoolA.forEach((c, i) => makeDraggable(framedCmd(cmdX + i * 76, poolTop + 26, 66, 80, c, true), "cmd", c));
+        JJBView.label(root, cmdX, poolTop, 220, 22, doubles ? "双打指挥官池" : "A 组指挥官", 16, th.ink);
+        cmdPoolA.forEach((c, i) => {
+            const x = cmdX + (i % (doubles ? 8 : 6)) * 76;
+            const y = poolTop + 26 + Math.floor(i / (doubles ? 8 : 6)) * 88;
+            makeDraggable(framedCmd(x, y, 66, 80, c, true), "cmd", c);
+        });
         const bGrpX = cmdX + cmdPoolA.length * 76 + 24; // B 组接 A 组后（gap24）
-        JJBView.label(root, bGrpX, poolTop, 200, 22, "B 组指挥官", 16, th.ink);
-        cmdPoolB.forEach((c, i) => makeDraggable(framedCmd(bGrpX + i * 76, poolTop + 26, 66, 80, c, true), "cmd", c));
+        if (!doubles) {
+            JJBView.label(root, bGrpX, poolTop, 200, 22, "B 组指挥官", 16, th.ink);
+            cmdPoolB.forEach((c, i) => makeDraggable(framedCmd(bGrpX + i * 76, poolTop + 26, 66, 80, c, true), "cmd", c));
+        }
         // grp-self（自选指挥官，design .avatar-grid 60×72 9列×2行）
         // GAP-10 live：渲染 JJConfigData.commanderList 全量（ban 后）减已入 A/B/C 池者，全部带框可拖
         // （合并 XP「拖自选图标+点选」两步，消灭其"没点选→加载 自选.png"的宽松漏洞）；
         // 显示条件镜像 XP SelectPanel.updateSelect（拯救/随机/极难①/非酋无自选区）。
         // B 组占用经 groupMap 计入 A4 校验；8因子(mfc==2)按 XP 不终检（checkBCount 强制计 B 仅影响 updateBCount 路径）。
         const selfTop = poolTop + 26 + 80 + 18; // 484
-        JJBView.label(root, cmdX, selfTop, 200, 22, "自选指挥官", 16, th.ink);
+        if (!doubles) JJBView.label(root, cmdX, selfTop, 200, 22, "自选指挥官", 16, th.ink);
         const selfPool: string[] = (() => {
+            if (doubles) return [];
             if (!live) return shuffle(POOL.filter(Boolean) as string[]);
             const show = !dAny.modeSuiji && !dAny.modeIsZhengjiu && (!dAny.modeIsVeryHard || dAny.modeIsVeryHard2) && !dAny.modeFeiqiu;
             if (!show) return [];
@@ -384,14 +428,19 @@ export default class JJBSelect {
             ((dAny.randomCommanderPoorC || []) as string[]).forEach((c) => { inPool[c] = true; });
             try { return (ConfigData.commanderList || []).map((arr: any[]) => arr[0] as string).filter((c: string) => !inPool[c]); } catch (e) { return []; }
         })();
-        JJBView.label(root, cmdX + 150, selfTop + 3, 440, 16,
-            live ? (selfPool.length ? "全量可选 · 拖入场次槽位（B 组占用合并计数）" : "本模式无自选区") : "18 位全解锁 · 双打可放 2 位", 13, th.muted);
-        const selfCells: (string | null)[] = live ? selfPool : selfPool.concat(new Array(Math.max(0, 18 - selfPool.length)).fill(null));
-        selfCells.slice(0, 18).forEach((c, i) => {
-            const ax = cmdX + (i % 9) * 70, ay = selfTop + 28 + Math.floor(i / 9) * 74;
-            if (c) makeDraggable(framedCmd(ax, ay, 60, 72, c, true), "cmd", c);
-            else { JJBView.dashBox(root, ax, ay, 60, 72, th.dropBg, th.dropEdge, 1); JJBView.label(root, ax, ay + 26, 60, 18, "+", 20, th.muted, HA.CENTER); }
-        });
+        if (doubles) {
+            JJBView.label(root, cmdX, selfTop + 5, 620, 18,
+                "占位规则：不分 A/B 组；两位玩家各拖 1 名指挥官，额外因子按配置填满。", 13, th.muted);
+        } else {
+            JJBView.label(root, cmdX + 150, selfTop + 3, 440, 16,
+                live ? (selfPool.length ? "全量可选 · 拖入场次槽位（B 组占用合并计数）" : "本模式无自选区") : "18 位全解锁 · 双打可放 2 位", 13, th.muted);
+            const selfCells: (string | null)[] = live ? selfPool : selfPool.concat(new Array(Math.max(0, 18 - selfPool.length)).fill(null));
+            selfCells.slice(0, 18).forEach((c, i) => {
+                const ax = cmdX + (i % 9) * 70, ay = selfTop + 28 + Math.floor(i / 9) * 74;
+                if (c) makeDraggable(framedCmd(ax, ay, 60, 72, c, true), "cmd", c);
+                else { JJBView.dashBox(root, ax, ay, 60, 72, th.dropBg, th.dropEdge, 1); JJBView.label(root, ax, ay + 26, 60, 18, "+", 20, th.muted, HA.CENTER); }
+            });
+        }
 
         // ---------- 比赛开始（右下，design .startbtn align-flex-end padding 14/38）----------
         const bw = 200, bx = 1242 - bw, by = 658;
@@ -407,7 +456,7 @@ export default class JJBSelect {
             updateDebug();
         };
         const startHit = JJBView.hit(root, bx, by, bw, 48, () => {
-            if (live) {
+            if (live || doubles) {
                 const err = validate();
                 showError(err);
                 if (err) return;
@@ -418,11 +467,15 @@ export default class JJBSelect {
 
         // 主题切换 reRenderCurrent 重建本屏时回读 JijieData.selected* 恢复已选视觉（数据在、节点树是新的）。
         // 新一局的重置由 JJBDesignBoot.onMode 统一负责，故此处读到的即本局已选。
-        if (live) {
+        if (live || doubles) {
             targets.forEach((t) => {
-                const v = t.kind === "cmd"
-                    ? (JijieData.selectedCommanderList || [])[t.slot]
-                    : (JijieData.selectedFactorList || [])[facFlatIdx(t.slot, t.idx)];
+                const v = doubles
+                    ? (t.kind === "cmd"
+                        ? (((JJBDoubles.selection.slots || [])[t.slot] || {}).cmds || [])[t.idx]
+                        : (((JJBDoubles.selection.slots || [])[t.slot] || {}).factors || [])[t.idx])
+                    : (t.kind === "cmd"
+                        ? (JijieData.selectedCommanderList || [])[t.slot]
+                        : (JijieData.selectedFactorList || [])[facFlatIdx(t.slot, t.idx)]);
                 if (v) fillTarget(t, v);
             });
         }

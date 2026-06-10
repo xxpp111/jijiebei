@@ -4,6 +4,7 @@
 // 比分=winCount/3。standalone(?design=overlay)=DEMO 不变。onBack：「返回判定」切回 battle。
 import { Theme } from "./JJBTheme";
 import { EVENT, DEMO_MATCHES, markFor, FONT_NUM, jjbLive, sessionMatches, VAL_RESULT } from "./JJBData";
+import JJBDoubles, { DOUBLES_CONFIG, doublesLive, doublesMatches } from "./JJBDoubles";
 import JJBView from "./JJBView";
 import JijieData from "../jijie2/JijieData"; // 只读 public static（比分/判定）
 
@@ -16,24 +17,25 @@ export default class JJBOverlay {
         JJBView.bg(root, th);
         const L = 56, R = 1224, W = R - L; // 内容区
 
-        const live = jjbLive();
-        const matches: any[] = live ? sessionMatches() : DEMO_MATCHES;
-        const wl: number[] = live ? (JijieData.winLoseList || []) : [];
+        const doubles = doublesLive();
+        const live = !doubles && jjbLive();
+        const matches: any[] = doubles ? doublesMatches() : (live ? sessionMatches() : DEMO_MATCHES);
+        const wl: number[] = doubles ? (JJBDoubles.winLoseList || []) : (live ? (JijieData.winLoseList || []) : []);
         // 状态推导（live）：已判定→对应徽章；首个未判定→进行中；其余→待战
         let liveAssigned = false;
         const statusOf = (i: number): string => {
-            if (!live) return matches[i].status;
+            if (!live && !doubles) return matches[i].status;
             if (typeof wl[i] === "number") return VAL_RESULT[wl[i]];
             if (!liveAssigned) { liveAssigned = true; return "live"; }
             return "wait";
         };
         const sts: string[] = matches.map((m: any, i: number) => statusOf(i));
-        const winCount = live
-            ? wl.filter((v) => v === 1 || v === 2).length
-            : 1;
+        const winCount = (live || doubles) ? wl.filter((v) => v === 1 || v === 2).length : 1;
+        const totalMatches = doubles ? DOUBLES_CONFIG.matches : 3;
         try {
             const w: any = window; w.__jjbDebug = w.__jjbDebug || {};
-            w.__jjbDebug.overlay = { live: live, score: winCount + " / 3", statuses: sts.slice(), maps: matches.map((m: any) => m.map) };
+            w.__jjbDebug.overlay = { live: live, doubles: doubles, score: winCount + " / " + totalMatches, statuses: sts.slice(), maps: matches.map((m: any) => m.map) };
+            if (doubles) JJBDoubles.exposeDebug();
         } catch (e) { /* noop */ }
 
         // ---------- 头部 ----------
@@ -43,7 +45,7 @@ export default class JJBOverlay {
         const tH = 56, tWd = Math.round(tH * tw / 200);
         JJBView.sprite(root, L + 114, 36, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         JJBView.label(root, L + 116, 96, 320, 18, EVENT.en, 13, th.accent, HA.LEFT, 255, FONT_NUM);
-        JJBView.label(root, 880, 30, 344, 66, winCount + " / 3", 58, th.accent, HA.RIGHT, 255, FONT_NUM);
+        JJBView.label(root, 880, 30, 344, 66, winCount + " / " + totalMatches, 58, th.accent, HA.RIGHT, 255, FONT_NUM);
         JJBView.label(root, 900, 100, 324, 20, "当前获胜", 14, th.muted, HA.RIGHT);
         JJBView.box(root, L, 150, W, 2, th.panelEdge);
 
@@ -68,8 +70,18 @@ export default class JJBOverlay {
             (m.cmds || []).forEach((c: string) => { JJBView.sprite(root, cx, Y + (H - 78) / 2, 64, 78, "images/commander/" + c); cx += 72; });
             // 因子图标
             let fx = m.doubles ? 700 : 624;
-            const fy = Y + (H - 54) / 2;
-            (m.factors || []).forEach((f: string) => { JJBView.sprite(root, fx, fy, 54, 54, "images/factor/" + f); fx += 62; });
+            (m.factors || []).forEach((f: string, k: number) => {
+                const wrap = doubles;
+                const size = wrap ? 43 : 54;
+                const gapF = wrap ? 49 : 62;
+                const x = fx + (wrap ? (k % 5) * gapF : k * gapF);
+                const y = Y + (wrap ? (k < 5 ? 22 : 67) : (H - 54) / 2);
+                JJBView.sprite(root, x, y, size, size, "images/factor/" + f);
+                if (doubles && m.mutators && k < m.mutators.length) {
+                    JJBView.box(root, x, y + size - 13, 34, 14, th.accent, null);
+                    JJBView.label(root, x, y + size - 11, 34, 12, "官突", 9, th.onAccent, HA.CENTER);
+                }
+            });
             // 状态徽章
             const bw = 130, bxx = R - bw - 20, by = Y + (H - 46) / 2;
             let bg: cc.Color = null, edge: cc.Color = null, tcol = th.muted;

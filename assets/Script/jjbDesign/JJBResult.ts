@@ -3,6 +3,7 @@
 // 双源（方案 A）：standalone(?design=result)=DEMO winLoseList 预置；真实会话=读 battle 累加的真实记分与抽取阵容。0 改 jijie2 源码。
 import { Theme } from "./JJBTheme";
 import { DEMO_MATCHES, markFor, EVENT, FONT_NUM, RESULT_LABEL, RESULT_VAL, VAL_RESULT, jjbLive, sessionMatches, modeLabel } from "./JJBData";
+import JJBDoubles, { DOUBLES_CONFIG, doublesLive, doublesMatches, doublesModeLabel } from "./JJBDoubles";
 import JJBView from "./JJBView";
 import JijieData from "../jijie2/JijieData"; // 只读写 public static（goal 允许；不改源码）
 
@@ -14,35 +15,45 @@ export default class JJBResult {
     static build(root: cc.Node, th: Theme): void {
         JJBView.bg(root, th);
 
-        const live = jjbLive();
+        const doubles = doublesLive();
+        const live = !doubles && jjbLive();
         const dAny: any = JijieData;
-        const matches: any[] = live ? sessionMatches() : DEMO_MATCHES;
+        const matches: any[] = doubles ? doublesMatches() : (live ? sessionMatches() : DEMO_MATCHES);
 
         // ---------- TopBar（同对战页） ----------
         JJBView.sprite(root, 50, 30, 52, 42, markFor(th.style, th.mode));
         const titleW = th.style === "sc2" ? 599 : th.style === "minimal" ? 666 : 585;
         const tH = 42, tWd = Math.round(tH * titleW / 200);
         JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
-        JJBView.label(root, 760, 30, 470, 20, live ? ("当前选手  " + (dAny.playerName || "选手")) : "当前选手  Potato_01", 15, th.muted, HA.RIGHT);
-        JJBView.label(root, 760, 54, 470, 20, live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选", 15, th.ink, HA.RIGHT);
+        JJBView.label(root, 760, 30, 470, 20, live ? ("当前选手  " + (dAny.playerName || "选手")) : (doubles ? "当前选手  双打队伍" : "当前选手  Potato_01"), 15, th.muted, HA.RIGHT);
+        JJBView.label(root, 760, 54, 470, 20, doubles ? ("比赛模式  " + doublesModeLabel()) : (live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选"), 15, th.ink, HA.RIGHT);
 
         // ---------- 记分（standalone 用 DEMO 预置；真实会话沿用 battle 累加的 winLoseList） ----------
-        if (!live) JijieData.winLoseList = DEMO_MATCHES.map((m: any) => RESULT_VAL[m.result]);
-        const wl = JijieData.winLoseList || [];
-        JijieData.winCount = wl.filter((v) => v === 1 || v === 2).length;  // XP：胜利+带奖励=总获胜
-        JijieData.winbCount = wl.filter((v) => v === 2).length;
-        JijieData.totalCount = wl.filter((v) => v === 0 || v === 1 || v === 2).length;
-        const wins = JijieData.winCount || 0; // 获胜场数 = winCount（已含带奖励，不再 +winbCount）
+        if (!live && !doubles) JijieData.winLoseList = DEMO_MATCHES.map((m: any) => RESULT_VAL[m.result]);
+        const wl = doubles ? (JJBDoubles.winLoseList || []) : (JijieData.winLoseList || []);
+        if (!doubles) {
+            JijieData.winCount = wl.filter((v) => v === 1 || v === 2).length;  // XP：胜利+带奖励=总获胜
+            JijieData.winbCount = wl.filter((v) => v === 2).length;
+            JijieData.totalCount = wl.filter((v) => v === 0 || v === 1 || v === 2).length;
+        }
+        const wins = doubles ? JJBDoubles.winCount() : (JijieData.winCount || 0); // 获胜场数 = winCount（已含带奖励，不再 +winbCount）
         try {
             const w: any = window; w.__jjbDebug = w.__jjbDebug || {};
-            w.__jjbDebug.result = { live: live, wins: wins, winLoseList: wl.slice(), winCount: JijieData.winCount, winbCount: JijieData.winbCount };
+            w.__jjbDebug.result = {
+                live: live, doubles: doubles, wins: wins, winLoseList: wl.slice(),
+                winCount: doubles ? JJBDoubles.winCount() : JijieData.winCount,
+                winbCount: doubles ? JJBDoubles.bonusCount() : JijieData.winbCount,
+                matchCount: doubles ? DOUBLES_CONFIG.matches : 3,
+            };
+            if (doubles) JJBDoubles.exposeDebug();
         } catch (e) { /* noop */ }
 
         // ---------- banner（kicker / 大比分 / tag） ----------
         JJBView.label(root, 340, 124, 600, 18, "MATCH COMPLETE · 比赛结束", 15, th.accent, HA.CENTER, 255, FONT_NUM);
         JJBView.label(root, 480, 148, 160, 116, String(wins), 108, th.accent, HA.RIGHT, 255, FONT_NUM); // rs-num，右边缘≈640（居中）
-        JJBView.label(root, 654, 222, 320, 36, "/ 3 场获胜", 30, th.ink, HA.LEFT);                       // rs-unit
-        JJBView.label(root, 440, 274, 400, 24, wins === 3 ? "完美通关" : "本局战绩", 17, th.muted, HA.CENTER);
+        const totalMatches = doubles ? DOUBLES_CONFIG.matches : 3;
+        JJBView.label(root, 654, 222, 320, 36, "/ " + totalMatches + " 场获胜", 30, th.ink, HA.LEFT);       // rs-unit
+        JJBView.label(root, 440, 274, 400, 24, wins === totalMatches ? "完美通关" : "本局战绩", 17, th.muted, HA.CENTER);
 
         // ---------- 战绩卡列表（v2：max-width 1040 居中 → x[120,1160]，卡 96px + 左侧胜负色条 + 放大）----------
         const listX = 120, listW = 1040, rH = 104, gap = 12, list0 = 300;
@@ -66,10 +77,18 @@ export default class JJBResult {
             const cmdCount = (m.cmds || []).length || 1;
             const facX = midX + cmdCount * 58 + (cmdCount - 1) * 8 + 16;
             (m.factors || []).forEach((f: string, k: number) => {
-                JJBView.sprite(root, facX + k * 52, top + 25, 46, 46, "images/factor/" + f);
-                if (live && m.lock && k === 0) {
-                    JJBView.box(root, facX, top + 59, 32, 13, th.accent, null);
-                    JJBView.label(root, facX, top + 61, 32, 11, "锁定", 8, ON_STATE, HA.CENTER);
+                const wrap = doubles;
+                const size = wrap ? 38 : 46;
+                const gap = wrap ? 43 : 52;
+                const x = facX + (wrap ? (k % 5) * gap : k * gap);
+                const y = top + (wrap ? (k < 5 ? 21 : 62) : 25);
+                JJBView.sprite(root, x, y, size, size, "images/factor/" + f);
+                if (doubles && m.mutators && k < m.mutators.length) {
+                    JJBView.box(root, x, y + size - 12, 32, 13, th.accent, null);
+                    JJBView.label(root, x, y + size - 10, 32, 11, "官突", 8, ON_STATE, HA.CENTER);
+                } else if (live && m.lock && k === 0) {
+                    JJBView.box(root, x, top + 59, 32, 13, th.accent, null);
+                    JJBView.label(root, x, top + 61, 32, 11, "锁定", 8, ON_STATE, HA.CENTER);
                 }
             });
             // rcard-badge（v2：22px/900 放大）
