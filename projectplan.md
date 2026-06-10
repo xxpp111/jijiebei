@@ -253,3 +253,34 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 5. 三屏模式文案 `modeLabel()`（按 modeSuiji/Zhengjiu/VeryHard/Feiqiu/OnePick flags+modeIsRandom 推导）。实测随机模式显"随机模式 · 抽取"（旧错显"10 因子 · 手选"）。
 
 全程 0 errors。改动：JJBBattle/JJBSelect/JJBDesignBoot/JJBData/JJBResult（均 jjbDesign），XP 零改动。下一步=批2 规则核心（GAP-01 槽数动态化→02 锁定因子→03 开始校验→04 B≤1→16 选手名 EditBox）。
+
+## 批2 规则核心 + 批3 玩法补全（2026-06-10 · goal 任务 · 10 gap 全部完成）
+
+**commit 链**：`250d185` 基线（批1 止血+边框名字+亮版标题）→ `0c7b274` 批2 → `e7518e4` 批3。改动仅 jjbDesign/* + projectplan.md，**jijie2/Scene/jjdata/design 零改动（git diff 实证）**。
+
+### 批2（A1–A5 = GAP-01/02/03/04/16）
+- **A1 槽数动态化**：`JJBData.manualSlots(slotIdx)` 纯函数镜像 XP `LMatchItem.updateStart` fcount 规则（手选=min(fcount-1,3)，12因子场3 factor4 幽灵槽不计）。对账表实测一致：8因子=1/2/2、10因子=2/2/3、12因子=3/3/3、拯救=2/2/3、随机=0/0/0。「因子池数=手选槽总数」恒等式（5/7/9）暴露 `__jjbDebug.select.poolIdentity` 交叉断言全 true。9 格 facFlatIdx 契约不变。
+- **A2 锁定因子**：select 每场因子行行首渲染 `lockFactorList[i]` 固定格（filled 黑底+accent 边框+「锁定」角标，不可拖不可清除不入 targets）；modeSuiji 整行不显示（对齐 XP updateStart 隐藏 lockFactor）；`sessionMatches()` 透出 `lock` 字段，battle/result 首因子加同款角标。
+- **A3 开始校验**：`validate()` 镜像 XP `SelectPanel.onStartClick` 三规则（逐场指挥官非空→逐场手选槽全满[槽数来自 A1 动态表]→B组≤1），不通过 startbtn 左侧 th.lose 红字+不导航，通过清红字导航。错误文案与 XP 同形（"第X场指挥官未选择"/"第X场因子Y未选择"/"B组指挥官只能选1个"）。
+- **A4 B组≤1**：name→组别查 `JJConfigData.commanderList`（只读 import，对齐 XP checkBCount 查表语义而非按池子来源）；触发条件精确对齐 XP：`mfc>2 && !modeIsOnePick`，8因子(mfc==2)不终检。
+- **A5 选手名**：home「参赛选手」换程序化 `cc.EditBox`（textLabel/placeholderLabel 手工建并指派——编辑器外创建默认为空，失焦后文本会不可见）；输入存 `Boot.playerInput`（主题切换重建恢复）→ onMode 写 `ip.txtName.string`，XP onClickX 自读写 `JijieData.playerName`，零语义漂移。实测输入「测试选手」三屏 topbar 同名。
+
+### 批3（B1–B5 = GAP-10/08/09/12/17）
+- **B1 自选指挥官**：live 自选区渲染 commanderList 全量（ban后16）减 A/B/C 池=10 人全可拖（合并 XP「拖自选图标+点选」两步，消灭"没点选→自选.png"宽松漏洞）；显示条件镜像 XP updateSelect（拯救/随机/极难①/非酋无自选区，拯救实测显示"本模式无自选区"+仅 7 个 A 池项）；B 组占用经 groupMap 合并计入 A4。
+- **B2 池 sel 反馈**：`refreshPool()` 按 selection 重算——被任何槽使用→上浮3px+accent 2px 外圈+右上✓角标（design .factor-sel），未使用→常态；不做整池 dim。**池子项重构为单容器节点**（黑底+边框+cover 图+名字浮层整体拖动/置顶/上浮，顺带修了拖动时边框名字不跟手的割裂感）。
+- **B3 取消重选**：点击已填槽=清空（destroy fill/aux→`drawPlaceholder` 无条件重画 dashed+hint→selection 与 JijieData.selected* 置 null→池 sel 重算）；**350ms 窗口**区分拖拽释放的 mouse/touch 双事件流（释放瞬间槽 hit 也收 MOUSE_UP，不当成清槽点击）；锁定格不入 targets 无此交互。实测清后可重拖。
+- **B4 随机抽签**：标准模式（home i=0/1/2，XP toStart 停 status=1）弹「手选阵容/随机抽签」二选层（遮罩挡底层点击；拯救/随机模式 status 已=2 照旧直进）。手选=modeIsRandom false→toSelect→固化 9 格契约→select。随机=调 XP public `jjUI.onRandomClick(null)`（置 modeIsRandom=true+抽3指挥官+全部因子写隐藏老 UI 组件+内部 toBattle 到 status=3）→镜像写回（`spCommander.cname`→selectedCommanderList、active `factorN.factorName`→selectedFactorList 扁平位）→winLoseList=[]→battle。`?path=manual|random` 自动化旗标。实测随机抽签直达 battle、3 指挥官+7 因子（10因子）镜像非空、modeLabel 显「随机」。
+  - **已记录 XP 副作用**（不触发 stop：与线上老 UI 行为一致，单局影响=0）：`onRandomClick` 直接 splice `ConfigData.commanderList` 抽走 3 人。本前端单局流程（result 后无"再来一局"入口，刷新开新局）不受影响；**后续加局内重开功能时必须处理此污染**。
+- **B5 浮层动态化**：overlay live 接 `sessionMatches()`（已判定→win/bonus/lose 徽章、首个未判定→「进行中」accent 高亮、其余→「待战」；比分=winCount/3，XP 语义含带奖励）；battle 右上「直播浮层」↔ overlay 右下「返回判定」互切（经 Boot，curScreen 同步暴露 `__jjbDebug.screen`，主题切换器照常）。实测判 1 场后 overlay score="1 / 3"、statuses=[win,live,wait]，切回 battle 判定保留。
+
+### B6 验收（三重确定性验证）
+- **build**：Cocos web-mobile exit 0，TS 0 错误。
+- **端到端（Playwright 8 路径 36/36 断言 PASS，全路径 console 0 errors）**：①8因子手选全流程（槽数1/2/2+锁定+空槽拦截+sel✓+清槽重拖+自选区拖入+判3场[胜/带奖/负]→result wins=2 不双计）②10因子双B拦截→清槽换A放行 ③12因子3/3/3池9 ④拯救直进2/2/3+无自选区 ⑤随机模式0/0/0无因子槽 ⑥随机抽签直达battle+镜像非空+浮层互切 ⑦二选层弹出+手选可达 ⑧EditBox名字三屏流转。
+- **对抗审查**：只读 subagent 独立审 diff 对照 XP 真相，9 项声明 **0 必修 BUG**；2 个已记录可接受 RISK（350ms 启发窗口在高延迟设备的理论误伤；PoolItem 坐标 init 快照对动态 resize 脆弱——当前无 resize 场景）。
+- **视觉**：CDP 截图 3 屏确认（select live sel 态+自选全量带名 / 二选层 metal 金色切角按钮 / overlay live 真实地图阵容+三态徽章）。
+- 测试基建：`/tmp/jjb-test/{helpers,all,shots}.js`（Cocos 节点查找/emit 点击/TOUCH 拖拽/EditBox 注入；注意 `cc.isValid(n, true)` strict 模式才过滤同帧 destroy 节点）。
+
+### 剩余（批4 前置）
+- 回 Claude Design 申请 v4：锁定因子样式/校验红字提示/二选层/取消交互动效/浮层 OBS 缩小可读形态/随机抽签 UI 的设计语言（当前全部用 token 兜底先行）。
+- 待土豆：极难②/单指挥官A/非酋 3 模式去留（GAP-14 后半）；双打官突独立立项。
+- 局内重开（如需要）：处理 onRandomClick splice commanderList 污染。
