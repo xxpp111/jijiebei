@@ -333,3 +333,16 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 **下一阶段 = v4 细节修缮（设计先行）**：需求 brief 已写 `design/v4-brief.md`，交 Claude Design 出设计后 TS 复刻。核心需求：①因子游戏边框（CM 项目现成素材 border-normal-mutatorframe 普通绿框 / border-gold-grandmaster 金色强化框，语义见 CM/tmp/design-handoff-announce-202606/mutator-reference.md）②指挥官边框（游戏选人界面微圆角+亮光长方形）③全局导航控制条（屏幕回切+重新随机+回主界面，含误触保护）④兜底转正（锁定格/校验红字/二选层/清槽提示/sel 动效）⑤浮层 OBS 底部横条形态（1280×200~240，缩至1/3可读）。
 
 **待确认**：赛事是否启用 CM 金色强化因子（决定金框两态是否需要）；重新随机的 XP 侧实现注意 onRandomClick splice 污染（考古已记录）。
+
+## v4 复刻实施记录（2026-06-11 · Codex spoke）
+
+### Phase A：边框系统基建 + select 落位
+
+**改动**：新增 `assets/Script/jjbDesign/JJBBorder.ts`，封装 v4 因子框、指挥官卡、toast；新增 `JJBData.GOLD_FACTORS`（默认空数组，赛事需要金色强化因子时填名单）；将 `design/v4/input/border-factor-normal.png` 与 `border-factor-gold.png` 入库到 `assets/resources/images/brand/`。`JJBSelect.ts` 的因子池、锁定/官突格、填充槽、指挥官池和校验提示已接入 v4 helper；裸红字替换为右下 toast，保留 `__jjbDebug.select.error`。
+
+**验证**：
+- Cocos web-mobile build exit 0。
+- 既有 Playwright 8 路径回归 36/36 PASS，console 0 errors：8 因子手选全流程、10 因子 B≤1、12 因子、拯救、随机模式、随机抽签直达 battle、二选层、选手名。
+- PhaseA 新断言 4/4 PASS：v4 因子节点存在、指挥官池存在、toast 出现并保留 error 语义、4s 自动消失，console 0 errors。
+- 截图留档：`/tmp/jjb-v4-impl/phaseA-select-metal-dark-toast.jpg`。
+- `git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。

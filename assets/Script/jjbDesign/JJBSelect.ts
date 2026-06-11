@@ -6,14 +6,12 @@ import { Theme } from "./JJBTheme";
 import { EVENT, DEMO_MATCHES, FACTORS, GROUP_A, GROUP_B, POOL, markFor, FONT_NUM, jjbLive, sessionMatches, manualSlots, facFlatIdx, modeLabel } from "./JJBData";
 import JJBDoubles, { DOUBLES_CONFIG, doublesLive, doublesMatches, doublesModeLabel } from "./JJBDoubles";
 import JJBView from "./JJBView";
+import JJBBorder from "./JJBBorder";
 import SelectPanel from "../jijie2/view/SelectPanel"; // 只读复用静态 checkHit（<30px 吸附判定）
 import JijieData from "../jijie2/JijieData";           // 真实会话下读写 public static（goal 允许；不改源码）
 import ConfigData from "../jijie2/data/JJConfigData";  // 只读 commanderList（name→组别，B组≤1 校验对齐 XP checkBCount）
 
 const HA = cc.Label.HorizontalAlign;
-const BLACK = cc.color(0, 0, 0);          // 槽位/图标黑底（design .filled/.factor background:#000）
-const NAMEBG = cc.color(0, 0, 0, 200);    // 名字浮层底（design .avatar-name 暗渐变近似）
-
 // 一个目标槽（指挥官 / 因子）。hit=透明热点节点（checkHit 参照），fill=当前填充图标节点。
 interface DropTarget {
     kind: string;       // "cmd" | "factor"
@@ -88,23 +86,27 @@ export default class JJBSelect {
         };
 
         // GAP-03 开始校验（live；镜像 XP SelectPanel.onStartClick 三规则，按 jjbDesign 本地 selection 判定）。
+        let validationCount = 0;
         const validate = (): string => {
+            const errs: string[] = [];
             const matchLen = matches.length;
             for (let i = 0; i < matchLen; i++) {
                 const cmdNeed = doubles ? DOUBLES_CONFIG.cmdsPerMatch : 1;
                 for (let k = 0; k < cmdNeed; k++) {
                     if (!selection.slots[i].cmds[k]) {
-                        if (doubles && cmdNeed > 1) return "第" + (i + 1) + "场指挥官" + (k + 1) + "未选择";
-                        return "第" + (i + 1) + "场指挥官未选择";
+                        errs.push(doubles && cmdNeed > 1 ? "第" + (i + 1) + "场指挥官" + (k + 1) + "未选择" : "第" + (i + 1) + "场指挥官未选择");
                     }
                 }
             }
             for (let i = 0; i < matchLen; i++) {
                 for (let k = 0; k < slotsPlan[i]; k++) {
-                    if (!selection.slots[i].factors[k]) return "第" + (i + 1) + "场因子" + (k + 1) + "未选择";
+                    if (!selection.slots[i].factors[k]) errs.push("第" + (i + 1) + "场因子" + (k + 1) + "未选择");
                 }
             }
-            if (doubles) return "";
+            if (doubles) {
+                validationCount = errs.length;
+                return errs[0] || "";
+            }
             // GAP-04 B组≤1：触发条件精确对齐 XP（mfc>2 且非 onePick；8因子 mfc==2 不终检）。
             if (!dAny.modeIsOnePick && dAny.modelFactorCount > 2) {
                 let b = 0;
@@ -112,9 +114,10 @@ export default class JJBSelect {
                     const c = selection.slots[i].cmds[0];
                     if (c && groupMap[c] === "B") b++;
                 }
-                if (b > 1) return "B组指挥官只能选1个";
+                if (b > 1) errs.push("B组指挥官只能选1个");
             }
-            return "";
+            validationCount = errs.length;
+            return errs[0] || "";
         };
 
         // 填充某个目标槽（前置预填、拖拽命中均走此一处）。真实会话同步写 JijieData.selected*。
@@ -127,15 +130,9 @@ export default class JJBSelect {
             t.dash = null;
             if (t.hint && cc.isValid(t.hint)) t.hint.destroy();
             t.hint = null;
-            // design .t-cmd/.t-fac.filled：黑底 + 1px accent 边框 + 图（内缩 1px 露边框）；指挥官加底部名字浮层(.avatar-name)
-            t.aux.push(JJBView.box(root, t.left, t.top, t.w, t.h, BLACK, th.accent, 1));
             t.fill = t.kind === "factor"
-                ? JJBView.sprite(root, t.left + 1, t.top + 1, t.w - 2, t.h - 2, "images/factor/" + name)
-                : JJBView.coverSprite(root, t.left + 1, t.top + 1, t.w - 2, t.h - 2, "images/commander/" + name);
-            if (t.kind === "cmd") {
-                t.aux.push(JJBView.box(root, t.left + 1, t.top + t.h - 16, t.w - 2, 15, NAMEBG, null));
-                t.aux.push(JJBView.label(root, t.left + 1, t.top + t.h - 15, t.w - 2, 12, name, 10, cc.Color.WHITE, HA.CENTER));
-            }
+                ? JJBBorder.framedFactorV4(root, t.left, t.top, t.w, name, th, { filled: true })
+                : JJBBorder.framedCmdV4(root, t.left, t.top, t.w, t.h, name, th, { fill: true });
             t.value = name;
             const slot = selection.slots[t.slot];
             (t.kind === "factor" ? slot.factors : slot.cmds)[t.idx] = name;
@@ -251,55 +248,11 @@ export default class JJBSelect {
             item.on(cc.Node.EventType.TOUCH_CANCEL, onEnd);
         };
 
-        // 池子项容器（design .avatar/.factor）：黑底+边框+cover 图+可选名字浮层装进单容器，
-        // 拖动/上浮/置顶整体移动（修拖动时只有图动、框名留在原地的割裂感）。容器即 makeDraggable/checkHit 对象。
-        const framedItem = (left: number, top: number, w: number, h: number, resPath: string, name: string): cc.Node => {
-            const item = JJBView.placed(root, left, top, w, h);
-            const g = item.addComponent(cc.Graphics);
-            g.rect(0, -h, w, h);
-            g.fillColor = BLACK; g.fill();
-            g.strokeColor = th.panelEdge; g.lineWidth = 1; g.stroke();
-            // cover 图（内缩 1px 露边框）
-            const mk = new cc.Node();
-            mk.parent = item; mk.setAnchorPoint(0.5, 0.5);
-            mk.setContentSize(w - 2, h - 2); mk.setPosition(w / 2, -h / 2);
-            const mask = mk.addComponent(cc.Mask);
-            mask.type = cc.Mask.Type.RECT;
-            const inner = new cc.Node();
-            inner.parent = mk; inner.setAnchorPoint(0.5, 0.5); inner.setPosition(0, 0);
-            const sp = inner.addComponent(cc.Sprite);
-            sp.sizeMode = cc.Sprite.SizeMode.CUSTOM; sp.trim = false;
-            cc.resources.load(resPath, cc.SpriteFrame, (err: Error, sf: cc.SpriteFrame) => {
-                if (err || !sf || !cc.isValid(inner)) return;
-                sp.spriteFrame = sf;
-                const os = sf.getOriginalSize();
-                const sc = Math.max((w - 2) / os.width, (h - 2) / os.height);
-                inner.setContentSize(os.width * sc, os.height * sc);
-            });
-            if (name) { // 名字浮层 .avatar-name
-                const nb = new cc.Node();
-                nb.parent = item; nb.setAnchorPoint(0, 1); nb.setPosition(1, -(h - 16));
-                const ng = nb.addComponent(cc.Graphics);
-                ng.rect(0, -15, w - 2, 15); ng.fillColor = NAMEBG; ng.fill();
-                const nl = new cc.Node();
-                nl.parent = item; nl.setAnchorPoint(0, 1);
-                const lab = nl.addComponent(cc.Label);
-                lab.string = name; lab.fontSize = 10; lab.lineHeight = 12;
-                lab.horizontalAlign = HA.LEFT; lab.verticalAlign = cc.Label.VerticalAlign.TOP;
-                lab.overflow = cc.Label.Overflow.NONE; lab.enableWrapText = false;
-                nl.color = cc.Color.WHITE;
-                const anyL: any = lab;
-                if (typeof anyL._forceUpdateRenderData === "function") anyL._forceUpdateRenderData(true);
-                let tw = nl.width;
-                if (!tw || tw < 1) { tw = 0; for (let i = 0; i < name.length; i++) tw += name.charCodeAt(i) > 255 ? 10 : 5.5; }
-                nl.setPosition(1 + (w - 2 - tw) / 2, -(h - 15)); // 居中（同 JJBView.label 测宽 trick）
-            }
-            return item;
-        };
+        // v4 池子项容器：因子用游戏边框 PNG 整图缩放；指挥官用圆角内亮线+高光+名牌。
         const framedCmd = (left: number, top: number, w: number, h: number, cmd: string, withName: boolean): cc.Node =>
-            framedItem(left, top, w, h, "images/commander/" + cmd, withName ? cmd : null);
+            JJBBorder.framedCmdV4(root, left, top, w, h, cmd, th, { noName: !withName });
         const framedFactor = (left: number, top: number, w: number, h: number, f: string): cc.Node =>
-            framedItem(left, top, w, h, "images/factor/" + f, null);
+            JJBBorder.framedFactorV4(root, left, top, w, f, th);
 
         // ---------- TopBar（lockup sm + meta，design padding 38）----------
         JJBView.sprite(root, 38, 28, 56, 46, markFor(th.style, th.mode));
@@ -356,20 +309,14 @@ export default class JJBSelect {
                 mutators.forEach((lockName: string, mi: number) => {
                     const lxx = sx + 14 + (cell % 5) * 58;
                     const lyy = facTop + Math.floor(cell / 5) * 58;
-                    JJBView.box(root, lxx, lyy, 52, 52, BLACK, th.accent, 1);
-                    JJBView.sprite(root, lxx + 1, lyy + 1, 50, 50, "images/factor/" + lockName);
-                    JJBView.box(root, lxx, lyy + 38, 34, 14, th.accent, null);
-                    JJBView.label(root, lxx, lyy + 40, 34, 12, "官突", 9, th.onAccent, HA.CENTER);
+                    JJBBorder.framedFactorV4(root, lxx, lyy, 52, lockName, th, { tag: "官突" });
                     cell++;
                 });
             }
             const lockName: string = (!doubles && live && !dAny.modeSuiji) ? (dAny.lockFactorList || [])[i] : null;
             if (!doubles && lockName) {
                 const lxx = sx + 14;
-                JJBView.box(root, lxx, facTop, 52, 52, BLACK, th.accent, 1);
-                JJBView.sprite(root, lxx + 1, facTop + 1, 50, 50, "images/factor/" + lockName);
-                JJBView.box(root, lxx, facTop + 38, 34, 14, th.accent, null);
-                JJBView.label(root, lxx, facTop + 40, 34, 12, "锁定", 9, th.onAccent, HA.CENTER);
+                JJBBorder.framedFactorV4(root, lxx, facTop, 52, lockName, th, { tag: "锁定" });
                 cell = 1;
             }
             const facN = slotsPlan[i];
@@ -447,12 +394,12 @@ export default class JJBSelect {
         if (th.style === "metal") JJBView.cutBox(root, bx, by, bw, 48, th.accent, null, 0, 12);
         else JJBView.box(root, bx, by, bw, 48, th.accent, null);
         JJBView.label(root, bx, by + 13, bw, 26, "比赛开始 ▶", 21, th.onAccent, HA.CENTER);
-        // GAP-03：不通过 → startbtn 左侧红字（th.lose 色；design 暂无此元素，先用 token 红字）+ 不导航。
+        // GAP-03：不通过 → v4 toast（红框 + ! + 条数角标），4s 自动消失；__jjbDebug.select.error 语义保留。
         let errNode: cc.Node = null;
         const showError = (msg: string) => {
             lastError = msg;
             if (errNode && cc.isValid(errNode)) { errNode.destroy(); errNode = null; }
-            if (msg) errNode = JJBView.label(root, bx - 630, by + 15, 620, 22, msg, 16, th.lose, HA.RIGHT);
+            if (msg) errNode = JJBBorder.toastV4(root, bx - 460, by + 5, 444, msg, Math.max(1, validationCount), th);
             updateDebug();
         };
         const startHit = JJBView.hit(root, bx, by, bw, 48, () => {

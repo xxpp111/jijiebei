@@ -47,6 +47,9 @@ export const POOL: (string | null)[] = [
     null, null, null, null, null, null, null, null, null, null, null, null,
 ];
 
+// v4 金色强化因子名单。默认空数组=全部普通绿框；赛事启用金色强化因子时只改这里。
+export const GOLD_FACTORS: string[] = [];
+
 // 拉丁/数字字体（设计 --font-num）。中文不用它（走系统字）。需 JJBDesignBoot 注入 Google Fonts。
 export const FONT_NUM = "Oswald";
 
