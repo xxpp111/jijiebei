@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>集结杯 v4 R2 · 对战页边框落位</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&family=Oswald:wght@500;700&family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="v4.css" />
+<style>
+  html, body { margin: 0; height: 100%; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="components/select-screen.jsx"></script>
+<script type="text/babel" src="components/battle-screen.jsx"></script>
+<script type="text/babel" src="components/spec-factor.jsx"></script>
+<script type="text/babel" src="components/spec-battle.jsx"></script>
+<script type="text/babel">
+  const { useState } = React;
+
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="battle-screens" title="① 对战页 · 边框落位" subtitle="R1 选择面板的 .cc 指挥官卡 / .fx 因子框 接入对战行 · 双打 · 官突模式 · 1280×720">
+          <DCArtboard id="b-sc2" label="星际2 · 暗（展开态）" width={1280} height={720}>
+            <BattleScreenV4 styleName="sc2" mode="dark" barState="full" />
+          </DCArtboard>
+          <DCArtboard id="b-metal" label="金属 · 暗（展开态）" width={1280} height={720}>
+            <BattleScreenV4 styleName="metal" mode="dark" barState="full" />
+          </DCArtboard>
+          <DCArtboard id="b-minimal" label="极简 · 亮（OBS 亮底适配）" width={1280} height={720}>
+            <BattleScreenV4 styleName="minimal" mode="light" barState="full" />
+          </DCArtboard>
+          <DCArtboard id="b-collapse" label="星际2 · 暗（控制条收起 · 直播态）" width={1280} height={720}>
+            <BattleScreenV4 styleName="sc2" mode="dark" barState="collapsed" />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="battle-spec" title="② 规格板" subtitle="状态矩阵 / 尺寸族 / 动效 / Cocos 落地要点 — 照 R1 spec 格式">
+          <DCArtboard id="s-anat" label="分区与落位" width={1300} height={540}>
+            <BattleAnatomy />
+          </DCArtboard>
+          <DCArtboard id="s-state" label="状态矩阵" width={920} height={560}>
+            <BattleStates />
+          </DCArtboard>
+          <DCArtboard id="s-size" label="尺寸族 & 单刷/双打" width={920} height={380}>
+            <BattleSizes />
+          </DCArtboard>
+          <DCArtboard id="s-impl" label="动效 / Cocos 落地" width={920} height={470}>
+            <BattleImpl />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

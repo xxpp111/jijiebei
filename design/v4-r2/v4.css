@@ -1,0 +1,293 @@
+/* ============================================================
+   集结杯 × CM — v4.css
+   v4 细节修缮新增组件：因子边框 / 指挥官边框 / 全局控制条 /
+   校验提示 / 清槽 / 规格板辅助。挂在 v3 token 体系之上
+   （.style-{metal|sc2|minimal} × .mode-{dark|light}）。
+   ============================================================ */
+
+/* ===== 规格板用 token 容器（不锁 1280×720 的 .jjb 变体） ===== */
+.jjbx {
+  --font-cn: "Noto Sans SC", system-ui, sans-serif;
+  --font-title: "Noto Sans SC", system-ui, sans-serif;
+  --font-num: "Oswald", sans-serif;
+  --font-mono: "Share Tech Mono", monospace;
+  position: relative; color: var(--ink, #e9eef4);
+  background: radial-gradient(120% 90% at 50% 0%, var(--bg-a, #16273f), var(--bg-b, #05090f) 78%);
+  font-family: var(--font-cn); -webkit-font-smoothing: antialiased;
+}
+.jjbx, .jjbx *, .jjbx *::before, .jjbx *::after { box-sizing: border-box; }
+.jjbx img { display: block; }
+.jjbx button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer; }
+.style-minimal.jjbx { background: linear-gradient(180deg, var(--bg-a), var(--bg-b)); }
+
+/* ============================================================
+   §1 因子边框 .fx  （普通=mutatorframe 绿框 / 金色=grandmaster 金框）
+   尺寸族用 --fxz 驱动：74/66/56/52/46
+   ============================================================ */
+.fx { position: relative; width: var(--fxz, 66px); height: var(--fxz, 66px); flex: none; }
+.fx-art {
+  position: absolute; left: 7%; top: 7%; width: 86%; height: 86%;
+  object-fit: cover; background: #000;
+}
+.fx-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+/* 金色：金框带外发光，框略放大、图略内收 */
+.fx.gold .fx-art { left: 9%; top: 9%; width: 82%; height: 82%; }
+.fx.gold .fx-frame { left: -5%; top: -5%; width: 110%; height: 110%; }
+/* 亮色底可读性：边框落影 + 图芯描边 */
+.mode-light .fx-frame { filter: drop-shadow(0 1px 3px rgba(10, 22, 34, .45)); }
+.mode-light .fx-art { outline: 1px solid rgba(10, 22, 34, .35); outline-offset: -1px; }
+
+/* 状态：sel（上浮 + ✓ + accent 外圈） */
+.fx-ring { position: absolute; inset: -2px; border-radius: 5px; pointer-events: none; z-index: 3; }
+.fx.fx-sel { transform: translateY(-3px); }
+.fx.fx-sel .fx-ring {
+  box-shadow: 0 0 0 2px var(--accent), 0 7px 16px rgba(0, 0, 0, .45),
+              0 0 16px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+/* 状态：dim（已耗尽 / 不可选） */
+.fx.fx-dim .fx-art { opacity: .38; filter: saturate(.5) brightness(.92); }
+.fx.fx-dim .fx-frame { opacity: .55; }
+/* 状态：拖拽中 */
+.fx.fx-drag { transform: scale(1.07) translateY(-2px); z-index: 6; }
+.fx.fx-drag .fx-ring {
+  box-shadow: 0 0 0 2px var(--accent), 0 14px 26px rgba(0, 0, 0, .55),
+              0 0 24px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* 状态：拖拽起点残影 */
+.fx.fx-ghost .fx-art, .fx.fx-ghost .fx-frame { opacity: .28; }
+.fx.fx-ghost .fx-ring { box-shadow: inset 0 0 0 1.5px var(--drop-edge); border-radius: 4px; border: 0; }
+
+/* ✓ 角标（与 v3 factor-check 同几何） */
+.fx-check, .cc-check {
+  position: absolute; top: -8px; right: -8px; z-index: 5;
+  width: 21px; height: 21px; border-radius: 50%;
+  background: var(--accent); color: var(--on-accent);
+  font-size: 12px; font-weight: 900; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .5);
+}
+
+/* 锁定 / 官突 角标（贴框左下，压在边框之上） */
+.fx-tag {
+  position: absolute; left: -5px; bottom: -6px; z-index: 5;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; line-height: 1;
+  padding: 3px 7px; white-space: nowrap;
+  background: var(--accent); color: var(--on-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+}
+.fx-tag.lock {
+  background: rgba(7, 11, 19, .88); color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent), 0 1px 4px rgba(0, 0, 0, .45);
+}
+.mode-light .fx-tag.lock { background: rgba(255, 255, 255, .92); }
+
+/* ============================================================
+   §2 指挥官边框 .cc  （微圆角 + 内外亮光描边 + 投影，参考游戏选人界面）
+   尺寸族 --ccw/--cch：70×84 / 66×80 / 60×72 / 58×70 / 56×67 / 64×78
+   ============================================================ */
+.cc {
+  position: relative; width: var(--ccw, 70px); height: var(--cch, 84px); flex: none;
+  border-radius: 6px; background: var(--avatar-bg, #0a1018);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .62), 0 3px 9px rgba(0, 0, 0, .42);
+}
+.cc::before { /* 内亮线 + 顶部高光，盖在图上 */
+  content: ""; position: absolute; inset: 0; border-radius: 6px; z-index: 3; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .17), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+.mode-light .cc { box-shadow: 0 0 0 1px rgba(21, 35, 58, .4), 0 3px 9px rgba(21, 35, 58, .2); }
+.cc-art { position: absolute; inset: 2px; border-radius: 4px; overflow: hidden; z-index: 1; }
+.cc-art img { width: 100%; height: 100%; object-fit: cover; }
+.cc-gloss {
+  position: absolute; left: 2px; right: 2px; top: 2px; height: 30%;
+  border-radius: 4px 4px 0 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .13), transparent);
+}
+.cc-name {
+  position: absolute; left: 2px; right: 2px; bottom: 2px; z-index: 2;
+  padding: 9px 2px 3px; border-radius: 0 0 4px 4px; text-align: center;
+  font-size: 10.5px; letter-spacing: 1px; line-height: 1; color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .5) 35%, rgba(0, 0, 0, .9));
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .9); white-space: nowrap; overflow: hidden;
+}
+
+/* 状态：已用 sel（accent 光圈 + ✓ + 画面微降饱和） */
+.cc.cc-sel { transform: translateY(-2px); }
+.cc.cc-sel, .mode-light .cc.cc-sel {
+  box-shadow: 0 0 0 2px var(--accent), 0 6px 14px rgba(0, 0, 0, .45),
+              0 0 16px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.cc.cc-sel .cc-art img { filter: saturate(.75) brightness(.86); }
+/* 状态：拖拽中 */
+.cc.cc-drag { transform: scale(1.06); z-index: 6; }
+.cc.cc-drag, .mode-light .cc.cc-drag {
+  box-shadow: 0 0 0 2px var(--accent), 0 16px 30px rgba(0, 0, 0, .55),
+              0 0 26px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* 状态：拖拽起点残影 */
+.cc.cc-ghost { box-shadow: none; background: var(--drop-bg); }
+.cc.cc-ghost::before { box-shadow: inset 0 0 0 1.5px var(--drop-edge); }
+.cc.cc-ghost .cc-art, .cc.cc-ghost .cc-name, .cc.cc-ghost .cc-gloss { opacity: .28; }
+/* 状态：槽位 filled（同族边框 + accent 内细线） */
+.cc.cc-fill::before {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 65%, transparent),
+              inset 0 1px 0 rgba(255, 255, 255, .2);
+}
+/* 状态：清槽 hover（✕ 蒙层 + 提示） */
+.cc-clear {
+  position: absolute; inset: 2px; border-radius: 4px; z-index: 4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  background: rgba(5, 8, 14, .62);
+}
+.cc-clear-x {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid #fff; color: #fff; font-size: 10px; font-weight: 700; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.cc-clear-t { font-size: 9.5px; letter-spacing: 1px; color: #fff; opacity: .9; }
+/* 因子槽清空同款蒙层 */
+.fx-clear {
+  position: absolute; left: 7%; top: 7%; width: 86%; height: 86%; z-index: 4;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 8, 14, .62);
+}
+
+/* ============================================================
+   §3 全局控制条 .ctrl（顶部中央，整合导航 + 危险操作 + 主题切换）
+   ============================================================ */
+.ctrl {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 20;
+  display: flex; align-items: stretch; height: 38px;
+  background: var(--panel-bg); border: 1px solid var(--panel-edge);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .3);
+}
+.style-metal .ctrl { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.style-minimal .ctrl { border-radius: 8px; }
+.style-sc2 .ctrl::before {
+  content: ""; position: absolute; left: -1px; top: -1px; width: 10px; height: 10px;
+  border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); pointer-events: none;
+}
+.ctrl-g { display: flex; align-items: center; padding: 0 5px; gap: 1px; }
+.ctrl-g + .ctrl-g { border-left: 1px solid var(--panel-edge); }
+.ctrl-btn {
+  position: relative; display: flex; align-items: center; gap: 5px;
+  height: 28px; padding: 0 11px; white-space: nowrap;
+  font-size: 12.5px; letter-spacing: 1px; color: var(--muted);
+}
+.ctrl-btn:hover { color: var(--ink); background: var(--drop-bg); }
+.ctrl-btn.on { color: var(--ink); font-weight: 700; }
+.ctrl-btn.on::after {
+  content: ""; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; background: var(--accent);
+}
+.ctrl-btn.off { opacity: .32; pointer-events: none; }
+.ctrl-btn.warn:hover { color: var(--lose); background: color-mix(in srgb, var(--lose) 10%, transparent); }
+.ctrl-ico { font-family: var(--font-num); font-size: 13px; line-height: 1; }
+.ctrl-lbl { font-size: 10px; letter-spacing: 2px; color: var(--muted); opacity: .75; padding: 0 4px 0 8px; }
+
+/* 二次确认（armed）：动作组就地展开，5s 无操作自动还原 */
+.ctrl-confirm {
+  display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px;
+  background: color-mix(in srgb, var(--lose) 14%, transparent);
+  box-shadow: inset 0 0 0 1px var(--lose);
+}
+.ctrl-confirm-q { font-size: 12.5px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.ctrl-cbtn {
+  height: 24px; padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  display: flex; align-items: center; white-space: nowrap;
+}
+.ctrl-cbtn.yes { background: var(--lose); color: #fff; }
+.ctrl-cbtn.no { box-shadow: inset 0 0 0 1px var(--panel-edge); color: var(--muted); }
+
+/* 收起态：仅留低调把手（直播） */
+.ctrl-pill {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 20;
+  display: flex; align-items: center; gap: 5px; height: 20px; padding: 0 13px;
+  background: var(--panel-bg); border: 1px solid var(--panel-edge);
+  border-radius: 10px; opacity: .38;
+}
+.ctrl-pill:hover { opacity: 1; }
+.ctrl-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+
+/* ============================================================
+   §4.2 校验错误提示 .toastv（startbtn 左侧正式形态）
+   ============================================================ */
+.toastv {
+  display: flex; align-items: center; gap: 10px; padding: 9px 16px;
+  background: color-mix(in srgb, var(--lose) 16%, rgba(9, 13, 21, .92));
+  box-shadow: inset 0 0 0 1px var(--lose), 0 6px 18px rgba(0, 0, 0, .4);
+}
+.mode-light .toastv { background: color-mix(in srgb, var(--lose) 9%, #ffffff); }
+.style-metal .toastv { clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px)); }
+.style-minimal .toastv { border-radius: 7px; }
+.toastv-ico {
+  width: 18px; height: 18px; border-radius: 50%; flex: none;
+  background: var(--lose); color: #fff; font-size: 12px; font-weight: 900; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.toastv-tx { font-size: 13.5px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.toastv-n {
+  font-family: var(--font-num); font-size: 11px; font-weight: 700; padding: 1px 7px;
+  background: var(--lose); color: #fff; border-radius: 9px; margin-left: 2px;
+}
+
+/* 拖放目标 hover（drag-over）升级态 */
+.dropv-over {
+  border-color: var(--accent) !important; border-style: solid !important;
+  box-shadow: inset 0 0 14px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 0 1px var(--accent);
+}
+
+/* ============================================================
+   规格板辅助（矩阵 / 标注）
+   ============================================================ */
+.mx { display: flex; flex-direction: column; gap: 14px; padding: 22px 26px; }
+.mx-title { font-size: 15px; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+.mx-grid { display: grid; gap: 0; align-items: end; }
+.mx-h { font-size: 11px; letter-spacing: 1px; color: var(--muted); text-align: center; padding-bottom: 4px; white-space: nowrap; }
+.mx-rowlab { font-size: 11.5px; color: var(--muted); letter-spacing: 1px; white-space: nowrap; align-self: center; }
+.mx-cell { display: flex; align-items: center; justify-content: center; padding: 16px 10px; }
+.mx-note { font-size: 11.5px; line-height: 1.65; color: var(--muted); }
+.mx-note b { color: var(--ink); font-weight: 700; }
+.mx-note code { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent); }
+.mx-divider { height: 1px; background: var(--panel-edge); }
+.mx-kv { display: flex; flex-direction: column; gap: 7px; }
+.mx-kv-row { display: flex; gap: 12px; font-size: 12px; align-items: baseline; }
+.mx-kv-row .k { font-family: var(--font-mono); font-size: 11px; color: var(--accent); flex: 0 0 188px; }
+.mx-kv-row .v { color: var(--ink); }
+.mx-kv-row .v i { color: var(--muted); font-style: normal; }
+
+/* ============================================================
+   R2 §5 对战页 — R1 边框落位（.cc 指挥官卡 / .fx 因子框 接入 .match 行）
+   仅做适配性微调；行/判定结构沿用 theme.css 的 .battle/.match/.verdict
+   ============================================================ */
+/* 双打=并排两张 cc（58×70）；地图略收窄给阵容/因子让位 */
+.match-cmds { gap: 9px; align-items: center; }
+.match-map { flex: 0 0 250px; }
+.match-map .mapthumb { width: 250px; }
+.match-factors { gap: 11px; align-content: center; }
+/* 场次号区容纳 双打 / 进行中 两枚徽标 */
+.match-no { gap: 7px; }
+.match-dbl { white-space: nowrap; align-self: flex-start; }
+.match-live {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; line-height: 1;
+  color: var(--on-accent); background: var(--accent); padding: 3px 9px; white-space: nowrap;
+}
+.match-live .ld { width: 5px; height: 5px; border-radius: 50%; background: var(--on-accent); animation: matchpulse 1.1s ease-in-out infinite; }
+@keyframes matchpulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+/* 当前进行场次：accent 包边（沿用 .slot-active 语言）。
+   注意：styles.css 的 .style-X.mode-Y .match 主题阴影具 (0,3,0) 特异性，
+   会盖掉基础 .match-active (0,2,0)；故每个主题用 (0,4,0) 显式重申 accent 圈。 */
+.match.match-active { box-shadow: 0 0 0 2px var(--accent), 0 10px 26px rgba(0, 0, 0, .4); }
+.style-metal.mode-dark .match.match-active { box-shadow: 0 0 0 2px var(--accent), inset 0 1px 0 rgba(246, 231, 182, .14), 0 10px 26px rgba(0, 0, 0, .4); }
+.style-metal.mode-light .match.match-active { box-shadow: 0 0 0 2px var(--accent), inset 0 1px 0 rgba(255, 255, 255, .7), 0 6px 18px rgba(90, 70, 20, .18); }
+.style-sc2.mode-dark .match.match-active { box-shadow: 0 0 0 2px var(--accent), inset 0 -2px 0 color-mix(in srgb, var(--accent) 30%, transparent), 0 8px 22px rgba(0, 0, 0, .4); }
+.style-sc2.mode-light .match.match-active { box-shadow: 0 0 0 2px var(--accent), 0 6px 18px rgba(20, 40, 32, .16); }
+.style-minimal.mode-dark .match.match-active { box-shadow: 0 0 0 2px var(--accent), 0 8px 22px rgba(0, 0, 0, .35); }
+.style-minimal.mode-light .match.match-active { box-shadow: 0 0 0 2px var(--accent), 0 6px 18px rgba(20, 23, 28, .14); }
+/* 已判定行：整行轻微降权，让"当前/待判"更突出 */
+.match.match-done { opacity: .82; }
+.match.match-done .match-map .mapthumb img { filter: saturate(.85) brightness(.96); }
+/* 判定区与新边框的平衡：按钮高度对齐 cc 卡（70），描边加重一档 */
+.battle .verdict { gap: 9px; align-self: stretch; align-items: stretch; }
+.battle .v-btn { display: flex; align-items: center; padding: 0 17px; }
+.battle .v-btn:not(.on) { box-shadow: inset 0 0 0 1px var(--panel-edge); }
+.battle .v-btn.on { box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>对战页边框落位 · 纵排审查</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&family=Oswald:wght@500;700&family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="v4.css" />
+<style>
+  html, body { margin: 0; background: #14171c; }
+  .rv { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px 0 80px; }
+  .rv-h { width: 1280px; color: #cfd6e0; font-family: "Noto Sans SC", sans-serif; font-size: 15px; letter-spacing: 1px; display: flex; align-items: center; gap: 12px; margin-top: 26px; }
+  .rv-h::before { content: ""; width: 22px; height: 3px; background: #D8B15A; }
+  .rv-h:first-child { margin-top: 0; }
+  .rv-frame { width: 1280px; height: 720px; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .rv-spec { box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .rv-cap { width: 1280px; color: #7e8794; font-family: "Share Tech Mono", monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="rv" id="rv"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="components/select-screen.jsx"></script>
+<script type="text/babel" src="components/battle-screen.jsx"></script>
+<script type="text/babel" src="components/spec-factor.jsx"></script>
+<script type="text/babel" src="components/spec-battle.jsx"></script>
+<script type="text/babel">
+  const THEMES = [
+    ["metal", "dark", "金属 · 暗"], ["metal", "light", "金属 · 亮"],
+    ["sc2", "dark", "星际2 · 暗"], ["sc2", "light", "星际2 · 亮"],
+    ["minimal", "dark", "极简 · 暗"], ["minimal", "light", "极简 · 亮"],
+  ];
+  function Review() {
+    return (
+      <>
+        <div className="rv-h">对战页 · 边框落位 — 6 主题（展开态）</div>
+        {THEMES.map(([s, m, lab]) => (
+          <React.Fragment key={s + m}>
+            <div className="rv-cap">battle-{s}-{m}</div>
+            <div className="rv-frame"><BattleScreenV4 styleName={s} mode={m} barState="full" /></div>
+          </React.Fragment>
+        ))}
+        <div className="rv-h">对战页 · 控制条收起（直播态） — 星际2 · 暗</div>
+        <div className="rv-frame"><BattleScreenV4 styleName="sc2" mode="dark" barState="collapsed" /></div>
+
+        <div className="rv-h">规格板</div>
+        <div className="rv-spec"><BattleAnatomy /></div>
+        <div className="rv-spec"><BattleStates /></div>
+        <div className="rv-spec"><BattleSizes /></div>
+        <div className="rv-spec"><BattleImpl /></div>
+      </>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("rv")).render(<Review />);
+</script>
+</body>
+</html>
