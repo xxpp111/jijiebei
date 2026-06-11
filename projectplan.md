@@ -357,3 +357,11 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 - 控制条新断言 12/12 PASS：home 禁灰、收起/展开、armed 5s 自动还原、重新随机确认后停 select 且 selected* 重置、池/地图变化、battle→overlay 导航、确认回主后状态重置。
 - 截图留档：`/tmp/jjb-v4-impl/phaseB-battle-sc2-dark-v2.jpg`、`phaseB-overlay-sc2-dark.jpg`、`phaseB-doubles-select-metal-dark.jpg`。
 - `git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
+
+### Phase C：回归、金框配置、视觉留档
+
+**验证**：
+- 金框配置：临时将 `GOLD_FACTORS` 设为 `["暴风雪"]` 后重 build，运行时确认 `暴风雪` 使用 `border-factor-gold`；恢复空数组重 build，确认同项回到 `border-factor-normal`。
+- 最终 Playwright 汇总：既有回归 36/36 PASS；Phase A/B/C 额外断言 17/17 PASS；console 0 errors。汇总 JSON：`/tmp/jjb-v4-impl/playwright-summary.json`。
+- 视觉留档：6 主题 select+battle 全部 CDP 截图，另存设计 review battle 截图。目录：`/tmp/jjb-v4-impl/`。
+- 最终 Cocos web-mobile build exit 0；`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
