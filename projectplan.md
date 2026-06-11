@@ -346,3 +346,14 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 - PhaseA 新断言 4/4 PASS：v4 因子节点存在、指挥官池存在、toast 出现并保留 error 语义、4s 自动消失，console 0 errors。
 - 截图留档：`/tmp/jjb-v4-impl/phaseA-select-metal-dark-toast.jpg`。
 - `git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
+
+### Phase B：全局控制条 + battle/result/overlay V4 落位
+
+**改动**：`JJBDesignBoot` 将原 `jjbSwitcher` 升级为 v4 全局控制条，包含导航、重新随机/回主界面 armed 确认、主题切换与收起把手；保留置顶保活。重新随机单刷路径不走 `onRandomClick`，按当前模式重抽并停在 select；双打重跑 `JJBDoubles.start()`。`JJBBattle/JJBResult/JJBOverlay` 接入 `JJBBorder`，battle 使用 58×70 指挥官卡、56×56 因子框、70px 判定按钮、进行中徽标和行级 active 包边；result/overlay 同步使用 64×78 指挥官卡与 46/52px 因子框。
+
+**验证**：
+- Cocos web-mobile build exit 0。
+- 既有 Playwright 8 路径回归 36/36 PASS，console 0 errors。
+- 控制条新断言 12/12 PASS：home 禁灰、收起/展开、armed 5s 自动还原、重新随机确认后停 select 且 selected* 重置、池/地图变化、battle→overlay 导航、确认回主后状态重置。
+- 截图留档：`/tmp/jjb-v4-impl/phaseB-battle-sc2-dark-v2.jpg`、`phaseB-overlay-sc2-dark.jpg`、`phaseB-doubles-select-metal-dark.jpg`。
+- `git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。

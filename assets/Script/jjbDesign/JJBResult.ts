@@ -5,6 +5,7 @@ import { Theme } from "./JJBTheme";
 import { DEMO_MATCHES, markFor, EVENT, FONT_NUM, RESULT_LABEL, RESULT_VAL, VAL_RESULT, jjbLive, sessionMatches, modeLabel } from "./JJBData";
 import JJBDoubles, { DOUBLES_CONFIG, doublesLive, doublesMatches, doublesModeLabel } from "./JJBDoubles";
 import JJBView from "./JJBView";
+import JJBBorder from "./JJBBorder";
 import JijieData from "../jijie2/JijieData"; // 只读写 public static（goal 允许；不改源码）
 
 const HA = cc.Label.HorizontalAlign;
@@ -73,22 +74,21 @@ export default class JJBResult {
             JJBView.coverSprite(root, mapX, top + 30, 248, 44, "images/maps/" + m.map);
             // rcard-mid（cmds 58×70 + facs 46×46）
             const midX = mapX + 248 + 22;
-            (m.cmds || []).forEach((c: string, k: number) => JJBView.coverSprite(root, midX + k * 64, top + 13, 58, 70, "images/commander/" + c));
+            (m.cmds || []).forEach((c: string, k: number) => JJBBorder.framedCmdV4(root, midX + k * 72, top + 13, 64, 78, c, th));
             const cmdCount = (m.cmds || []).length || 1;
-            const facX = midX + cmdCount * 58 + (cmdCount - 1) * 8 + 16;
+            const facX = midX + cmdCount * 64 + (cmdCount - 1) * 8 + 16;
             (m.factors || []).forEach((f: string, k: number) => {
                 const wrap = doubles;
-                const size = wrap ? 38 : 46;
-                const gap = wrap ? 43 : 52;
+                const size = 46;
+                const gap = 52;
                 const x = facX + (wrap ? (k % 5) * gap : k * gap);
                 const y = top + (wrap ? (k < 5 ? 21 : 62) : 25);
-                JJBView.sprite(root, x, y, size, size, "images/factor/" + f);
                 if (doubles && m.mutators && k < m.mutators.length) {
-                    JJBView.box(root, x, y + size - 12, 32, 13, th.accent, null);
-                    JJBView.label(root, x, y + size - 10, 32, 11, "官突", 8, ON_STATE, HA.CENTER);
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th, { tag: "官突" });
                 } else if (live && m.lock && k === 0) {
-                    JJBView.box(root, x, top + 59, 32, 13, th.accent, null);
-                    JJBView.label(root, x, top + 61, 32, 11, "锁定", 8, ON_STATE, HA.CENTER);
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th, { tag: "锁定" });
+                } else {
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th);
                 }
             });
             // rcard-badge（v2：22px/900 放大）

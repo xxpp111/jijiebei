@@ -8,6 +8,7 @@ import { Theme } from "./JJBTheme";
 import { DEMO_MATCHES, markFor, EVENT, RESULT_LABEL, RESULT_VAL, jjbLive, sessionMatches, modeLabel } from "./JJBData";
 import JJBDoubles, { DOUBLES_CONFIG, doublesLive, doublesMatches, doublesModeLabel } from "./JJBDoubles";
 import JJBView from "./JJBView";
+import JJBBorder from "./JJBBorder";
 import JijieData from "../jijie2/JijieData";       // 只读写 public static（goal 允许；不改源码）
 import JijieControl from "../jijie2/JijieContro";   // 调 public showResultEnd（XP 比赛结束钩子）
 
@@ -73,7 +74,7 @@ export default class JJBBattle {
             vNodes[i].forEach((n) => { if (cc.isValid(n)) n.destroy(); });
             vNodes[i] = [];
             const active = doubles ? (JJBDoubles.winLoseList || [])[i] : (JijieData.winLoseList || [])[i];
-            const btnTop = rowTop + (H - 40) / 2;
+            const btnTop = rowTop + (H - 70) / 2;
             let bx = V_RIGHT - V_DEFS.reduce((s, d) => s + d.w, 0) - 10 * (V_DEFS.length - 1);
             V_DEFS.forEach((d) => {
                 const val = RESULT_VAL[d.res];
@@ -84,9 +85,9 @@ export default class JJBBattle {
                     else if (d.res === "bonus") { fill = th.bonus; edge = th.bonus; col = ON_STATE; }
                     else { fill = th.lose; edge = th.lose; col = cc.Color.WHITE; }
                 }
-                const box = JJBView.box(root, bx, btnTop, d.w, 40, fill, edge, 1);
-                const lbl = JJBView.label(root, bx, btnTop + 11, d.w, 20, RESULT_LABEL[d.res], 17, col, HA.CENTER);
-                const hit = JJBView.hit(root, bx, btnTop, d.w, 40, () => {
+                const box = JJBView.box(root, bx, btnTop, d.w, 70, fill, edge, on ? 1 : 2);
+                const lbl = JJBView.label(root, bx, btnTop + 24, d.w, 22, RESULT_LABEL[d.res], 17, col, HA.CENTER);
+                const hit = JJBView.hit(root, bx, btnTop, d.w, 70, () => {
                     if (doubles) JJBDoubles.setVerdict(i, val);
                     else {
                         if (!JijieData.winLoseList) JijieData.winLoseList = [];
@@ -112,12 +113,25 @@ export default class JJBBattle {
         // ---------- 3 场 ----------
         matches.forEach((m: any, i: number) => {
             const rowTop = ROW_TOPS[i];
-            const doubles = !!m.doubles;
-            const isBoss = doubles || (typeof m.slot === "string" && m.slot.indexOf("BOSS") >= 0);
-            JJBView.panel(root, 50, rowTop, 1180, H, th, undefined, isBoss ? th.accent : undefined);
+            const rowDoubles = !!m.doubles;
+            const isBoss = rowDoubles || (typeof m.slot === "string" && m.slot.indexOf("BOSS") >= 0);
+            const wl = doubles ? (JJBDoubles.winLoseList || []) : (JijieData.winLoseList || []);
+            let firstOpen = -1;
+            for (let j = 0; j < matches.length; j++) {
+                if (typeof wl[j] !== "number") { firstOpen = j; break; }
+            }
+            const rowDone = typeof wl[i] === "number";
+            const rowLive = firstOpen === i;
+            const rowPanel = JJBView.panel(root, 50, rowTop, 1180, H, th, undefined, rowLive || isBoss ? th.accent : undefined);
+            if (rowDone) rowPanel.opacity = 210;
+            if (rowLive) {
+                const liveX = 70;
+                JJBView.box(root, liveX, rowTop + 83, 70, 20, th.accent, null);
+                JJBView.label(root, liveX, rowTop + 86, 70, 14, "进行中", 11, th.onAccent, HA.CENTER);
+            }
 
             // match-no（+ 双打标）
-            if (doubles) {
+            if (rowDoubles) {
                 JJBView.label(root, 70, rowTop + 35, 100, 26, m.slot, 22, th.accent, HA.LEFT);
                 JJBView.box(root, 70, rowTop + 64, 44, 20, null, th.panelEdge, 1);
                 JJBView.label(root, 70, rowTop + 67, 44, 16, "双打", 11, th.ink, HA.CENTER);
@@ -126,28 +140,29 @@ export default class JJBBattle {
             }
 
             // match-map（横幅 + 名）
-            JJBView.coverSprite(root, 190, rowTop + 24, 270, 48, "images/maps/" + m.map);
-            JJBView.label(root, 190, rowTop + 78, 270, 18, m.map, 14, th.muted, HA.LEFT);
+            const mapW = rowDoubles ? 250 : 290;
+            JJBView.coverSprite(root, 190, rowTop + 24, mapW, 45, "images/maps/" + m.map);
+            JJBView.label(root, 190, rowTop + 76, mapW, 18, m.map, 14, th.muted, HA.LEFT);
 
-            // match-cmds（avatar big 70×84）
-            (m.cmds || []).forEach((c: string, k: number) => JJBView.coverSprite(root, 480 + k * 78, rowTop + 16, 70, 84, "images/commander/" + c));
+            // match-cmds（v4 battle 档 58×70）
+            const cmdX0 = rowDoubles ? 462 : 500;
+            (m.cmds || []).forEach((c: string, k: number) => JJBBorder.framedCmdV4(root, cmdX0 + k * 67, rowTop + 23, 58, 70, c, th));
 
             // match-factors；live 首位是锁定因子，doubles 前 N 个是官突 mutator。
             const cmdCount = (m.cmds || []).length || 1;
-            const facX = 480 + cmdCount * 70 + (cmdCount - 1) * 8 + 20;
+            const facX = cmdX0 + cmdCount * 58 + (cmdCount - 1) * 9 + 22;
             (m.factors || []).forEach((f: string, k: number) => {
-                const wrap = doubles;
-                const size = wrap ? 42 : 56;
-                const gap = wrap ? 48 : 62;
+                const wrap = rowDoubles;
+                const size = 56;
+                const gap = 62;
                 const x = facX + (wrap ? (k % 5) * gap : k * gap);
-                const y = rowTop + (wrap ? (k < 5 ? 22 : 66) : 30);
-                JJBView.sprite(root, x, y, size, size, "images/factor/" + f);
-                if (doubles && m.mutators && k < m.mutators.length) {
-                    JJBView.box(root, x, y + size - 14, 34, 14, th.accent, null);
-                    JJBView.label(root, x, y + size - 12, 34, 12, "官突", 9, ON_STATE, HA.CENTER);
+                const y = rowTop + (wrap ? (k < 5 ? 30 : 70) : 30);
+                if (rowDoubles && m.mutators && k < m.mutators.length) {
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th, { tag: "官突" });
                 } else if (live && m.lock && k === 0) {
-                    JJBView.box(root, x, rowTop + 72, 34, 14, th.accent, null);
-                    JJBView.label(root, x, rowTop + 74, 34, 12, "锁定", 9, ON_STATE, HA.CENTER);
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th, { tag: "锁定" });
+                } else {
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th);
                 }
             });
 

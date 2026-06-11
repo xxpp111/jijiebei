@@ -25,6 +25,10 @@ export default class JJBDesignBoot {
     private static curScreen: string = "home";
     private static playerInput: string = ""; // GAP-16：home EditBox 输入值（主题切换重建后恢复）
     private static autoPath: string = "";    // 自动化旗标 ?path=manual|random：标准模式二选层自动选路
+    private static currentModeIdx: number = -1;
+    private static ctrlCollapsed: boolean = false;
+    private static armedAction: string = "";
+    private static armedTimer: any = null;
 
     /** XP 逻辑就绪后调用；仅 ?design=... 时挂载新前端。任何异常都吞掉，不影响正常游戏。 */
     static tryMount(stage: cc.Node): void {
@@ -60,7 +64,7 @@ export default class JJBDesignBoot {
         try {
             if (q["doubles"] === "1") {
                 JJBDesignBoot.startDoubles();
-                JJBDesignBoot.buildSwitcher();
+                JJBDesignBoot.buildControlBar();
                 return;
             }
             const screen = q["design"];
@@ -72,7 +76,7 @@ export default class JJBDesignBoot {
                 JJBDesignBoot.showHome();
                 if (q["auto"] !== undefined && q["auto"] !== "") JJBDesignBoot.onMode(parseInt(q["auto"], 10) || 0);
             }
-            JJBDesignBoot.buildSwitcher(); // 屏 build 后建切换器并置顶（盖在当前屏之上）
+            JJBDesignBoot.buildControlBar(); // 屏 build 后建控制条并置顶（盖在当前屏之上）
         } catch (e) {
             cc.warn("[JJBDesignBoot] render 失败: " + e);
         }
@@ -118,10 +122,10 @@ export default class JJBDesignBoot {
     private static fresh(): cc.Node {
         if (JJBDesignBoot.root && cc.isValid(JJBDesignBoot.root)) JJBDesignBoot.root.destroy();
         JJBDesignBoot.root = JJBView.root1280(JJBDesignBoot.stage);
-        // 切换器常驻 canvas：gameplay 导航新建 root 会排到其上方盖住它，这里把已存在的切换器重新置顶保活
+        // 控制条常驻 canvas：gameplay 导航新建 root 会排到其上方盖住它，这里把已存在的控制条重新置顶保活
         try {
             const cv = cc.Canvas.instance ? cc.Canvas.instance.node : JJBDesignBoot.stage;
-            const sw = cv && cv.getChildByName("jjbSwitcher");
+            const sw = cv && (cv.getChildByName("jjbControlBar") || cv.getChildByName("jjbSwitcher"));
             if (sw && cc.isValid(sw)) sw.setSiblingIndex(cv.childrenCount - 1);
         } catch (e) { /* noop */ }
         return JJBDesignBoot.root;
@@ -131,12 +135,14 @@ export default class JJBDesignBoot {
         JJBDesignBoot.setScreen("home");
         JJBHome.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (i) => JJBDesignBoot.onMode(i),
             JJBDesignBoot.playerInput, (s) => { JJBDesignBoot.playerInput = s; });
+        JJBDesignBoot.buildControlBar();
     }
 
     /** 点击模式 → 调 XP 的 InitPanel 真实逻辑（设 JijieData + toStart 随机抽取）。
      *  标准 8/10/12 因子停在 status=1 → 弹「手选阵容/随机抽签」二选层（GAP-12，对齐老 UI btnSelect/btnRandom）；
      *  拯救/随机模式 toStart 内部已自调 toSelect → 直进选择面板。 */
     private static onMode(i: number): void {
+        JJBDesignBoot.currentModeIdx = i;
         try { (window as any).__jjbDebug = { screen: JJBDesignBoot.curScreen }; } catch (e) { /* noop */ } // 新局清残留 debug
         if (i === 5) {
             JJBDesignBoot.startDoubles();
@@ -262,44 +268,183 @@ export default class JJBDesignBoot {
     private static goSelect(): void {
         JJBDesignBoot.setScreen("select");
         JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
+        JJBDesignBoot.buildControlBar();
     }
     private static goBattle(): void {
         JJBDesignBoot.setScreen("battle");
         JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult(), () => JJBDesignBoot.goOverlay());
+        JJBDesignBoot.buildControlBar();
     }
     private static goResult(): void {
         JJBDesignBoot.setScreen("result");
         JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
+        JJBDesignBoot.buildControlBar();
     }
     /** GAP-17 浮层（OBS 浏览器源+Interact 单窗口）：battle ↔ overlay 互切，主题切换器照常。 */
     private static goOverlay(): void {
         JJBDesignBoot.setScreen("overlay");
         JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
+        JJBDesignBoot.buildControlBar();
     }
 
-    /** 右上角常驻主题切换器：3 风格 + 2 模式按钮，当前高亮；点击 runtime 切 + 重渲当前屏。 */
-    private static buildSwitcher(): void {
+    /** v4 全局控制条：导航 + 危险操作 + 主题 + 收起。保留原 jjbSwitcher 的置顶保活职责。 */
+    private static buildControlBar(): void {
         const canvas = cc.Canvas.instance ? cc.Canvas.instance.node : JJBDesignBoot.stage;
         if (!canvas) return;
-        const old = canvas.getChildByName("jjbSwitcher");
+        const old = canvas.getChildByName("jjbControlBar") || canvas.getChildByName("jjbSwitcher");
         if (old && cc.isValid(old)) old.destroy();
         const th = JJBDesignBoot.th;
-        const sw = new cc.Node("jjbSwitcher");
+        const sw = new cc.Node("jjbControlBar");
         sw.parent = canvas; sw.setAnchorPoint(0.5, 0.5); sw.setContentSize(1280, 720); sw.setPosition(0, 0);
-        sw.setSiblingIndex(canvas.childrenCount - 1); // 置顶，盖在当前屏之上
+        sw.setSiblingIndex(canvas.childrenCount - 1);
         const CT = cc.Label.HorizontalAlign.CENTER;
-        const mk = (left: number, w: number, label: string, on: boolean, cb: () => void) => {
-            JJBView.box(sw, left, 12, w, 28, on ? th.accent : th.panelBg, on ? th.accent : th.panelEdge, 1);
-            JJBView.label(sw, left, 18, w, 18, label, 13, on ? th.onAccent : th.muted, CT);
-            JJBView.hit(sw, left, 12, w, 28, cb);
+        const canSelect = JJBDoubles.live() || JijieData.status >= 2;
+        const canBattle = JJBDoubles.live() || JijieData.status >= 3;
+        const total = JJBDoubles.live() ? JJBDoubles.totalCount() : JijieData.totalCount;
+        const canResult = canBattle && total >= 3;
+        const canOverlay = canBattle;
+
+        if (JJBDesignBoot.ctrlCollapsed) {
+            const pill = JJBView.box(sw, 574, 12, 132, 22, th.panelBg, th.panelEdge, 1);
+            pill.name = "jjbCtrlPill";
+            pill.opacity = 97;
+            JJBView.label(sw, 588, 16, 72, 14, "··· 控制", 11, th.muted, CT);
+            const hit = JJBView.hit(sw, 574, 12, 132, 22, () => { JJBDesignBoot.ctrlCollapsed = false; JJBDesignBoot.buildControlBar(); });
+            hit.name = "jjbCtrl_expand";
+            hit.on(cc.Node.EventType.MOUSE_ENTER, () => { if (cc.isValid(pill)) pill.opacity = 255; });
+            hit.on(cc.Node.EventType.MOUSE_LEAVE, () => { if (cc.isValid(pill)) pill.opacity = 97; });
+            JJBDesignBoot.exposeControlDebug(canSelect, canBattle, canResult, canOverlay);
+            return;
+        }
+
+        if (JJBDesignBoot.armedAction) {
+            const outside = JJBView.hit(sw, 0, 0, 1280, 720, () => JJBDesignBoot.cancelArmed());
+            outside.name = "jjbCtrl_outsideCancel";
+        }
+
+        const barLeft = JJBDesignBoot.armedAction ? 286 : 300;
+        const barTop = 12;
+        const barW = JJBDesignBoot.armedAction ? 760 : 690;
+        if (th.style === "metal") JJBView.cutBox(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1, 10);
+        else JJBView.box(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1);
+        const sep = (x: number) => JJBView.box(sw, x, barTop + 6, 1, 26, th.panelEdge, null);
+        const btn = (left: number, w: number, label: string, name: string, on: boolean, enabled: boolean, cb: () => void, warn: boolean = false) => {
+            const top = 17;
+            const fill = on ? th.accent : (warn && enabled ? cc.color(th.lose.r, th.lose.g, th.lose.b, 24) : null);
+            if (fill) JJBView.box(sw, left, top, w, 28, fill, null);
+            const col = enabled ? (on ? th.onAccent : (warn ? th.lose : th.muted)) : th.muted;
+            const lab = JJBView.label(sw, left, top + 6, w, 16, label, 12, col, CT);
+            if (!enabled) lab.opacity = 82;
+            if (enabled) {
+                const h = JJBView.hit(sw, left, top, w, 28, cb);
+                h.name = name;
+            }
         };
-        // 顶部留白区（各屏 logo/标题 右端 ~463 与右侧 meta 左端 ~1052 之间的公共空隙），避免压住「当前选手」等 meta
-        let bx = 610;
-        const styles: Array<[string, string]> = [["metal", "金属"], ["sc2", "星际2"], ["minimal", "极简"]];
-        styles.forEach((it) => { mk(bx, 62, it[1], JJBDesignBoot.curStyle === it[0], () => JJBDesignBoot.applyTheme(it[0], "")); bx += 64; });
-        bx += 12;
+
+        let x = barLeft + 8;
+        btn(x, 38, "首页", "jjbCtrl_home", JJBDesignBoot.curScreen === "home", true, () => JJBDesignBoot.showHome()); x += 40;
+        btn(x, 38, "选择", "jjbCtrl_select", JJBDesignBoot.curScreen === "select", canSelect, () => JJBDesignBoot.goSelect()); x += 40;
+        btn(x, 38, "对战", "jjbCtrl_battle", JJBDesignBoot.curScreen === "battle", canBattle, () => JJBDesignBoot.goBattle()); x += 40;
+        btn(x, 38, "结算", "jjbCtrl_result", JJBDesignBoot.curScreen === "result", canResult, () => JJBDesignBoot.goResult()); x += 40;
+        btn(x, 38, "浮层", "jjbCtrl_overlay", JJBDesignBoot.curScreen === "overlay", canOverlay, () => JJBDesignBoot.goOverlay()); x += 44;
+        sep(x); x += 8;
+
+        if (JJBDesignBoot.armedAction) {
+            const q = JJBDesignBoot.armedAction === "reroll" ? "重抽当前局？" : "放弃本局回主界面？";
+            JJBView.box(sw, x, 17, 250, 28, cc.color(th.lose.r, th.lose.g, th.lose.b, 38), th.lose, 1);
+            JJBView.label(sw, x + 8, 23, 92, 16, q, 12, th.ink, cc.Label.HorizontalAlign.LEFT);
+            const yesW = JJBDesignBoot.armedAction === "reroll" ? 72 : 86;
+            JJBView.box(sw, x + 108, 19, yesW, 24, th.lose, null);
+            JJBView.label(sw, x + 108, 24, yesW, 14, JJBDesignBoot.armedAction === "reroll" ? "确认重抽" : "确认回主", 12, cc.Color.WHITE, CT);
+            const yes = JJBView.hit(sw, x + 108, 19, yesW, 24, () => JJBDesignBoot.confirmArmed());
+            yes.name = "jjbCtrl_confirm";
+            JJBView.box(sw, x + 108 + yesW + 8, 19, 48, 24, null, th.panelEdge, 1);
+            JJBView.label(sw, x + 108 + yesW + 8, 24, 48, 14, "取消", 12, th.muted, CT);
+            const no = JJBView.hit(sw, x + 108 + yesW + 8, 19, 48, 24, () => JJBDesignBoot.cancelArmed());
+            no.name = "jjbCtrl_cancel";
+            x += 258;
+        } else {
+            btn(x, 82, "↻重新随机", "jjbCtrl_reroll", false, canSelect || canBattle, () => JJBDesignBoot.arm("reroll"), true); x += 84;
+            btn(x, 82, "←回主界面", "jjbCtrl_homeReset", false, true, () => JJBDesignBoot.arm("home"), true); x += 88;
+        }
+        sep(x); x += 8;
+
+        const styles: Array<[string, string, number]> = [["metal", "金属", 44], ["sc2", "星际2", 50], ["minimal", "极简", 42]];
+        styles.forEach((it) => { btn(x, it[2], it[1], "jjbCtrl_style_" + it[0], JJBDesignBoot.curStyle === it[0], true, () => JJBDesignBoot.applyTheme(it[0], "")); x += it[2] + 2; });
+        x += 4;
         const modes: Array<[string, string]> = [["dark", "暗"], ["light", "亮"]];
-        modes.forEach((it) => { mk(bx, 44, it[1], JJBDesignBoot.curMode === it[0], () => JJBDesignBoot.applyTheme("", it[0])); bx += 46; });
+        modes.forEach((it) => { btn(x, 28, it[1], "jjbCtrl_mode_" + it[0], JJBDesignBoot.curMode === it[0], true, () => JJBDesignBoot.applyTheme("", it[0])); x += 30; });
+        sep(x); x += 8;
+        btn(x, 48, "«收起", "jjbCtrl_collapse", false, true, () => { JJBDesignBoot.ctrlCollapsed = true; JJBDesignBoot.buildControlBar(); });
+        JJBDesignBoot.exposeControlDebug(canSelect, canBattle, canResult, canOverlay);
+    }
+
+    private static buildSwitcher(): void {
+        JJBDesignBoot.buildControlBar();
+    }
+
+    private static exposeControlDebug(canSelect: boolean, canBattle: boolean, canResult: boolean, canOverlay: boolean): void {
+        try {
+            const w: any = window; w.__jjbDebug = w.__jjbDebug || {};
+            w.__jjbDebug.control = {
+                collapsed: JJBDesignBoot.ctrlCollapsed,
+                armed: JJBDesignBoot.armedAction,
+                canSelect: canSelect,
+                canBattle: canBattle,
+                canResult: canResult,
+                canOverlay: canOverlay,
+            };
+        } catch (e) { /* noop */ }
+    }
+
+    private static arm(action: string): void {
+        JJBDesignBoot.armedAction = action;
+        if (JJBDesignBoot.armedTimer) clearTimeout(JJBDesignBoot.armedTimer);
+        JJBDesignBoot.armedTimer = setTimeout(() => JJBDesignBoot.cancelArmed(), 5000);
+        JJBDesignBoot.buildControlBar();
+    }
+
+    private static cancelArmed(): void {
+        JJBDesignBoot.armedAction = "";
+        if (JJBDesignBoot.armedTimer) clearTimeout(JJBDesignBoot.armedTimer);
+        JJBDesignBoot.armedTimer = null;
+        JJBDesignBoot.buildControlBar();
+    }
+
+    private static confirmArmed(): void {
+        const action = JJBDesignBoot.armedAction;
+        JJBDesignBoot.armedAction = "";
+        if (JJBDesignBoot.armedTimer) clearTimeout(JJBDesignBoot.armedTimer);
+        JJBDesignBoot.armedTimer = null;
+        if (action === "reroll") JJBDesignBoot.rerollCurrent();
+        else if (action === "home") JJBDesignBoot.resetToHome();
+        else JJBDesignBoot.buildControlBar();
+    }
+
+    private static rerollCurrent(): void {
+        if (JJBDoubles.live()) {
+            JJBDoubles.start();
+            JJBDesignBoot.goSelect();
+            return;
+        }
+        const idx = JJBDesignBoot.currentModeIdx >= 0 ? JJBDesignBoot.currentModeIdx : 1;
+        try {
+            JijieData.initStart();
+            JijieData.reset();
+        } catch (e) { /* noop */ }
+        JJBDesignBoot.autoPath = "manual";
+        JJBDesignBoot.onMode(idx);
+    }
+
+    private static resetToHome(): void {
+        try {
+            JJBDoubles.reset();
+            JijieData.initStart();
+            JijieData.reset();
+        } catch (e) { /* noop */ }
+        JJBDesignBoot.currentModeIdx = -1;
+        JJBDesignBoot.autoPath = "";
+        JJBDesignBoot.showHome();
     }
 
     private static applyTheme(style: string, mode: string): void {
@@ -307,7 +452,7 @@ export default class JJBDesignBoot {
         if (mode) JJBDesignBoot.curMode = mode;
         JJBDesignBoot.th = getTheme(JJBDesignBoot.curStyle, JJBDesignBoot.curMode);
         JJBDesignBoot.reRenderCurrent();   // 用新 th 重渲当前屏（fresh 重建 root，JijieData 真实数据保留）
-        JJBDesignBoot.buildSwitcher();     // 屏重建后重建切换器并置顶（反映高亮 + 新皮肤配色）
+        JJBDesignBoot.buildControlBar();   // 屏重建后重建控制条并置顶（反映高亮 + 新皮肤配色）
     }
 
     private static reRenderCurrent(): void {

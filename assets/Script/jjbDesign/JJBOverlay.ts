@@ -6,6 +6,7 @@ import { Theme } from "./JJBTheme";
 import { EVENT, DEMO_MATCHES, markFor, FONT_NUM, jjbLive, sessionMatches, VAL_RESULT } from "./JJBData";
 import JJBDoubles, { DOUBLES_CONFIG, doublesLive, doublesMatches } from "./JJBDoubles";
 import JJBView from "./JJBView";
+import JJBBorder from "./JJBBorder";
 import JijieData from "../jijie2/JijieData"; // 只读 public static（比分/判定）
 
 const HA = cc.Label.HorizontalAlign;
@@ -67,19 +68,21 @@ export default class JJBOverlay {
             JJBView.coverSprite(root, 220, Y + (H - 51) / 2, 288, 51, "images/maps/" + m.map);
             // 指挥官头像
             let cx = 540;
-            (m.cmds || []).forEach((c: string) => { JJBView.sprite(root, cx, Y + (H - 78) / 2, 64, 78, "images/commander/" + c); cx += 72; });
+            (m.cmds || []).forEach((c: string) => { JJBBorder.framedCmdV4(root, cx, Y + (H - 78) / 2, 64, 78, c, th); cx += 72; });
             // 因子图标
             let fx = m.doubles ? 700 : 624;
             (m.factors || []).forEach((f: string, k: number) => {
                 const wrap = doubles;
-                const size = wrap ? 43 : 54;
-                const gapF = wrap ? 49 : 62;
+                const size = wrap ? 46 : 52;
+                const gapF = wrap ? 52 : 60;
                 const x = fx + (wrap ? (k % 5) * gapF : k * gapF);
                 const y = Y + (wrap ? (k < 5 ? 22 : 67) : (H - 54) / 2);
-                JJBView.sprite(root, x, y, size, size, "images/factor/" + f);
                 if (doubles && m.mutators && k < m.mutators.length) {
-                    JJBView.box(root, x, y + size - 13, 34, 14, th.accent, null);
-                    JJBView.label(root, x, y + size - 11, 34, 12, "官突", 9, th.onAccent, HA.CENTER);
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th, { tag: "官突" });
+                } else if (live && m.lock && k === 0) {
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th, { tag: "锁定" });
+                } else {
+                    JJBBorder.framedFactorV4(root, x, y, size, f, th);
                 }
             });
             // 状态徽章
