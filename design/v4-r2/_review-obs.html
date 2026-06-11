@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>② OBS 底部横条 · 纵排审查</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&family=Oswald:wght@500;700&family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="v4.css" />
+<link rel="stylesheet" href="obs.css" />
+<style>
+  html, body { margin: 0; background: #14171c; }
+  .rv { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px 0 90px; }
+  .rv-h { width: 1280px; color: #cfd6e0; font-family: "Noto Sans SC", sans-serif; font-size: 15px; letter-spacing: 1px; display: flex; align-items: center; gap: 12px; margin-top: 30px; }
+  .rv-h::before { content: ""; width: 22px; height: 3px; background: #D8B15A; }
+  .rv-h:first-child { margin-top: 0; }
+  .rv-cap { width: 1280px; color: #7e8794; font-family: "Share Tech Mono", monospace; font-size: 12px; }
+  .rv-frame { width: 1280px; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .rv-spec { box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .rv-scale { width: 1280px; box-sizing: border-box; padding: 22px 26px; background: #1b1f26; display: flex; align-items: flex-end; gap: 36px; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .rv-scale.light { background: #c8cdd4; }
+  .rv-scol { display: flex; flex-direction: column; gap: 8px; }
+  .rv-scap { font-family: "Share Tech Mono", monospace; font-size: 12px; color: #9aa3b0; }
+  .rv-scale.light .rv-scap { color: #4a525e; }
+  .rv-scap.key { color: #D8B15A; }
+</style>
+</head>
+<body>
+<div class="rv" id="rv"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="components/select-screen.jsx"></script>
+<script type="text/babel" src="components/battle-screen.jsx"></script>
+<script type="text/babel" src="components/obs-bar.jsx"></script>
+<script type="text/babel" src="components/spec-factor.jsx"></script>
+<script type="text/babel" src="components/spec-obs.jsx"></script>
+<script type="text/babel">
+  const THEMES = [
+    ["metal", "dark", "金属 · 暗"], ["metal", "light", "金属 · 亮"],
+    ["sc2", "dark", "星际2 · 暗"], ["sc2", "light", "星际2 · 亮"],
+    ["minimal", "dark", "极简 · 暗"], ["minimal", "light", "极简 · 亮"],
+  ];
+  function Review() {
+    return (
+      <>
+        <div className="rv-h">OBS 底部横条 · 6 主题（直播态 · 第 2 场进行中）</div>
+        {THEMES.map(([s, m, lab]) => (
+          <React.Fragment key={s + m}>
+            <div className="rv-cap">obs-{s}-{m}</div>
+            <div className="rv-frame"><OBSBar styleName={s} mode={m} /></div>
+          </React.Fragment>
+        ))}
+
+        <div className="rv-h">全场判定态（胜利 / 带奖励 / 失败）</div>
+        <div className="rv-cap">obs-decided-metal-dark</div>
+        <div className="rv-frame"><OBSBar styleName="metal" mode="dark" rows={OBS_ROWS_DECIDED} scoreLabel="终局 · 已胜场" /></div>
+        <div className="rv-cap">obs-decided-sc2-light</div>
+        <div className="rv-frame"><OBSBar styleName="sc2" mode="light" rows={OBS_ROWS_DECIDED} scoreLabel="终局 · 已胜场" /></div>
+
+        <div className="rv-h">缩放校验 · 缩至 1/3 仍可读（硬标准）</div>
+        <div className="rv-scale">
+          <div className="rv-scol"><span className="rv-scap">50% · 640×116</span><OBSScaled scale={0.5} styleName="sc2" mode="dark" /></div>
+          <div className="rv-scol"><span className="rv-scap key">33% · 427×77 ★基准</span><OBSScaled scale={0.333} styleName="sc2" mode="dark" /></div>
+        </div>
+        <div className="rv-scale light">
+          <div className="rv-scol"><span className="rv-scap">50% · 640×116</span><OBSScaled scale={0.5} styleName="minimal" mode="light" /></div>
+          <div className="rv-scol"><span className="rv-scap key">33% · 427×77 ★基准</span><OBSScaled scale={0.333} styleName="minimal" mode="light" /></div>
+        </div>
+
+        <div className="rv-h">规格板</div>
+        <div className="rv-spec"><OBSAnatomy /></div>
+        <div className="rv-spec"><OBSStates /></div>
+        <div className="rv-spec"><OBSSizes /></div>
+        <div className="rv-spec"><OBSImpl /></div>
+      </>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("rv")).render(<Review />);
+</script>
+</body>
+</html>
