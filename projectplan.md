@@ -365,3 +365,5 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 - 最终 Playwright 汇总：既有回归 36/36 PASS；Phase A/B/C 额外断言 17/17 PASS；console 0 errors。汇总 JSON：`/tmp/jjb-v4-impl/playwright-summary.json`。
 - 视觉留档：6 主题 select+battle 全部 CDP 截图，另存设计 review battle 截图。目录：`/tmp/jjb-v4-impl/`。
 - 最终 Cocos web-mobile build exit 0；`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
+
+**补充修正**：完成审计时补齐 battle 行级态细节：判定后立即重绘行状态（下一场变「进行中」、已判定行降权覆盖），同一判定按钮二次点击可取消回未判定。补充断言 3/3 PASS，既有回归仍 36/36 PASS，console 0 errors。

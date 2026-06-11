@@ -88,10 +88,18 @@ export default class JJBBattle {
                 const box = JJBView.box(root, bx, btnTop, d.w, 70, fill, edge, on ? 1 : 2);
                 const lbl = JJBView.label(root, bx, btnTop + 24, d.w, 22, RESULT_LABEL[d.res], 17, col, HA.CENTER);
                 const hit = JJBView.hit(root, bx, btnTop, d.w, 70, () => {
-                    if (doubles) JJBDoubles.setVerdict(i, val);
-                    else {
+                    const nextVal = active === val ? undefined : val;
+                    if (!doubles) {
                         if (!JijieData.winLoseList) JijieData.winLoseList = [];
-                        JijieData.winLoseList[i] = val;
+                        JijieData.winLoseList[i] = nextVal as any;
+                    }
+                    if (doubles) {
+                        if (nextVal === undefined) {
+                            JJBDoubles.winLoseList[i] = undefined as any;
+                            JJBDoubles.exposeDebug();
+                        } else {
+                            JJBDoubles.setVerdict(i, nextVal);
+                        }
                     }
                     recompute(); updateDebug();
                     // 真实会话：判定完 → 导航结算（单刷同时调 XP 比赛结束钩子；双打不走 XP）
@@ -102,7 +110,8 @@ export default class JJBBattle {
                         try { JijieControl.showResultEnd(); } catch (e) { cc.warn("[JJBBattle] showResultEnd: " + e); }
                         if (onDone) { onDone(); return; }
                     }
-                    drawVerdict(i);
+                    root.removeAllChildren();
+                    JJBBattle.build(root, th, onDone, onOverlay);
                 });
                 hit.name = "jjbV_" + i + "_" + val; // 便于自动化点击断言定位
                 vNodes[i].push(box, lbl, hit);
@@ -165,6 +174,8 @@ export default class JJBBattle {
                     JJBBorder.framedFactorV4(root, x, y, size, f, th);
                 }
             });
+
+            if (rowDone) JJBView.box(root, 50, rowTop, 1180, H, cc.color(0, 0, 0, 40), null);
 
             // verdict
             drawVerdict(i);
