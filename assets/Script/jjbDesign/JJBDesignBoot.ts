@@ -33,6 +33,9 @@ export default class JJBDesignBoot {
     // C1（Phase E bare 模式）：?design=obsbar&bare=1 启动时进入裸采集；
     //   URL 旗标持久直到离开页面（页面内导航不重置）；离开 obsbar 自动恢复 1280×720，回到 obsbar 自动回 bare。
     private static bareMode: boolean = false;
+    // 置顶停靠形态：?design=obsbar&bartop=1（非 bare）。横条挂页面顶部，主播把缩小后的源
+    // 贴画布底边停靠，多余背景坠到画布外——直播姬窗口捕获零裁剪出横条（用户流程拍板）。
+    private static barTopMode: boolean = false;
     private static lastDesignRes: { w: number; h: number; policy: number } = { w: 1280, h: 720, policy: cc.ResolutionPolicy.SHOW_ALL };
     // C3：bare 模式下控制条默认收起为 pill；点 pill 展开为精简 5 项导航。
     //   独立 flag 避免与 ctrlCollapsed 共用（同 if 条件会互锁——一个进另一个就出不去）。
@@ -52,6 +55,7 @@ export default class JJBDesignBoot {
             // C1（Phase E）：bare 旗标 → 适配切 1280×232 SHOW_ALL；其余维持 1280×720 SHOW_ALL。
             //   旧的整版 bg overscan 在 bare 下由 JJBObsBar.solidBacking 改为 th.bgB 纯色 + clearColor 兜底。
             JJBDesignBoot.bareMode = (q["design"] === "obsbar" && q["bare"] === "1");
+            JJBDesignBoot.barTopMode = (q["design"] === "obsbar" && q["bartop"] === "1" && !JJBDesignBoot.bareMode);
             const designW = JJBDesignBoot.bareMode ? 1280 : 1280;
             const designH = JJBDesignBoot.bareMode ? 232 : 720;
             try {
@@ -325,7 +329,7 @@ export default class JJBDesignBoot {
     private static goObsBar(): void {
         JJBDesignBoot.applyDesignResolutionForScreen("obsbar");
         JJBDesignBoot.setScreen("obsbar");
-        JJBObsBar.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, JJBDesignBoot.bareMode);
+        JJBObsBar.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, JJBDesignBoot.bareMode, JJBDesignBoot.barTopMode);
         JJBDesignBoot.buildControlBar();
     }
 
@@ -351,7 +355,8 @@ export default class JJBDesignBoot {
         const canObsbar = canBattle;
 
         // C3：obsbar+bare 默认走 pill（即使 ctrlCollapsed=false）。非 bare 行为零变化。
-        const isObsBarBare = JJBDesignBoot.curScreen === "obsbar" && JJBDesignBoot.bareMode;
+        // bartop 停靠形态同走 pill：完整控制条会叠在置顶横条上，广播捕获会穿帮。
+        const isObsBarBare = JJBDesignBoot.curScreen === "obsbar" && (JJBDesignBoot.bareMode || JJBDesignBoot.barTopMode);
         if (JJBDesignBoot.ctrlCollapsed || (isObsBarBare && !JJBDesignBoot.bareControlExpanded)) {
             // F5：bare pill 放入比分区空位，避开右侧三列徽章/地图/阵容内容；非 bare 沿用原位置。
             const pillLayout = isObsBarBare ? JJBDesignBoot.barePillLayout() : { left: 574, top: 12, w: 132, h: 22 };

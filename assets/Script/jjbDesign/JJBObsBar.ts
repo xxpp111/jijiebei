@@ -36,7 +36,7 @@ interface ObsRow {
 
 export default class JJBObsBar {
 
-    static build(root: cc.Node, th: Theme, bare: boolean = false): void {
+    static build(root: cc.Node, th: Theme, bare: boolean = false, topDock: boolean = false): void {
         // A1：全屏背景盖住 XP 老场景；OBS 端只裁底部 232px 区域，无副作用。
         // C2（Phase E bare）：bare 模式 designResolution 切 1280×232，整页可视区=仅横条，
         //     bg 全屏层会盖 letterbox 适配带（SHOW_ALL 多余边）造成白边，跳过。
@@ -49,7 +49,8 @@ export default class JJBObsBar {
         const heroIndex = JJBObsBar.heroIndex(rows);
 
         // C2：bare 顶=可视区顶=0；非 bare 贴 720 舞台底（保持原行为）。
-        const barTop = bare ? 0 : BAR_TOP;
+        // bartop 停靠形态（?bartop=1）：横条挂页面顶部，余下背景在主播停靠时坠出画布外。
+        const barTop = (bare || topDock) ? 0 : BAR_TOP;
         const bar = JJBView.placed(root, 0, barTop, BAR_W, BAR_H);
         bar.name = "jjbObsBar";
         JJBObsBar.drawBg(bar, th);
