@@ -595,4 +595,6 @@ $ git status -s
 
 **留白问题的终解 = `?design=obsbar&bartop=1` 置顶停靠形态**：横条挂页面顶部（非 bare、720 页、全屏主题 bg），控制条自动走 pill；主播缩小源后贴画布底边停靠，横条以下的背景坠出画布外，画面只剩横条。误拖最坏多露一条主题色边，永不需要裁剪框。改动：Boot 增 barTopMode 旗标 + pill 门控并入，JJBObsBar.build 增 topDock 参数（与 bare 共用 top=0 路径），默认贴底行为与既有断言零变化。实拍验证：sc2-dark 横条置顶完整渲染、pill 在分数轨、名牌（雷诺）正常。
 
+**判定回路（用户确认需求，实测全通）**：停靠状态下 pill 展开本就含「对战」入口（jjbCtrl_battle，Phase E 精简导航自带）——pill→对战→点判定→控制条「横条」回停靠，比分/徽章即时跳变（实测 wins 1→2、[win,bonus,live]）。**修正一个真 gap**：bartop 旗标原先要求 URL 带 design=obsbar 才解析，而主播从首页开一个 URL 玩整局——改为会话级解析（?bartop=1 任意入口生效、随导航持久），从首页开局→随机抽签→判定→切横条全链路实测 barTopY=viewportTopY（置顶成立）。
+
 **三种横条形态分工**：默认（贴底）=应用内浮层语义（设计稿原义）；`bare=1`=OBS 浏览器源/扁窗采集；`bartop=1`=直播姬窗口捕获停靠（主力直播形态）。待 SOP 化进主播文档。

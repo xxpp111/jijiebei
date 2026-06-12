@@ -55,7 +55,9 @@ export default class JJBDesignBoot {
             // C1（Phase E）：bare 旗标 → 适配切 1280×232 SHOW_ALL；其余维持 1280×720 SHOW_ALL。
             //   旧的整版 bg overscan 在 bare 下由 JJBObsBar.solidBacking 改为 th.bgB 纯色 + clearColor 兜底。
             JJBDesignBoot.bareMode = (q["design"] === "obsbar" && q["bare"] === "1");
-            JJBDesignBoot.barTopMode = (q["design"] === "obsbar" && q["bartop"] === "1" && !JJBDesignBoot.bareMode);
+            // bartop 不要求 design=obsbar：主播从首页开局玩整局，?bartop=1 随会话持久，
+            // 任何时刻切到横条都是置顶停靠形态。
+            JJBDesignBoot.barTopMode = (q["bartop"] === "1" && !JJBDesignBoot.bareMode);
             const designW = JJBDesignBoot.bareMode ? 1280 : 1280;
             const designH = JJBDesignBoot.bareMode ? 232 : 720;
             try {
