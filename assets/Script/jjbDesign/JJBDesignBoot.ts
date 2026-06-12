@@ -341,8 +341,11 @@ export default class JJBDesignBoot {
     private static buildControlBar(): void {
         const canvas = cc.Canvas.instance ? cc.Canvas.instance.node : JJBDesignBoot.stage;
         if (!canvas) return;
-        const old = canvas.getChildByName("jjbControlBar") || canvas.getChildByName("jjbSwitcher");
-        if (old && cc.isValid(old)) old.destroy();
+        // 幽灵清理：destroy 是帧末延迟的，getChildByName 只取第一个会漏掉同帧重建（真实点击
+        // touch+mouse 双触发）累积出的多余控制条——遍历全部同名子节点逐个销毁。
+        canvas.children.slice().forEach((c: cc.Node) => {
+            if ((c.name === "jjbControlBar" || c.name === "jjbSwitcher") && cc.isValid(c)) c.destroy();
+        });
         const th = JJBDesignBoot.th;
         const sw = new cc.Node("jjbControlBar");
         sw.parent = canvas; sw.setAnchorPoint(0.5, 0.5); sw.setContentSize(1280, 720); sw.setPosition(0, 0);
@@ -361,7 +364,10 @@ export default class JJBDesignBoot {
         const isObsBarBare = JJBDesignBoot.curScreen === "obsbar" && (JJBDesignBoot.bareMode || JJBDesignBoot.barTopMode);
         if (JJBDesignBoot.ctrlCollapsed || (isObsBarBare && !JJBDesignBoot.bareControlExpanded)) {
             // F5：bare pill 放入比分区空位，避开右侧三列徽章/地图/阵容内容；非 bare 沿用原位置。
-            const pillLayout = isObsBarBare ? JJBDesignBoot.barePillLayout() : { left: 574, top: 12, w: 132, h: 22 };
+            // bartop：pill 挪到 232px 采集线以下的空背景区——观众画面零控制 UI，主播浏览器内可见。
+            const pillLayout = isObsBarBare
+                ? (JJBDesignBoot.bareMode ? JJBDesignBoot.barePillLayout() : { left: 24, top: 242, w: 132, h: 22 })
+                : { left: 574, top: 12, w: 132, h: 22 };
             const pillLeft = pillLayout.left;
             const pillTop = pillLayout.top;
             const pillW = pillLayout.w;
@@ -390,15 +396,16 @@ export default class JJBDesignBoot {
         // C3：bare 模式展开 = 精简 5 项导航（覆盖在横条上层），不走完整版（含 reroll/homeReset/armed 等非采集所需）。
         if (isObsBarBare) {
             // 5 项 = 浮层 / 横条(高亮+disabled) / 主题(轮转 6 主题) / 收起 + 分隔。
-            //   居中靠右：barTop=12（同 pill y），barW=5*40+8*1+4*4 ≈ 224，barLeft=1280-12-224=1044。
-            const barTop = 12;
+            //   bare：居中靠右 barTop=12（232 画布内无处可避）；
+            //   bartop：整条挪到 232px 采集线以下（y=242），观众画面零穿帮。
+            const barTop = JJBDesignBoot.bareMode ? 12 : 242;
             const barW = 232;
-            const barLeft = 1280 - 12 - barW;
+            const barLeft = JJBDesignBoot.bareMode ? (1280 - 12 - barW) : 24;
             if (th.style === "metal") JJBView.cutBox(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1, 10);
             else JJBView.box(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1);
             const sep = (x: number) => JJBView.box(sw, x, barTop + 6, 1, 26, th.panelEdge, null);
             const btn = (left: number, w: number, label: string, name: string, on: boolean, enabled: boolean, cb: () => void) => {
-                const top = 17;
+                const top = barTop + 5;
                 const fill = on ? th.accent : null;
                 if (fill) JJBView.box(sw, left, top, w, 28, fill, null);
                 const col = enabled ? (on ? th.onAccent : th.muted) : th.muted;
