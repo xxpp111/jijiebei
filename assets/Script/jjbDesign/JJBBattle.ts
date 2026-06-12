@@ -37,6 +37,7 @@ export default class JJBBattle {
         JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         JJBView.label(root, 760, 30, 470, 20, live ? ("当前选手  " + (dAny.playerName || "选手")) : (doubles ? "当前选手  双打队伍" : "当前选手  Potato_01"), 15, th.muted, HA.RIGHT);
         JJBView.label(root, 760, 54, 470, 20, doubles ? ("比赛模式  " + doublesModeLabel()) : (live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选"), 15, th.ink, HA.RIGHT);
+        if (!live && !doubles) JJBView.demoBadge(root, th, 1070, 78);
 
         // ---------- 记分初始化（直接读写 JijieData public static） ----------
         // 真实会话：仅首次进入（未初始化）才置空——主题切换 reRenderCurrent 重建本屏时保留已判定记分；

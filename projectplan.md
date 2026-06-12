@@ -603,3 +603,25 @@ $ git status -s
 
 **用户实拍发现**：bartop 下完整控制条叠在横条上（且与 pill 并存）。**根因一（幽灵条，预存 bug）**：buildControlBar 清理用 getChildByName 只删第一个同名节点，而 destroy 是帧末延迟的——真实点击的 touch+mouse 双触发同帧重建两次时，第二次只找到"正在死"的旧条而跳过销毁，多出一条永远清不掉的活条；此前幽灵与正身渲染相同、完美重叠不可见，bartop 下 pill 与完整条形态不同才暴露。修复=遍历全部同名子节点逐个销毁。**根因二（布局）**：bartop 的 pill 与精简导航沿用 bare 的横条内坐标。修复=两者整体下移到 232px 采集线以下（pill top=242、导航 top=242，按钮 y 改 barTop 相对值）——观众画面零控制 UI，主播浏览器内正常可见可点。
 **验证**：battle 页同帧双击「横条」→ 活控制条=1（幽灵清理实测）；pill top=242、展开导航按钮 top=247（均在采集线下，世界坐标实测）；minimal-light 实拍横条区无任何控制 UI、名牌正常。bare 模式布局不变（232 画布内无处可避，维持原位）。
+
+## Phase G P1 审计差距矩阵（2026-06-13 · XP 对齐 + 演示态语义）
+
+**审计范围**：以 `assets/Script/jijie2/` 为单刷 XP 权威，只读核对 jjbDesign live 路径：8/10/12 因子手选、标准随机抽签、拯救、随机模式、二选层；屏覆盖 select / battle / result / overlay / obsbar（含 bare / bartop）。双打官突是 jjbDesign 自管，仅核内部自洽。历史已拍板的新版 5 按钮、自选全量拖、单刷打满 3 场、极难/非酋入口去留，按本文件「XP 线上老版 vs jjbDesign 玩法行为对比」与「决策敲定」节记为有意差异，不计 mismatch。
+
+| ID | mismatch | jjbDesign 证据 | jijie2 / XP 证据 | 修正要求 |
+|---|---|---|---|---|
+| G-P1-01 | standalone `DEMO_MATCHES` 的 BOSS 行仍带早期双打彩蛋：`cmds` 两人且 `doubles:true`，导致 select/battle/result/overlay/obsbar 演示页出现「双打」语义与双指挥官槽；真实单刷会话虽然正确，但演示态会被误读为 live 单刷异常。 | `assets/Script/jjbDesign/JJBData.ts:69-72` 第三场 `cmds:["阿塔尼斯","凯瑞甘"]` + `doubles:true`；`assets/Script/jjbDesign/JJBSelect.ts:283-290` standalone `m.doubles` 会显示「双打」并把 `cmdN` 变 2。 | `assets/Script/jijie2/view/LMatchItem.ts:18-21` 只有 `spCommander`，`spCommander2` 属性注释；`assets/Script/jijie2/view/LMatchItem.ts:147-155` 进入 battle 只设置 `spCommander`，第二指挥官仍注释。 | DEMO BOSS 改为单指挥官、`doubles:false`；「双打」标只由 `JJBDoubles` 独立模式承载。 |
+| G-P1-02 | standalone 自选区提示固定显示「双打可放 2 位」，即使当前不是双打模式，也在单刷演示 select 页泄漏双打语义。 | `assets/Script/jjbDesign/JJBSelect.ts:378-383` 非 doubles 分支的 standalone 文案为 `18 位全解锁 · 双打可放 2 位`。 | `assets/Script/jijie2/view/LMatchItem.ts:20-21` / `assets/Script/jijie2/view/SelectPanel.ts:248-251` 第二指挥官校验全注释；XP 单刷不展示双指挥官能力。 | 该提示仅在 `doublesLive()` 为真时出现；非 doubles standalone 改成纯演示/全解锁提示。 |
+| G-P1-03 | standalone 演示页没有可见「演示数据」标识；直接 `?design=select` 时数据源回落 DEMO，但 topbar 只显示 `Potato_01 / 8 因子 · 手选`，与真实会话外观不可区分。 | `assets/Script/jjbDesign/JJBSelect.ts:47` 非 live 非 doubles 走 `DEMO_MATCHES`；`assets/Script/jjbDesign/JJBSelect.ts:262-264` topbar 只写 `Potato_01` 与模式文案；`rg "演示数据|演示" assets/Script/jjbDesign` 仅命中注释，无可见 UI 文案。 | `assets/Script/jijie2/JijieData.ts:7-9` XP 以 `status` 区分初始/选择/开始/结束；`assets/Script/jijie2/JijieContro.ts:113-115` live select 会置 `status=2`；`assets/Script/jjbDesign/JJBData.ts:120-124` jjbDesign 已能判定 live，但未把 fallback DEMO 显示给用户。 | select/battle/result/overlay/obsbar 的 DEMO fallback 屏加醒目的「演示数据」角标，使用主题 token 适配 6 主题。 |
+
+**零差距确认（非矩阵项）**：live 单刷每场指挥官数恒为 1（`sessionMatches()` 返回单元素 `cmds` 且 `doubles:false`）；`manualSlots()` 镜像 `LMatchItem.updateStart()` 的 8=1/2/2、10=2/2/3、12=3/3/3、拯救=2/2/3、随机=0/0/0；随机模式锁定因子隐藏；开始校验三规则与 XP `SelectPanel.onStartClick()` 对齐；随机抽签通过 XP `JJUI.onRandomClick()` 后镜像回写 selected*；判定写回 `winLoseList` 0/1/2 且 `winCount` 含 bonus 不双计；`showResultEnd()` 在打满 3 场触发。双打官突内部 `matches*cmdsPerMatch=cmdPoolSize`、`matches*extraFactors=factorPoolSize` 当前自洽。
+
+## Phase G P2/P3 收口（2026-06-13 · 演示态修正 + 全量回归）
+
+- **P2 修正完成**：仅改 `assets/Script/jjbDesign/**`。`DEMO_MATCHES` BOSS 行收回为单指挥官、`doubles:false`、3 因子；非 live 非 doubles 的 select/battle/result/overlay/obsbar 均显示「演示数据」角标；standalone 自选区提示改为「18 位全解锁 · 演示数据」；`JJBView.label` 在配置后重设内容尺寸，防止业务 Label 零宽整裁。
+- **P3 断言补强完成**：新增 `/tmp/jjb-test/phaseG.js`，覆盖 DEMO fallback、live 8/10/12/拯救/随机/随机抽签、doubles 自洽、跨屏 Label 可见性。最新回归：Cocos web-mobile build exit 0；`phaseG.js` 48/48 PASS；`obsbar.js` 42/42 PASS；`all.js` 36/36 PASS；`v4-existing.js` 20/20 PASS；全部 console errors=0。
+- **留档**：汇总写入 `/tmp/jjb-v4-impl/playwright-summary-phaseG.json`；截图 `/tmp/jjb-v4-impl/phaseG-demo-select.png` 与 `/tmp/jjb-v4-impl/phaseG-live-8-select.png` 已目检。头像/脸部打码不纳入判断。
+- **harness 状态**：`.harness-pro-85aed822-xp` 已按顺序完成 P1/P2/P3 review+gate，三阶段均为 PASS；`harness-pro stop` 已完成。audit 的 phase/reviewer/stop/security 均 PASS，overall=`partial_compliance`，原因为 host reviewer fallback/direct 路径缺少 per-reviewer mutation snapshot（post mutation hash 前后一致但 `missing_snapshot_count=35`），非代码质量失败；`harness-pro doctor --json` severity=ok。
+- **红线**：`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 输出为空。
+
+**hub 终验（Phase G · 2026-06-13 · Fable hub）**：全项通过。差距矩阵 3 条 mismatch 全部为演示态语义（与 hub 预判一致），双侧行号证据抽查属实；**核心结论成立：live 路径与 XP 零差距**（每场单指挥官/槽数恒等式/校验三规则/winCount 语义/随机抽签镜像逐维确认）。修正实拍复核：DEMO BOSS 单指挥官槽+无双打标、「演示数据」红角标 topbar 可见、live 复核当前 build 双打 label=0。四套回归 48/48+42/42+36/36+20/20 全绿 console 0；harness 三 phase 全 PASS、stop/audit 完成（partial=已知工具性原因）；红线为空。顺手收益：JJBView.label 同步加了 contentSize 防御（localLabel 教训推广）。

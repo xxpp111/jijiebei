@@ -114,6 +114,9 @@ export default class JJBView {
             const dx = align === cc.Label.HorizontalAlign.RIGHT ? (w - tw) : (w - tw) / 2;
             n.x += dx;
         }
+        // Label 组件可能在渲染数据刷新后把节点宽度改成文本测量值甚至 0；
+        // 业务断言要求非空文本节点保留目标尺寸，避免 CLAMP/NONE 下被整裁。
+        n.setContentSize(w, h);
         return n;
     }
 
@@ -222,6 +225,19 @@ export default class JJBView {
     static hit(parent: cc.Node, left: number, top: number, w: number, h: number, cb: () => void): cc.Node {
         const n = JJBView.placed(parent, left, top, w, h);
         n.on(cc.Node.EventType.MOUSE_UP, cb);
+        return n;
+    }
+
+    /** DEMO fallback 明示角标：避免 standalone 演示数据被误认为真实 live 会话。 */
+    static demoBadge(parent: cc.Node, th: Theme, left: number = 1070, top: number = 78): cc.Node {
+        const w = 92, h = 26;
+        const fill = cc.color(th.lose.r, th.lose.g, th.lose.b, 224);
+        const edge = cc.color(th.accent.r, th.accent.g, th.accent.b, 185);
+        const n = th.style === "metal"
+            ? JJBView.cutBox(parent, left, top, w, h, fill, edge, 1, 7)
+            : JJBView.box(parent, left, top, w, h, fill, edge, 1);
+        n.name = "jjbDemoBadge";
+        JJBView.label(parent, left, top + 6, w, 16, "演示数据", 13, cc.Color.WHITE, cc.Label.HorizontalAlign.CENTER);
         return n;
     }
 

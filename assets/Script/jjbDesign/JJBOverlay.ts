@@ -48,6 +48,7 @@ export default class JJBOverlay {
         JJBView.label(root, L + 116, 96, 320, 18, EVENT.en, 13, th.accent, HA.LEFT, 255, FONT_NUM);
         JJBView.label(root, 880, 30, 344, 66, winCount + " / " + totalMatches, 58, th.accent, HA.RIGHT, 255, FONT_NUM);
         JJBView.label(root, 900, 100, 324, 20, "当前获胜", 14, th.muted, HA.RIGHT);
+        if (!live && !doubles) JJBView.demoBadge(root, th, 1070, 126);
         JJBView.box(root, L, 150, W, 2, th.panelEdge);
 
         // ---------- 三场 ----------

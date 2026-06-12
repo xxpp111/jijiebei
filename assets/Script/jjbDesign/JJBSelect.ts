@@ -263,6 +263,7 @@ export default class JJBSelect {
         const modeStr = doubles ? ("比赛模式  " + doublesModeLabel()) : (live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选");
         JJBView.label(root, 762, 30, 480, 20, playerStr, 15, th.muted, HA.RIGHT);
         JJBView.label(root, 762, 54, 480, 20, modeStr, 15, th.ink, HA.RIGHT);
+        if (!live && !doubles) JJBView.demoBadge(root, th, 1070, 78);
 
         // ---------- 三场槽 grid 3 列（design .slots：head + mapthumb 475:85 + t-cmds + t-facs）----------
         const PAD = 38;
@@ -377,10 +378,10 @@ export default class JJBSelect {
         })();
         if (doubles) {
             JJBView.label(root, cmdX, selfTop + 5, 620, 18,
-                "占位规则：不分 A/B 组；两位玩家各拖 1 名指挥官，额外因子按配置填满。", 13, th.muted);
+                "双打可放 2 位 · 额外因子按配置填满", 13, th.muted);
         } else {
             JJBView.label(root, cmdX + 150, selfTop + 3, 440, 16,
-                live ? (selfPool.length ? "全量可选 · 拖入场次槽位（B 组占用合并计数）" : "本模式无自选区") : "18 位全解锁 · 双打可放 2 位", 13, th.muted);
+                live ? (selfPool.length ? "全量可选 · 拖入场次槽位（B 组占用合并计数）" : "本模式无自选区") : "18 位全解锁 · 演示数据", 13, th.muted);
             const selfCells: (string | null)[] = live ? selfPool : selfPool.concat(new Array(Math.max(0, 18 - selfPool.length)).fill(null));
             selfCells.slice(0, 18).forEach((c, i) => {
                 const ax = cmdX + (i % 9) * 70, ay = selfTop + 28 + Math.floor(i / 9) * 74;

@@ -28,6 +28,7 @@ export default class JJBResult {
         JJBView.sprite(root, 116, 30, tWd, tH, "images/brand/jjb-title-" + th.style + "-" + th.mode);
         JJBView.label(root, 760, 30, 470, 20, live ? ("当前选手  " + (dAny.playerName || "选手")) : (doubles ? "当前选手  双打队伍" : "当前选手  Potato_01"), 15, th.muted, HA.RIGHT);
         JJBView.label(root, 760, 54, 470, 20, doubles ? ("比赛模式  " + doublesModeLabel()) : (live ? ("比赛模式  " + modeLabel()) : "比赛模式  8 因子 · 手选"), 15, th.ink, HA.RIGHT);
+        if (!live && !doubles) JJBView.demoBadge(root, th, 1070, 78);
 
         // ---------- 记分（standalone 用 DEMO 预置；真实会话沿用 battle 累加的 winLoseList） ----------
         if (!live && !doubles) JijieData.winLoseList = DEMO_MATCHES.map((m: any) => RESULT_VAL[m.result]);

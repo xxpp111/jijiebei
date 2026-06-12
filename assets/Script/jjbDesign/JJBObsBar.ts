@@ -58,6 +58,7 @@ export default class JJBObsBar {
 
         JJBObsBar.drawScore(bar, th, score, data.finalState);
         JJBObsBar.drawMatches(bar, th, rows, heroIndex);
+        if (data.source === "demo") JJBView.demoBadge(root, th, 24, barTop + 52);
 
         // 入场：透明度淡入（y 由 JJBView.placed 置于目标，不做 tween 避免 Cocos 2.4 tween.y capture 行为差异影响实测）
         bar.opacity = 0;

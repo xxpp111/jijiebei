@@ -69,7 +69,7 @@ export function markFor(style: string, mode: string): string {
 export const DEMO_MATCHES = [
     { slot: "第 1 场", map: "克哈裂痕", cmds: ["凯瑞甘"], factors: ["岩浆爆发", "虚空裂隙", "丧尸大战"], status: "win", result: "win" },
     { slot: "第 2 场", map: "黑暗杀星", cmds: ["雷诺"], factors: ["核弹打击", "暴风雪", "相互摧毁"], status: "live", result: "bonus" },
-    { slot: "BOSS 战", map: "往日神庙", cmds: ["阿塔尼斯", "凯瑞甘"], factors: ["虚空裂隙", "岩浆爆发", "核弹打击", "丧尸大战", "净化光束"], status: "wait", doubles: true, result: "win" },
+    { slot: "BOSS 战", map: "往日神庙", cmds: ["阿塔尼斯"], factors: ["虚空裂隙", "岩浆爆发", "核弹打击"], status: "wait", doubles: false, result: "win" },
 ];
 
 // 三态判定（对战页 Verdict / 结算页 战绩）。设计顺序 win/bonus/lose；编码对齐 JijieData.winLoseList。
