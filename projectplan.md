@@ -584,3 +584,7 @@ $ git status -s
 - **audit**：`harness-pro audit` 已写 `audit-phase-3.json`，phase/reviewer/stop/security compliance 均 PASS，post secret matches=0；overall=`partial_compliance`，原因是 host reviewer fallback/direct 路径缺少 host-run mutation snapshot（`missing_snapshot_count=25`，post mutation match=NO）且仓库无 npm test runner（post npm test skipped）。随后 `harness-pro doctor` severity=ok。
 
 **hub 终验（Phase F · 2026-06-12 · Fable hub）**：全项通过。① 矢量框裁定（用户"糊"问题根治）：select 原图 2× 放大与 Retina dsf2 原生裁切均线条锐利、层次分明（外暗轮廓/斜面亮缘/框体/角铆钉可辨）；外扩实测普通 106%（66→76.6 等）/金 116%（44→51、56→65），与设计精确吻合。② E-bug 双修复 live 亲验：800×400 bare letterbox=纯主题底色无 XP（四角像素采样 + hub 实拍双证），pill 移入分数轨空位不压徽章。③ harness 全生命周期首次零人工干预跑通：3 phase × 6 reviewer 真实评审全 PASS、session completed、audit 的 partial_compliance 为已记录的工具性原因（host-run snapshot 缺失 + npm runner 不存在），非质量问题。④ 本轮留档质量合格：截图等资源载完+350ms 才拍、附像素采样与包围盒实测，hub 抽验与档案一致——三轮验证纪律整改至此闭环。
+
+## hub 热修（2026-06-12 · Fable hub · localLabel 零宽裁剪）
+
+**用户验证发现**：指挥官名牌与锁定/官突角标文字全部不可见（底框在、文字无）。**根因**：`JJBBorder.localLabel` 在节点设好尺寸后才 `addComponent(cc.Label)`——Label 组件挂载瞬间按空字符串实测把节点改成 0 宽，后续 CLAMP 按 0 宽整裁文字；该 bug 自 Phase A 引入 JJBBorder 起潜伏四轮（Phase C 留档复核同样无文字），从未被发现因为所有断言只查状态与几何、从不查"文字可见"。**修复**：Label 配置完成后重设 `n.setContentSize(w, h)`（与 JJBView.label / JJBObsBar.label 同模式，一行）。**验证**：build exit 0；battle 名牌（凯瑞甘/雷诺/阿塔尼斯+凯瑞甘）实拍恢复；双打 select 官突角标文字实拍恢复；全场景 Label 扫描 82 个全部非零宽（仅引擎 FPS 调试面板 2 个零宽，非业务）。**教训入册**：文字可见性（Label 节点宽 >0 且字符串非空）应纳入下一轮断言基建。

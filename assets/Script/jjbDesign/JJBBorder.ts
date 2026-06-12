@@ -363,6 +363,9 @@ export default class JJBBorder {
         l.string = text; l.fontSize = size; l.lineHeight = Math.round(size * 1.2);
         l.horizontalAlign = align; l.verticalAlign = cc.Label.VerticalAlign.TOP;
         l.overflow = cc.Label.Overflow.CLAMP; l.enableWrapText = false;
+        // Label 组件挂载瞬间会按空串实测把节点改成 0 宽（CLAMP 下文字被整裁掉），
+        // 配置完必须重设回目标尺寸（与 JJBView.label / JJBObsBar.label 同模式）。
+        n.setContentSize(w, h);
         n.color = color;
         return n;
     }
