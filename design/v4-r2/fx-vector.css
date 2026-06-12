@@ -1,0 +1,118 @@
+/* ============================================================
+   集结杯 × CM — fx-vector.css (②.5 因子边框矢量化)
+   替换 mutatorframe / grandmaster PNG 贴图。
+   所有几何 = u 系数（u = max(--fxz/66, 0.6px)），与
+   Cocos 2.4 Graphics 落地规格一一对应（见 spec-fxv）。
+   状态语言（sel/dim/drag/ghost/✓/tag）沿用 v4.css §1 不变。
+   ============================================================ */
+
+.fx.vx { --u: max(0.6px, calc(var(--fxz, 66px) / 66)); }
+
+/* 图芯：普通/金统一 89%（同一可见面积）。
+   框体必须压住图芯外缘：普通 ~1.4u / 金 ~2.1u —— 源图黑边/黑角永藏框下 */
+.fx.vx .fx-art { left: 5.5%; top: 5.5%; width: 89%; height: 89%; }
+.fx.vx.gold .fx-art { left: 5.5%; top: 5.5%; width: 89%; height: 89%; }
+
+/* 框节点：普通外扩 106%（每边 3%）；
+   金 116%（每边 8%）——厚金带整体外包图芯，仅内热线收口压边 */
+.fx.vx .fx-frame.fxv { left: -3%; top: -3%; width: 106%; height: 106%; }
+.fx.vx.gold .fx-frame.fxv { left: -8%; top: -8%; width: 116%; height: 116%; }
+
+/* 金框 sel/drag 外圈移到金带+发光之外 */
+.fx.vx.gold .fx-ring { inset: calc(var(--fxz, 66px) * -0.08 - 2px); border-radius: 8px; }
+
+.fxv > span { position: absolute; pointer-events: none; }
+
+/* ---------------- 普通绿框（金属斜面 + 角铆钉） ----------------
+   带宽自节点外缘：0..1 外暗轮廓 / 1..2.1 斜面亮缘 / 2..5 框体 /
+   5..6 内暗线 / 6..7 内亮线（压图芯） ---------------- */
+.fxv .r1 {
+  inset: 0; border: calc(var(--u) * 1) solid #0A130C;
+  border-radius: calc(var(--u) * 3.2);
+  box-shadow: inset 0 0 0 calc(var(--u) * 1.1) #86AE6A;
+}
+.fxv .r2 {
+  inset: calc(var(--u) * 2); border: calc(var(--u) * 3) solid #35522F;
+  border-radius: calc(var(--u) * 2.2);
+}
+.fxv .hl {
+  left: calc(var(--u) * 7); right: calc(var(--u) * 7);
+  top: calc(var(--u) * 2.6); height: calc(var(--u) * 1);
+  background: #BCD9A0; opacity: .5; border-radius: calc(var(--u) * .5);
+}
+.fxv .r3 {
+  inset: calc(var(--u) * 5); border: calc(var(--u) * 1) solid #111C13;
+  border-radius: calc(var(--u) * 1.4);
+  box-shadow: inset 0 0 0 calc(var(--u) * 1) #9FC683;
+}
+.fxv .rv {
+  width: calc(var(--u) * 3.4); height: calc(var(--u) * 3.4);
+  border-radius: 50%; background: #C2DBA4;
+  box-shadow: inset 0 calc(var(--u) * -1) 0 rgba(10, 19, 12, .35),
+              0 0 0 calc(var(--u) * .9) #16241A;
+}
+.fxv .rv.tl { left: calc(var(--u) * 1.8); top: calc(var(--u) * 1.8); }
+.fxv .rv.tr { right: calc(var(--u) * 1.8); top: calc(var(--u) * 1.8); }
+.fxv .rv.bl { left: calc(var(--u) * 1.8); bottom: calc(var(--u) * 1.8); }
+.fxv .rv.br { right: calc(var(--u) * 1.8); bottom: calc(var(--u) * 1.8); }
+
+/* ---------------- 金色强化框（华贵粗框 + 双描边发光 + 角金菱） ----
+   带宽自节点外缘：0..2.5 发光a / 1.5..3.3 发光b / 3..4 暗轮廓 /
+   4..5.5 深金外缘 / 5.5..8.5 主体 / 8.5..10 内深金 /
+   10..11 内热线（压图芯） ---------------- */
+.fxv .gw1 {
+  inset: 0; border: calc(var(--u) * 2.5) solid rgba(255, 200, 70, .13);
+  border-radius: calc(var(--u) * 3.4);
+}
+.fxv .gw2 {
+  inset: calc(var(--u) * 1.5); border: calc(var(--u) * 1.8) solid rgba(255, 206, 84, .30);
+  border-radius: calc(var(--u) * 3);
+}
+.fxv .g1 {
+  inset: calc(var(--u) * 3); border: calc(var(--u) * 1) solid #3A2306;
+  border-radius: calc(var(--u) * 2.6);
+}
+.fxv .g2 {
+  inset: calc(var(--u) * 4); border: calc(var(--u) * 1.5) solid #C98F26;
+  border-radius: calc(var(--u) * 2.2);
+}
+.fxv .g3 {
+  inset: calc(var(--u) * 5.5); border: calc(var(--u) * 3) solid #F6C75A;
+  border-radius: calc(var(--u) * 1.8);
+}
+.fxv .ghl {
+  left: calc(var(--u) * 9); right: calc(var(--u) * 9);
+  top: calc(var(--u) * 6); height: calc(var(--u) * 1);
+  background: #FFEBAE; opacity: .75; border-radius: calc(var(--u) * .5);
+}
+.fxv .g4 {
+  inset: calc(var(--u) * 8.5); border: calc(var(--u) * 1.5) solid #8F5E10;
+  border-radius: calc(var(--u) * 1.2);
+  box-shadow: inset 0 0 0 calc(var(--u) * 1) #FFF4C9;
+}
+.fxv .gd {
+  width: calc(var(--u) * 4.6); height: calc(var(--u) * 4.6);
+  background: #FFE284; transform: rotate(45deg);
+  box-shadow: 0 0 0 calc(var(--u) * .9) #6B4708;
+}
+.fxv .gd.tl { left: calc(var(--u) * 4.7); top: calc(var(--u) * 4.7); }
+.fxv .gd.tr { right: calc(var(--u) * 4.7); top: calc(var(--u) * 4.7); }
+.fxv .gd.bl { left: calc(var(--u) * 4.7); bottom: calc(var(--u) * 4.7); }
+.fxv .gd.br { right: calc(var(--u) * 4.7); bottom: calc(var(--u) * 4.7); }
+
+/* 规格板辅助：图格边界虚线（可视化外扩量） */
+.fx.fx-guide::after {
+  content: ""; position: absolute; inset: 0; z-index: 4;
+  border: 1px dashed rgba(125, 140, 160, .4); pointer-events: none;
+}
+
+/* 规格板数值表 */
+.fxt { display: flex; flex-direction: column; border: 1px solid var(--panel-edge); }
+.fxt-r { display: grid; grid-template-columns: 40px 1.2fr 1.1fr 1.05fr .5fr 1.3fr .4fr; font-size: 12px; color: var(--ink); }
+.fxt-r > span { padding: 6px 10px; border-bottom: 1px solid var(--panel-edge); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fxt-r:last-child > span { border-bottom: none; }
+.fxt-r.h > span { font-weight: 700; color: var(--accent); background: var(--drop-bg); letter-spacing: 1px; }
+.fxt-r > span.m { font-family: var(--font-mono); font-size: 11px; }
+.fxt-r > span:not(:first-child) { border-left: 1px solid var(--panel-edge); }
+.fxt-4 .fxt-r { grid-template-columns: .7fr .8fr 1fr 1fr; }
+.fxt-chip { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(128, 128, 128, .45); }

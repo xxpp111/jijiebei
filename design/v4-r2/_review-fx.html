@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>②.5 因子边框矢量化 · 纵排审查</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&family=Oswald:wght@500;700&family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="v4.css" />
+<link rel="stylesheet" href="fx-vector.css" />
+<style>
+  html, body { margin: 0; background: #14171c; }
+  .rv { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px 0 90px; }
+  .rv-h { width: 1100px; color: #cfd6e0; font-family: "Noto Sans SC", sans-serif; font-size: 15px; letter-spacing: 1px; display: flex; align-items: center; gap: 12px; margin-top: 30px; }
+  .rv-h::before { content: ""; width: 22px; height: 3px; background: #D8B15A; }
+  .rv-h:first-child { margin-top: 0; }
+  .rv-cap { width: 1100px; color: #7e8794; font-family: "Share Tech Mono", monospace; font-size: 12px; }
+  .rv-spec { width: 1100px; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .rv-spec > .jjbx { width: 100%; }
+</style>
+</head>
+<body>
+<div class="rv" id="rv"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="components/select-screen.jsx"></script>
+<script type="text/babel" src="components/spec-factor.jsx"></script>
+<script type="text/babel" src="components/fx-vector.jsx"></script>
+<script type="text/babel" src="components/spec-fxv.jsx"></script>
+<script type="text/babel">
+  function Review() {
+    return (
+      <>
+        <div className="rv-h">新旧对比 · PNG ↔ 矢量</div>
+        <div className="rv-cap">fxv-compare</div>
+        <div className="rv-spec"><FXVCompare /></div>
+
+        <div className="rv-h">落位预览</div>
+        <div className="rv-cap">fxv-preview-metal-dark</div>
+        <div className="rv-spec"><FXVPreview styleName="metal" mode="dark" /></div>
+        <div className="rv-cap">fxv-preview-minimal-light</div>
+        <div className="rv-spec"><FXVPreview styleName="minimal" mode="light" /></div>
+
+        <div className="rv-h">状态矩阵（语言零改动）</div>
+        <div className="rv-cap">fxv-matrix</div>
+        <div className="rv-spec"><FXVMatrix /></div>
+
+        <div className="rv-h">尺寸族 34/44/56/66/74</div>
+        <div className="rv-cap">fxv-sizes</div>
+        <div className="rv-spec"><FXVSizes /></div>
+
+        <div className="rv-h">6 主题适配</div>
+        <div className="rv-cap">fxv-themes</div>
+        <div style={{ boxShadow: "0 8px 30px rgba(0,0,0,.5)" }}><FXVThemes /></div>
+
+        <div className="rv-h">规格板</div>
+        <div className="rv-cap">fxv-anatomy</div>
+        <div className="rv-spec" style={{ width: 1180 }}><FXVAnatomy /></div>
+        <div className="rv-cap">fxv-values</div>
+        <div className="rv-spec"><FXVValues /></div>
+        <div className="rv-cap">fxv-cocos</div>
+        <div className="rv-spec"><FXVCocos /></div>
+      </>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("rv")).render(<Review />);
+</script>
+</body>
+</html>

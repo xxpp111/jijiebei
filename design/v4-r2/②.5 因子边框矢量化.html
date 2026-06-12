@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>集结杯 ②.5 · 因子边框矢量化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&family=Oswald:wght@500;700&family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="v4.css" />
+<link rel="stylesheet" href="fx-vector.css" />
+<style>
+  html, body { margin: 0; height: 100%; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="components/select-screen.jsx"></script>
+<script type="text/babel" src="components/spec-factor.jsx"></script>
+<script type="text/babel" src="components/fx-vector.jsx"></script>
+<script type="text/babel" src="components/spec-fxv.jsx"></script>
+<script type="text/babel">
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="fxv-main" title="②.5 因子边框矢量化 · 对比与落位" subtitle="替换 mutatorframe 71×73 / grandmaster 126×126 位图 · 纯 Cocos 2.4 Graphics 原语 · 普通框外扩 106% / 金框 110%">
+          <DCArtboard id="a-compare" label="新旧对比 · Retina / OBS 放大不发糊" width={960} height={540}>
+            <FXVCompare />
+          </DCArtboard>
+          <DCArtboard id="a-prev-dark" label="落位预览 · 金属 · 暗" width={760} height={420}>
+            <FXVPreview styleName="metal" mode="dark" />
+          </DCArtboard>
+          <DCArtboard id="a-prev-light" label="落位预览 · 极简 · 亮（投影板策略）" width={760} height={420}>
+            <FXVPreview styleName="minimal" mode="light" />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="fxv-states" title="状态与尺寸" subtitle="sel / dim / drag / ghost 语言零改动 · 尺寸族 34/44/56/66/74 · 6 主题 token">
+          <DCArtboard id="a-matrix" label="状态矩阵" width={1040} height={520}>
+            <FXVMatrix />
+          </DCArtboard>
+          <DCArtboard id="a-sizes" label="尺寸族 + 节点尺寸表" width={900} height={680}>
+            <FXVSizes />
+          </DCArtboard>
+          <DCArtboard id="a-themes" label="6 主题适配" width={948} height={200}>
+            <FXVThemes />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="fxv-spec" title="规格板" subtitle="分层结构 / 精确值 / Cocos 2.4 落地要点">
+          <DCArtboard id="s-anat" label="分层结构（爆炸图）" width={1180} height={640}>
+            <FXVAnatomy />
+          </DCArtboard>
+          <DCArtboard id="s-values" label="精确值表" width={1100} height={920}>
+            <FXVValues />
+          </DCArtboard>
+          <DCArtboard id="s-cocos" label="Cocos 落地要点" width={980} height={640}>
+            <FXVCocos />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
