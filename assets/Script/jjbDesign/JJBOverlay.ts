@@ -14,7 +14,7 @@ const ST_LABEL: { [k: string]: string } = { win: "胜利", live: "进行中", wa
 
 export default class JJBOverlay {
 
-    static build(root: cc.Node, th: Theme, onBack?: () => void): void {
+    static build(root: cc.Node, th: Theme, onBack?: () => void, onObsBar?: () => void): void {
         JJBView.bg(root, th);
         const L = 56, R = 1224, W = R - L; // 内容区
 
@@ -109,6 +109,12 @@ export default class JJBOverlay {
             JJBView.label(root, 1078, 618, 146, 18, "返回判定 ↩", 13, th.muted, HA.CENTER);
             const hit = JJBView.hit(root, 1078, 612, 146, 30, onBack);
             hit.name = "jjbToBattle";
+        }
+        if (onObsBar) {
+            JJBView.box(root, 1078, 576, 146, 30, null, th.panelEdge, 1);
+            JJBView.label(root, 1078, 582, 146, 18, "底部横条 ▬", 13, th.muted, HA.CENTER);
+            const hit = JJBView.hit(root, 1078, 576, 146, 30, onObsBar);
+            hit.name = "jjbToObsBar";
         }
     }
 }

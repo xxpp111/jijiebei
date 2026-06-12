@@ -163,6 +163,8 @@ export default class JJBView {
                 Math.round(th.bgA.b + (th.bgB.b - th.bgA.b) * t), 255);
             JJBView.box(parent, 0, Math.floor(720 * i / SEG), 1280, Math.ceil(720 / SEG) + 1, col);
         }
+        // 标记全屏 bg 已渲染（obsbar 等屏实测断言使用）
+        try { (window as any).__jjbDebug = (window as any).__jjbDebug || {}; (window as any).__jjbDebug.__jjbFullscreenBgNode = true; } catch (e) { /* noop */ }
         // ② 皮肤纹理：sc2=44px 网格(椭圆遮罩→中心实四周淡,对齐 design radial mask) / metal=118° 斜纹 / minimal=无
         if (th.style === "sc2") {
             // 网格 accent@5%；椭圆 Mask 裁到中心区，近似 design radial 遮罩(中心30%实→边缘92%透明)

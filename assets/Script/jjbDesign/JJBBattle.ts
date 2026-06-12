@@ -22,7 +22,7 @@ const V_DEFS = [{ res: "win", w: 70 }, { res: "bonus", w: 87 }, { res: "lose", w
 
 export default class JJBBattle {
 
-    static build(root: cc.Node, th: Theme, onDone?: () => void, onOverlay?: () => void): void {
+    static build(root: cc.Node, th: Theme, onDone?: () => void, onOverlay?: () => void, onObsBar?: () => void): void {
         JJBView.bg(root, th);
 
         const doubles = doublesLive();
@@ -111,7 +111,7 @@ export default class JJBBattle {
                         if (onDone) { onDone(); return; }
                     }
                     root.removeAllChildren();
-                    JJBBattle.build(root, th, onDone, onOverlay);
+                    JJBBattle.build(root, th, onDone, onOverlay, onObsBar);
                 });
                 hit.name = "jjbV_" + i + "_" + val; // 便于自动化点击断言定位
                 vNodes[i].push(box, lbl, hit);
@@ -192,6 +192,12 @@ export default class JJBBattle {
             JJBView.label(root, 1078, 116, 146, 18, "直播浮层 ▣", 13, th.muted, HA.CENTER);
             const ovHit = JJBView.hit(root, 1078, 110, 146, 30, onOverlay);
             ovHit.name = "jjbToOverlay";
+        }
+        if (onObsBar) {
+            JJBView.box(root, 1078, 146, 146, 30, null, th.panelEdge, 1);
+            JJBView.label(root, 1078, 152, 146, 18, "OBS 横条 ▬", 13, th.muted, HA.CENTER);
+            const obHit = JJBView.hit(root, 1078, 146, 146, 30, onObsBar);
+            obHit.name = "jjbToObsBar";
         }
 
         recompute();

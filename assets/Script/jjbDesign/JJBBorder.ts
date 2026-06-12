@@ -161,7 +161,7 @@ export default class JJBBorder {
         return n;
     }
 
-    private static factorTag(parent: cc.Node, text: string, th: Theme, lock: boolean): void {
+    static factorTag(parent: cc.Node, text: string, th: Theme, lock: boolean): void {
         const w = text.length > 2 ? 42 : 34;
         const bg = lock ? cc.color(7, 11, 19, 225) : th.accent;
         const fg = lock ? th.accent : th.onAccent;

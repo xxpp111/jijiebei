@@ -11,7 +11,8 @@ import JJBOverlay from "./JJBOverlay";
 import JJBSelect from "./JJBSelect";
 import JJBBattle from "./JJBBattle";
 import JJBResult from "./JJBResult";
-import JJBDoubles from "./JJBDoubles";
+import JJBDoubles, { DOUBLES_CONFIG } from "./JJBDoubles";
+import JJBObsBar from "./JJBObsBar";
 import JijieControl from "../jijie2/JijieContro";
 import JijieData from "../jijie2/JijieData";
 
@@ -62,7 +63,7 @@ export default class JJBDesignBoot {
 
     private static render(q: { [k: string]: string }): void {
         try {
-            if (q["doubles"] === "1") {
+            if (q["doubles"] === "1" && q["design"] !== "obsbar") {
                 JJBDesignBoot.startDoubles();
                 JJBDesignBoot.buildControlBar();
                 return;
@@ -72,6 +73,10 @@ export default class JJBDesignBoot {
             else if (screen === "select") { JJBDesignBoot.setScreen("select"); JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); }
             else if (screen === "battle") { JJBDesignBoot.goBattle(); }
             else if (screen === "result") { JJBDesignBoot.setScreen("result"); JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
+            else if (screen === "obsbar") {
+                if (q["doubles"] === "1") JJBDoubles.start();
+                JJBDesignBoot.goObsBar();
+            }
             else {
                 JJBDesignBoot.showHome();
                 if (q["auto"] !== undefined && q["auto"] !== "") JJBDesignBoot.onMode(parseInt(q["auto"], 10) || 0);
@@ -272,7 +277,7 @@ export default class JJBDesignBoot {
     }
     private static goBattle(): void {
         JJBDesignBoot.setScreen("battle");
-        JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult(), () => JJBDesignBoot.goOverlay());
+        JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult(), () => JJBDesignBoot.goOverlay(), () => JJBDesignBoot.goObsBar());
         JJBDesignBoot.buildControlBar();
     }
     private static goResult(): void {
@@ -283,7 +288,13 @@ export default class JJBDesignBoot {
     /** GAP-17 浮层（OBS 浏览器源+Interact 单窗口）：battle ↔ overlay 互切，主题切换器照常。 */
     private static goOverlay(): void {
         JJBDesignBoot.setScreen("overlay");
-        JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
+        JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle(), () => JJBDesignBoot.goObsBar());
+        JJBDesignBoot.buildControlBar();
+    }
+    /** R2② OBS 底部横条：1280×232 贴 720 舞台底部，battle/overlay/result 可切入。 */
+    private static goObsBar(): void {
+        JJBDesignBoot.setScreen("obsbar");
+        JJBObsBar.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
         JJBDesignBoot.buildControlBar();
     }
 
@@ -301,8 +312,10 @@ export default class JJBDesignBoot {
         const canSelect = JJBDoubles.live() || JijieData.status >= 2;
         const canBattle = JJBDoubles.live() || JijieData.status >= 3;
         const total = JJBDoubles.live() ? JJBDoubles.totalCount() : JijieData.totalCount;
-        const canResult = canBattle && total >= 3;
+        const targetTotal = JJBDoubles.live() ? DOUBLES_CONFIG.matches : 3;
+        const canResult = canBattle && total >= targetTotal;
         const canOverlay = canBattle;
+        const canObsbar = canBattle;
 
         if (JJBDesignBoot.ctrlCollapsed) {
             const pill = JJBView.box(sw, 574, 12, 132, 22, th.panelBg, th.panelEdge, 1);
@@ -313,7 +326,7 @@ export default class JJBDesignBoot {
             hit.name = "jjbCtrl_expand";
             hit.on(cc.Node.EventType.MOUSE_ENTER, () => { if (cc.isValid(pill)) pill.opacity = 255; });
             hit.on(cc.Node.EventType.MOUSE_LEAVE, () => { if (cc.isValid(pill)) pill.opacity = 97; });
-            JJBDesignBoot.exposeControlDebug(canSelect, canBattle, canResult, canOverlay);
+            JJBDesignBoot.exposeControlDebug(canSelect, canBattle, canResult, canOverlay, canObsbar);
             return;
         }
 
@@ -322,9 +335,9 @@ export default class JJBDesignBoot {
             outside.name = "jjbCtrl_outsideCancel";
         }
 
-        const barLeft = JJBDesignBoot.armedAction ? 286 : 300;
+        const barLeft = JJBDesignBoot.armedAction ? 246 : 260;
         const barTop = 12;
-        const barW = JJBDesignBoot.armedAction ? 760 : 690;
+        const barW = JJBDesignBoot.armedAction ? 840 : 770;
         if (th.style === "metal") JJBView.cutBox(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1, 10);
         else JJBView.box(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1);
         const sep = (x: number) => JJBView.box(sw, x, barTop + 6, 1, 26, th.panelEdge, null);
@@ -347,6 +360,7 @@ export default class JJBDesignBoot {
         btn(x, 38, "对战", "jjbCtrl_battle", JJBDesignBoot.curScreen === "battle", canBattle, () => JJBDesignBoot.goBattle()); x += 40;
         btn(x, 38, "结算", "jjbCtrl_result", JJBDesignBoot.curScreen === "result", canResult, () => JJBDesignBoot.goResult()); x += 40;
         btn(x, 38, "浮层", "jjbCtrl_overlay", JJBDesignBoot.curScreen === "overlay", canOverlay, () => JJBDesignBoot.goOverlay()); x += 44;
+        btn(x, 38, "横条", "jjbCtrl_obsbar", JJBDesignBoot.curScreen === "obsbar", canObsbar, () => JJBDesignBoot.goObsBar()); x += 44;
         sep(x); x += 8;
 
         if (JJBDesignBoot.armedAction) {
@@ -376,14 +390,14 @@ export default class JJBDesignBoot {
         modes.forEach((it) => { btn(x, 28, it[1], "jjbCtrl_mode_" + it[0], JJBDesignBoot.curMode === it[0], true, () => JJBDesignBoot.applyTheme("", it[0])); x += 30; });
         sep(x); x += 8;
         btn(x, 48, "«收起", "jjbCtrl_collapse", false, true, () => { JJBDesignBoot.ctrlCollapsed = true; JJBDesignBoot.buildControlBar(); });
-        JJBDesignBoot.exposeControlDebug(canSelect, canBattle, canResult, canOverlay);
+        JJBDesignBoot.exposeControlDebug(canSelect, canBattle, canResult, canOverlay, canObsbar);
     }
 
     private static buildSwitcher(): void {
         JJBDesignBoot.buildControlBar();
     }
 
-    private static exposeControlDebug(canSelect: boolean, canBattle: boolean, canResult: boolean, canOverlay: boolean): void {
+    private static exposeControlDebug(canSelect: boolean, canBattle: boolean, canResult: boolean, canOverlay: boolean, canObsbar: boolean): void {
         try {
             const w: any = window; w.__jjbDebug = w.__jjbDebug || {};
             w.__jjbDebug.control = {
@@ -393,6 +407,7 @@ export default class JJBDesignBoot {
                 canBattle: canBattle,
                 canResult: canResult,
                 canOverlay: canOverlay,
+                canObsbar: canObsbar,
             };
         } catch (e) { /* noop */ }
     }
@@ -458,6 +473,7 @@ export default class JJBDesignBoot {
     private static reRenderCurrent(): void {
         const s = JJBDesignBoot.curScreen;
         if (s === "overlay") JJBDesignBoot.goOverlay();
+        else if (s === "obsbar") JJBDesignBoot.goObsBar();
         else if (s === "select") JJBDesignBoot.goSelect();
         else if (s === "battle") JJBDesignBoot.goBattle();
         else if (s === "result") JJBDesignBoot.goResult();

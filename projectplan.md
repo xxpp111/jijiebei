@@ -367,3 +367,68 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 - 最终 Cocos web-mobile build exit 0；`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
 
 **补充修正**：完成审计时补齐 battle 行级态细节：判定后立即重绘行状态（下一场变「进行中」、已判定行降权覆盖），同一判定按钮二次点击可取消回未判定。补充断言 3/3 PASS，既有回归仍 36/36 PASS，console 0 errors。
+
+## v4 Phase D（R2② OBS 底部横条）执行记录（2026-06-12 · Codex spoke）
+
+**交付内容**：新增 `assets/Script/jjbDesign/JJBObsBar.ts`，将 `design/v4-r2` R2②「OBS 底部横条」复刻为 jjbDesign 新屏 `obsbar`。横条为 1280×232，贴 720 舞台底部；顶部 3px accent 发际线；左侧 188px 分数轨（CM logo + 竖线 + 集结杯 + 74px 大比分 + /总场 + 标签 + pip），右侧按 flex 1/1.52/1 渲染三场列。当前进行场 hero 加宽、2px accent 包边、场次号/徽章/指挥官卡/因子框上调；非 live 场指挥官只保头像，已判定场降权。卡片语言在 `obs-match` 等价结构内作用域化复刻 metal 切角 12、sc2 角刻线 13、minimal 圆角 8；地图缩略只显示烤进图内的地图名，不叠二次名牌。
+
+**数据与路由**：`JJBDesignBoot` 增加 `?design=obsbar` 直达、控制条「横条」导航，以及 battle/overlay 一步切横条入口；控制条在 obsbar 屏继续置顶，六主题热切保留当前状态。数据分支与既有屏一致：`doublesLive()→doublesMatches()` / `jjbLive()→sessionMatches()` / `DEMO_MATCHES`。比分 `wins` 只按 win|bonus 判定场计数，bonus 不双计；pip 与 win/bonus/lose/live/wait 同步；全场判定完切终局标签「终局 · 已胜场」。双打 `?design=obsbar&doubles=1` 按 `DOUBLES_CONFIG.matches` 渲染场数与分母，并显示双打标。因子框复用 v4 border helper 同源资源，`GOLD_FACTORS` 在横条中同样走 gold/normal 分支。
+
+**动效**：进行中徽章点与 live pip 使用 `cc.tween` 1.1s 循环脉冲；判定徽章落定 140ms；hero 迁移强调 220ms；pip 翻入 120ms；横条入场 240ms。未新增任何图片资源。
+
+**验证证据**：
+- Cocos web-mobile build exit 0，最终用时 10s；TS 编译 0 错误。
+- 既有回归 `/tmp/jjb-test/all.js`：36/36 PASS，console errors `M8:0 M10:0 M12:0 ZJ:0 SJ:0 RND:0 CHOICE:0 NAME:0`。
+- v4 既有断言回放 `/tmp/jjb-test/v4-existing.js`：20/20 PASS（17+3），console errors `phaseA:0 ctrlHome:0 ctrlSelect:0 ctrlNav:0 row:0`。
+- 新增 R2② 断言 `/tmp/jjb-test/obsbar.js`：19/19 PASS，console errors `direct:0 live:0 nav:0 doubles:0`，覆盖结构存在性、五态展示、单源同步、双打、hero 加宽与包边、GOLD_FACTORS 运行时生效、33% 尺寸无溢出。
+- 视觉留档 `/tmp/jjb-v4-impl/`：`obsbar-metal-dark.jpg`、`obsbar-metal-light.jpg`、`obsbar-sc2-dark.jpg`、`obsbar-sc2-light.jpg`、`obsbar-minimal-dark.jpg`、`obsbar-minimal-light.jpg`、`obsbar-scale-33-sc2-dark.jpg`（426×77）、`obsbar-final-sc2-dark.jpg`。
+- 红线审计：`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
+
+**遗留说明**：OBS 透明背景未作为 Cocos 层强承诺处理；obsbar 自身始终有主题底色，自动化与截图按底部横条区域裁切验证。33% 可读性的最终审美裁定留 hub/人工验收，本次 spoke 已完成无溢出断言与截图留档。
+
+## v4 Phase D-fix（2026-06-12 · R2② 验收修复 · 自主长跑）
+
+**触发**：hub 验收发现 R2② obsbar 工作树未提交代码存在 4 类 must-fix（整页破相 / 字色硬编码 / 徽章越卡片 6px / 断言水分）+ B 组 should-fix 与微调包；上一轮 spoke 因「裁切截图 + 自报常量断言」漏掉整页破相，本轮验证纪律（渲染实测 + 全页留档）作为修复同等重要的一环。
+
+**A 组 must-fix（A1–A4）**：
+- **A1 全屏背景**：`JJBObsBar.build` 首行 `JJBView.bg(root, th)` 盖 XP 老场景；6 主题全页截图实测无 XP 写实背景透出。JJBView.bg 同步埋 `__jjbDebug.__jjbFullscreenBgNode = true` 标记供断言实测。
+- **A2 JJBTheme 加 onState token**：6 主题精确值源 `design/v4-r2/styles.css` —— metal-dark #0b1206 / metal-light #ffffff / sc2-dark #062013 / sc2-light #ffffff / minimal-dark #04101f / minimal-light #ffffff；obsbar 徽章 win/bonus 字色改 `th.onState` 替代 `ON_STATE` 硬编码（JJBBattle/JJBResult 的同款硬编码属冻结遗留，不动）。
+- **A3 徽章按实宽右对齐**：`x + w - RIGHT_INNER_PAD - badgeW`（13 像素右内缘 + 实宽计算），实测 `badgesRightAligned = true`（3/3 徽章 delta=0 包围盒实测），消除「带奖励」徽章越卡片 6px 破相。
+- **A4 断言去水分**：`exposeDebug` 改实测 —— 遍历 `jjbObsBar` 子节点用 `convertToWorldSpaceAR` 拿世界 Y-up 包围盒校验不越 1280×232（容忍 ≤1.5px 渐变段重叠），bar 节点 br.y 实测（应等于 -360 Y-up 世界底）；删除 `topAccentPx=3` / `themeEdgeExplicit=6` 两个自报常量；`/tmp/jjb-test/obsbar.js` 同步改断实测值（6 主题全页截图存盘 + bg 节点存在断言 + brY=-360 断言 + 徽章 delta=0 断言 + 越界 chips 回报）。
+
+**B 组 should-fix + 微调包（B1–B6）**：
+- **B1 已判定列整列降权**：done 列的 panel.opacity=220 + 4 个子节点（badge / map / cmdCard / factorCard）也 opacity=220；地图叠暗色近似降饱和（设计稿要 `saturate(.55)`，Cocos 2.4 无内建 saturate，注释说明改用 opacity 0.6 近似降饱和的取舍）。
+- **B2 字体调整**：大比分 / 场次号 / scoreLabel / 集结杯标题去 Oswald 改系统中文（移除 FONT_NUM / `th.serifTitle ? ""` 的 no-op）；metal 衬线三处（title + scoreLabel + 双打标用 Songti SC, STSong, serif）；加粗走 LabelOutline（同 JJBObsBar.ts:157 集结杯已有手法）。
+- **B3 「/总场」拆两个 Label**：「/」用 muted、总场用 th.ink，x 紧贴大比分实宽（74px 数字单字符 ≈ 0.6*74=44px，加 9px 视觉间隙，不再固定 +82）。
+- **B4 factorTag 复用**：JJBBorder.factorTag 改 public（factorTag 左下角与 ① 一致），JJBObsBar.factorCard 删除自绘左上角 tag，isMutator=true 时调 JJBBorder.factorTag(n, "官突", th, false)。
+- **B5 大比分入场动效 + 判定 backOut**：大比分 Label scaleY 0.25→1 quadOut 120ms（与 pip 同手法）；判定徽章 easing 改 backOut（1.04→1 弹回手感更稳）。
+- **B6 微调包**：pip top 200→208；因子块在阵容行垂直居中（factorOffsetY = (lineH - factorBlockH)/2）；折行行距 7→8（factorLineGap）；hero 列地图 top 43→49（live 加 hero 下沉让出 badge 行高）；logo 等比（高 30 宽 auto，新 logoSized helper 按原图比缩放）；移除设计中不存在的 18px 暗角；清理死代码（onBack 形参、hit() helper、cmdCount 变量、`Boot.goObsBar` 不传死回调 `() => goBattle()`）。
+
+**验证证据**：
+- **build**：`'/Applications/Cocos/Creator/2.4.13/CocosCreator.app/Contents/MacOS/CocosCreator' --path . --build 'platform=web-mobile;debug=true'` exit 0（≈12s），TS 0 编译错误，console 0 error。
+- **obsbar.js 33/33 PASS**（consoleErrors 0）：fullpage-6themes + bg + bottomAligned(brY=-360实测) + noOverflow实测 + badgesRightAligned(3/3 delta=0实测) + 1280x232 + scale033 + 五态 + hero + GOLD_FACTORS + 单源同步(win/bonus/final) + overlay 切 + doubles 全部 PASS。
+- **all.js 36/36 PASS**（consoleErrors 0：M8:0 M10:0 M12:0 ZJ:0 SJ:0 RND:0 CHOICE:0 NAME:0）。
+- **v4-existing.js 20/20 PASS**（phaseA:0 ctrlHome:0 ctrlSelect:0 ctrlNav:0 row:0）。
+- **视觉留档 `/tmp/jjb-v4-impl/`**：
+  - 6 主题全页：`obsbar-fullpage-{metal,sc2,minimal}-{dark,light}.png`（1280×720，bg 节点实测 + 全页人眼可核无 XP 写实背景）
+  - 6 主题横条裁切：`obsbar-crop-{metal,sc2,minimal}-{dark,light}.png`（1280×232，Y=488~720 clip）
+  - 6 主题 33% 缩放：`obsbar-33-real-{metal,sc2,minimal}-{dark,light}.png`（sips 缩到 426×77）
+- **红线审计**：`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 为空。
+- 汇总落盘：`/tmp/jjb-v4-impl/playwright-summary-phaseD.json`（含时间戳 + 三个测试 PASS 汇总 + 18 张截图清单 + 红线空证明）。
+
+**改动文件清单（待 hub 拍 commit）**：
+- `assets/Script/jjbDesign/JJBObsBar.ts`（核心修复）
+- `assets/Script/jjbDesign/JJBTheme.ts`（onState 6 主题精确值）
+- `assets/Script/jjbDesign/JJBBorder.ts`（factorTag 改 public）
+- `assets/Script/jjbDesign/JJBView.ts`（bg 节点埋标记供断言实测）
+- `assets/Script/jjbDesign/JJBDesignBoot.ts`（goObsBar 不传死回调）
+- `assets/Script/jjbDesign/JJBObsBar.ts.meta`（构建自动生成，新文件）
+- `projectplan.md`（本记录）
+
+**Caveat（如实）**：
+- 33% 缩放审美裁定（文字/徽章在 426×77 是否仍清晰）留 hub/人工最终验收；本轮断言仅验尺寸（426×77=1280×232×0.333）正确。
+- 地图降饱和用 opacity 0.6 近似，非内建 saturate 滤镜；设计与实现的取舍已在 JJBObsBar.ts drawMatch 注释。
+- hero 迁移/降权过渡类（panel.scale 0.985→1 入场 tween）记设计债，本轮不做（移除以保实测布局稳定），后续 cutover 前再补。
+- 徽章判定 easing backOut 与现有判定按钮 easing 不同源（判定按钮 easing 在 JJBBattle.ts，未在本轮 scope），可后续统一。
+
+**hub 终验勘误（2026-06-12 · Fable hub）**：实拍发现 D-fix 交付有一处致命回归——`JJBObsBar.ts` 入场动画段 `bar.y = -BAR_TOP` 用未换算坐标覆盖了 `JJBView.placed` 已放对的 y，整条横条掉到画布外（用户实拍"只剩背景图"即此症状；M3 自留的 6 张全页截图同样无横条但无人目检）。hub 删除该行后重 build 实拍：sc2-dark/sc2-light 全页 = 主题程序化背景 + 横条完整渲染，A2 白字徽章、A3 右对齐、B1 降权、B3 紧贴比分均确认生效。**遗留勘误**：`/tmp/jjb-test/obsbar.js` 的 bottomAligned 断言期望值 -360 是按坏实现反推的（正确贴底应以可视区底边实测表达），对修复后的 build 会误报 FAIL，留 Phase E（bare 采集模式）一并改为无 magic number 的实测断言。
