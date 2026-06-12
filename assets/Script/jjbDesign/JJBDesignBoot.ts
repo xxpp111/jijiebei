@@ -353,14 +353,17 @@ export default class JJBDesignBoot {
         // C3：obsbar+bare 默认走 pill（即使 ctrlCollapsed=false）。非 bare 行为零变化。
         const isObsBarBare = JJBDesignBoot.curScreen === "obsbar" && JJBDesignBoot.bareMode;
         if (JJBDesignBoot.ctrlCollapsed || (isObsBarBare && !JJBDesignBoot.bareControlExpanded)) {
-            // C3：bare pill 落横条右上角内（design 1280×232 内坐标；JJBView.placed 用左上原点 → 1280-132-12=1136, 12）
-            //   非 bare 共用原 pill 位置（574, 12）保持切换器原视觉。
-            const pillLeft = isObsBarBare ? 1136 : 574;
-            const pill = JJBView.box(sw, pillLeft, 12, 132, 22, th.panelBg, th.panelEdge, 1);
+            // F5：bare pill 放入比分区空位，避开右侧三列徽章/地图/阵容内容；非 bare 沿用原位置。
+            const pillLayout = isObsBarBare ? JJBDesignBoot.barePillLayout() : { left: 574, top: 12, w: 132, h: 22 };
+            const pillLeft = pillLayout.left;
+            const pillTop = pillLayout.top;
+            const pillW = pillLayout.w;
+            const pillH = pillLayout.h;
+            const pill = JJBView.box(sw, pillLeft, pillTop, pillW, pillH, th.panelBg, th.panelEdge, 1);
             pill.name = "jjbCtrlPill";
             pill.opacity = 97;
-            JJBView.label(sw, pillLeft + 14, 16, 72, 14, isObsBarBare ? "··· 控制" : "··· 控制", 11, th.muted, CT);
-            const hit = JJBView.hit(sw, pillLeft, 12, 132, 22, () => {
+            JJBView.label(sw, pillLeft + 6, pillTop + 4, pillW - 12, 14, isObsBarBare ? "··· 控制" : "··· 控制", 11, th.muted, CT);
+            const hit = JJBView.hit(sw, pillLeft, pillTop, pillW, pillH, () => {
                 if (isObsBarBare) JJBDesignBoot.bareControlExpanded = true;
                 else JJBDesignBoot.ctrlCollapsed = false;
                 JJBDesignBoot.buildControlBar();
@@ -486,6 +489,7 @@ export default class JJBDesignBoot {
     private static exposeControlDebug(canSelect: boolean, canBattle: boolean, canResult: boolean, canOverlay: boolean, canObsbar: boolean): void {
         try {
             const w: any = window; w.__jjbDebug = w.__jjbDebug || {};
+            const bareControl = JJBDesignBoot.measureBareControlIntersection();
             w.__jjbDebug.control = {
                 collapsed: JJBDesignBoot.ctrlCollapsed,
                 armed: JJBDesignBoot.armedAction,
@@ -494,7 +498,89 @@ export default class JJBDesignBoot {
                 canResult: canResult,
                 canOverlay: canOverlay,
                 canObsbar: canObsbar,
+                barePillNoIntersection: bareControl.noIntersection,
+                barePillIntersections: bareControl.intersections,
             };
+        } catch (e) { /* noop */ }
+    }
+
+    private static barePillLayout(): { left: number; top: number; w: number; h: number } {
+        const scoreLeft = 24;
+        const scoreW = 188;
+        const scoreWinTop = 82;
+        const scoreRightGutter = 0;
+        const w = 66;
+        const h = 20;
+        return {
+            left: scoreLeft + scoreW - scoreRightGutter - w,
+            top: scoreWinTop + Math.round((70 - h) * 0.16),
+            w,
+            h,
+        };
+    }
+
+    private static measureBareControlIntersection(): { noIntersection: boolean; intersections: any[] } {
+        if (!(JJBDesignBoot.curScreen === "obsbar" && JJBDesignBoot.bareMode)) return { noIntersection: true, intersections: [] };
+        try {
+            const canvas = cc.Canvas.instance ? cc.Canvas.instance.node : JJBDesignBoot.stage;
+            const ctrl = canvas && canvas.getChildByName("jjbControlBar");
+            const pill = ctrl && ctrl.getChildByName("jjbCtrlPill");
+            const bar = JJBDesignBoot.root && JJBDesignBoot.root.getChildByName("jjbObsBar");
+            if (!pill || !bar) return { noIntersection: false, intersections: [{ reason: "missing-pill-or-bar" }] };
+            const pillBox = JJBDesignBoot.worldBox(pill);
+            if (!pillBox) return { noIntersection: false, intersections: [{ reason: "missing-pill-box" }] };
+            const names = [
+                "jjbObsLogo", "jjbObsTitle", "jjbObsScoreWin", "jjbObsScoreSlash", "jjbObsScoreTotal", "jjbObsScoreLabel",
+                "jjbObsPip_", "jjbObsMatchNo_", "jjbObsBadge_", "jjbObsMap_", "jjbObsCmd_", "jjbObsFx_", "jjbFxV4_",
+            ];
+            const hits: any[] = [];
+            const visit = (n: cc.Node) => {
+                if (!n || hits.length >= 8) return;
+                const nm = n.name || "";
+                const check = names.some((p) => nm === p || nm.indexOf(p) === 0);
+                if (check) {
+                    const b = JJBDesignBoot.worldBox(n);
+                    if (b && JJBDesignBoot.boxesIntersect(pillBox, b)) hits.push({ name: nm, box: b });
+                }
+                for (let i = 0; i < n.childrenCount; i++) visit(n.children[i]);
+            };
+            visit(bar);
+            return { noIntersection: hits.length === 0, intersections: hits };
+        } catch (e) {
+            return { noIntersection: false, intersections: [{ reason: String(e) }] };
+        }
+    }
+
+    private static worldBox(n: cc.Node): { left: number; right: number; top: number; bottom: number } {
+        try {
+            JJBDesignBoot.refreshWorldMatrixChain(n);
+            const tl = n.convertToWorldSpaceAR(cc.v2(0, 0));
+            const br = n.convertToWorldSpaceAR(cc.v2(n.width, -n.height));
+            return {
+                left: Math.min(tl.x, br.x),
+                right: Math.max(tl.x, br.x),
+                top: Math.max(tl.y, br.y),
+                bottom: Math.min(tl.y, br.y),
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    private static boxesIntersect(a: { left: number; right: number; top: number; bottom: number },
+                                  b: { left: number; right: number; top: number; bottom: number }): boolean {
+        return a.left < b.right && a.right > b.left && a.bottom < b.top && a.top > b.bottom;
+    }
+
+    private static refreshWorldMatrixChain(n: cc.Node): void {
+        try {
+            const chain: any[] = [];
+            let cur: any = n;
+            while (cur) { chain.push(cur); cur = cur.parent; }
+            for (let i = chain.length - 1; i >= 0; i--) {
+                const node: any = chain[i];
+                if (typeof node._updateWorldMatrix === "function") node._updateWorldMatrix();
+            }
         } catch (e) { /* noop */ }
     }
 

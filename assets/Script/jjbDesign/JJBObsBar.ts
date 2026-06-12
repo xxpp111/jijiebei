@@ -16,6 +16,7 @@ const HA = cc.Label.HorizontalAlign;
 const BAR_W = 1280;
 const BAR_H = 232;
 const BAR_TOP = 720 - BAR_H;
+const BARE_BACKING = { left: -360, top: -220, w: 2000, h: 1160 }; // same overscan envelope as JJBView.bg
 const PAD_L = 24;
 const SCORE_W = 188;
 const GAP = 16;
@@ -40,7 +41,7 @@ export default class JJBObsBar {
         // C2（Phase E bare）：bare 模式 designResolution 切 1280×232，整页可视区=仅横条，
         //     bg 全屏层会盖 letterbox 适配带（SHOW_ALL 多余边）造成白边，跳过。
         if (!bare) JJBView.bg(root, th);
-        else JJBObsBar.solidBacking(th);
+        else JJBObsBar.solidBacking(root, th);
 
         const data = JJBObsBar.resolveRows();
         const rows = data.rows;
@@ -66,7 +67,11 @@ export default class JJBObsBar {
 
     /** C2：bare 不画 JJBView.bg 全屏层；改由引擎 clearColor + DOM 底色承担 letterbox 适配带。
      *  此处同步引擎 clearColor（不依赖 DOM 拿到时机，createScene 后即可调），与 th.bgB 同色。 */
-    private static solidBacking(th: Theme): void {
+    private static solidBacking(root: cc.Node, th: Theme): void {
+        const backing = JJBView.box(root, BARE_BACKING.left, BARE_BACKING.top, BARE_BACKING.w, BARE_BACKING.h, th.bgB);
+        backing.name = "jjbObsBareBacking";
+        try { backing.setSiblingIndex(0); } catch (e) { /* noop */ }
+        try { (window as any).__jjbDebug = (window as any).__jjbDebug || {}; (window as any).__jjbDebug.__jjbBareBackingNode = true; } catch (e) { /* noop */ }
         try { cc.director.setClearColor(th.bgB); } catch (e) { /* noop */ }
         try {
             const d: any = (typeof document !== "undefined") ? document : null;
@@ -364,17 +369,11 @@ export default class JJBObsBar {
     }
 
     private static factorCard(parent: cc.Node, x: number, y: number, size: number, name: string, th: Theme, isMutator: boolean): cc.Node {
-        const n = JJBObsBar.placed(parent, x, y, size, size);
-        n.name = "jjbObsFx_" + name;
-        const gold = JJBBorder.isGoldFactor(name);
-        const inset = Math.round(size * (gold ? 0.09 : 0.07));
-        JJBObsBar.sprite(n, inset, inset, size - inset * 2, size - inset * 2, "images/factor/" + name);
-        const pad = gold ? -Math.round(size * 0.05) : 0;
-        const frameSize = gold ? Math.round(size * 1.1) : size;
-        JJBObsBar.sprite(n, pad, pad, frameSize, frameSize, gold ? "images/brand/border-factor-gold" : "images/brand/border-factor-normal");
-        // B4：官突角标复用 JJBBorder.factorTag（左下角，与 ① 一致）
-        if (isMutator) JJBBorder.factorTag(n, "官突", th, false);
-        return n;
+        return JJBBorder.framedFactorV4(parent, x, y, size, name, th, {
+            local: true,
+            nodeName: "jjbObsFx_" + name,
+            tag: isMutator ? "官突" : undefined,
+        });
     }
 
     private static exposeDebug(source: string, rows: ObsRow[], score: { wins: number; total: number; pips: string[] }, heroIndex: number, finalState: boolean, bar: cc.Node, bare: boolean = false): void {

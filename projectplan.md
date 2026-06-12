@@ -519,3 +519,68 @@ $ git status -s
 - **R2② 直播交付最后一块（bare 采集模式）** 完成。
 - 验收通过即可进 R2③ 二选层设计（按 yb 决策 2026-06-10 路线 C 暂不上线，先精修+校准）。
 - 待 hub 拍板：commit 提交 + 是否安排下一 phase（R2③）。
+
+## v4 Phase F（R2② bare / 因子框终验修复 · 2026-06-12 · Codex spoke）
+
+**目标**：收口 Phase E hub 终验遗留的两个真 bug：① 800×400 bare letterbox 区露 XP 老场景；② bare pill 压 BOSS 列「待战」徽章。同时下线普通/金色因子框 PNG，改为程序化矢量边框，避免资源加载时序与留档不一致。
+
+**harness round**：runtime `.harness-pro-c3e581b5-fx-bare`，session `harness-2026-06-12T06-10-04`，phases=3，strict gate。P1 / P2 已完成真实 DUBHE review，6 reviewer 全量产出，gate 均为 PASS。P3 当前 pre-review 证据已准备：Cocos verify PASSED；真实 DUBHE review 与 audit 需在本记录后执行，若 gate/audit 非 PASS 本轮不得收口。
+
+### 改动摘要
+
+- `assets/Script/jjbDesign/JJBBorder.ts`：`framedFactorV4` 从 PNG sprite 框改为 `cc.Graphics` 程序化矢量框；图芯 89%，普通框外扩 106%，金框外扩 116%，线宽基准 `u=Math.max(size/66,0.6)`；保留 `sel/dim/drag/ghost/check/tag` 对外语义，并支持 OBS 局部复用的 `local/nodeName`。
+- `assets/Script/jjbDesign/JJBObsBar.ts`：OBS 因子卡统一复用 `JJBBorder.framedFactorV4(...,{local:true,nodeName:'jjbObsFx_'+name})`；bare 模式新增 Cocos overscan 纯色盖板 `jjbObsBareBacking`，覆盖 800×400 等高视口 letterbox 区，不再只依赖 clearColor / DOM 背景。
+- `assets/Script/jjbDesign/JJBDesignBoot.ts`：bare pill 从右上角移入比分区空位，新增 `barePillLayout()` 和 world-space 包围盒实测字段 `barePillNoIntersection/barePillIntersections`。
+- 删除 `assets/resources/images/brand/border-factor-normal.png(.meta)` 与 `border-factor-gold.png(.meta)`；active code 引用已清零。
+- `/tmp/jjb-test/obsbar.js`：bare 背景断言改为 `__jjbFullscreenBgNode !== true && __jjbBareBackingNode === true`，并新增 bare pill 零相交断言。
+
+### 验证证据
+
+- **Cocos build**：Phase 3 deterministic verify 已跑，`Cocos build web-mobile (exit 0)` passed，用时 9311ms，`verify-report-3.json` 写入完成，overall=PASSED。
+- **Playwright 汇总**：`/tmp/jjb-v4-impl/playwright-summary-phaseF.json` 为 `ok:true`。
+  - `obsbar.js`：42/42 PASS，fail=0，所有场景 console errors=0。
+  - `all.js`：36/36 PASS，fail=0，`M8/M10/M12/ZJ/SJ/RND/CHOICE/NAME` console errors=0。
+  - `v4-existing.js`：20/20 PASS，fail=0，`phaseA/ctrlHome/ctrlSelect/ctrlNav/row` console errors=0。
+- **PNG 下线**：`rg -n "images/brand/border-factor|border-factor-(normal|gold)" assets/Script assets/resources /tmp/jjb-test/obsbar.js` 无匹配；`assets/resources/images/brand/border-factor*` 无文件。
+- **红线审计**：`git diff --stat -- assets/Script/jijie2 assets/Scene assets/resources/jjdata design` 为空。
+- **bare 800×400 letterbox 像素断言**：四角采样均为 sc2-dark `bgB`，RGBA 分别为 `[5,9,11,255]`，`letterboxOk/backingNode/barFillsViewport/pillNoIntersection` 均为 true。
+
+### 截图清单与目检
+
+- `phaseF-select-metal-dark.png`：深色 metal 选择页，66px 池因子与 52px 锁定因子均可见，普通/金框锐利，无空白框。
+- `phaseF-battle-metal-dark.png`：深色 metal 对战页，56px 因子框清楚，金框和绿框层级正常。
+- `phaseF-obsbar-metal-dark.png`：深色 metal OBS 横条完整贴底，44px/34px 因子框可读。
+- `phaseF-select-metal-light.png`：亮色 metal 选择页，金/绿因子框在浅底上可辨，无资源缺失。
+- `phaseF-battle-metal-light.png`：亮色 metal 对战页，阵容行与因子框间距正常。
+- `phaseF-obsbar-metal-light.png`：亮色 metal OBS 横条完整，底部结构无错位。
+- `phaseF-select-sc2-dark.png`：深色 sc2 选择页，角刻线风格边框可见，选择区布局正常。
+- `phaseF-battle-sc2-dark.png`：深色 sc2 对战页，56px 因子框清晰，行级态正常。
+- `phaseF-obsbar-sc2-dark.png`：深色 sc2 OBS 横条完整，直播横条无留白泄漏。
+- `phaseF-select-sc2-light.png`：亮色 sc2 选择页，因子框在浅底可读，锁定区无错位。
+- `phaseF-battle-sc2-light.png`：亮色 sc2 对战页，阵容和按钮区域正常。
+- `phaseF-obsbar-sc2-light.png`：亮色 sc2 OBS 横条完整，44px/34px 因子框可见。
+- `phaseF-select-minimal-dark.png`：深色 minimal 选择页，池因子、锁定因子与金框均清楚。
+- `phaseF-battle-minimal-dark.png`：深色 minimal 对战页，三场行布局稳定，因子框无破图。
+- `phaseF-obsbar-minimal-dark.png`：深色 minimal OBS 横条完整，比分区与三列内容不相交。
+- `phaseF-select-minimal-light.png`：亮色 minimal 选择页，浅底下边框和选中态仍可辨。
+- `phaseF-battle-minimal-light.png`：亮色 minimal 对战页，因子框、状态按钮与地图条无重叠。
+- `phaseF-obsbar-minimal-light.png`：亮色 minimal OBS 横条完整，底部横条无遮挡。
+- `phaseF-retina-select-sc2-dark-dsf2.png`：Retina dsf=2 选择页，程序化边框在高分屏下仍清晰。
+- `phaseF-bare-sc2-dark-1280x232.png`：bare 标准视口横条满幅，pill 位于比分区空位，不压 BOSS 徽章。
+- `phaseF-bare-sc2-dark-1600x300.png`：宽高放大视口横条铺满宽度，额外区域为主题底色，无 XP 老场景露出。
+- `phaseF-bare-sc2-dark-800x400.png`：等高视口横条居中显示，四周 letterbox 为 sc2-dark 主题底色，无白边或 XP 内容。
+
+> 目检说明：头像隐私打码不纳入视觉判断，只检查边框、背景、布局、状态、遮挡和资源加载。
+
+### 剩余风险
+
+- 33% 缩放的最终审美仍需人工/主播端确认；本轮自动化覆盖无溢出、无破图、无 letterbox 泄漏。
+- P3 DUBHE review 与 audit 结果以 runtime 产物为准；若出现 WARNING/BLOCKED，不得以本记录替代 gate。
+
+### Closeout（2026-06-12T15:06 Asia/Shanghai）
+
+- **P3 DUBHE review**：真实 review 已完成，6/6 reviewer 成功，P3-R1/P3-R2/P3-R3/P3-R4 全部 unanimous PASS，gate-matrix-3 `gate_decision=PASS`。
+- **P3 record-gate / stop**：`record-gate --phase 3 --gate-decision PASS` 成功，Phase 3 状态 completed；`harness-pro stop` 返回 `finalStatus=completed`。
+- **audit**：`harness-pro audit` 已写 `audit-phase-3.json`，phase/reviewer/stop/security compliance 均 PASS，post secret matches=0；overall=`partial_compliance`，原因是 host reviewer fallback/direct 路径缺少 host-run mutation snapshot（`missing_snapshot_count=25`，post mutation match=NO）且仓库无 npm test runner（post npm test skipped）。随后 `harness-pro doctor` severity=ok。
+
+**hub 终验（Phase F · 2026-06-12 · Fable hub）**：全项通过。① 矢量框裁定（用户"糊"问题根治）：select 原图 2× 放大与 Retina dsf2 原生裁切均线条锐利、层次分明（外暗轮廓/斜面亮缘/框体/角铆钉可辨）；外扩实测普通 106%（66→76.6 等）/金 116%（44→51、56→65），与设计精确吻合。② E-bug 双修复 live 亲验：800×400 bare letterbox=纯主题底色无 XP（四角像素采样 + hub 实拍双证），pill 移入分数轨空位不压徽章。③ harness 全生命周期首次零人工干预跑通：3 phase × 6 reviewer 真实评审全 PASS、session completed、audit 的 partial_compliance 为已记录的工具性原因（host-run snapshot 缺失 + npm runner 不存在），非质量问题。④ 本轮留档质量合格：截图等资源载完+350ms 才拍、附像素采样与包围盒实测，hub 抽验与档案一致——三轮验证纪律整改至此闭环。
