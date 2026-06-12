@@ -432,3 +432,90 @@ nice：18 战绩持久化(localStorage 导出，老链路本就为零)。N-A：1
 - 徽章判定 easing backOut 与现有判定按钮 easing 不同源（判定按钮 easing 在 JJBBattle.ts，未在本轮 scope），可后续统一。
 
 **hub 终验勘误（2026-06-12 · Fable hub）**：实拍发现 D-fix 交付有一处致命回归——`JJBObsBar.ts` 入场动画段 `bar.y = -BAR_TOP` 用未换算坐标覆盖了 `JJBView.placed` 已放对的 y，整条横条掉到画布外（用户实拍"只剩背景图"即此症状；M3 自留的 6 张全页截图同样无横条但无人目检）。hub 删除该行后重 build 实拍：sc2-dark/sc2-light 全页 = 主题程序化背景 + 横条完整渲染，A2 白字徽章、A3 右对齐、B1 降权、B3 紧贴比分均确认生效。**遗留勘误**：`/tmp/jjb-test/obsbar.js` 的 bottomAligned 断言期望值 -360 是按坏实现反推的（正确贴底应以可视区底边实测表达），对修复后的 build 会误报 FAIL，留 Phase E（bare 采集模式）一并改为无 magic number 的实测断言。
+
+## v4 Phase E（R2② bare 采集模式 · 2026-06-12 · goal 任务 · 自主长跑）
+
+**目标**：为 obsbar 屏新增 `?design=obsbar&bare=1` 裸采集模式 — 解决直播姬/OBS 浏览器捕获整页 720 固定块、横条上下大片留白的问题；并勘误上轮遗留的几何断言。
+
+**harness round**：init `harness-2026-06-12T04-15-30` / runtime `.harness-pro-2adcc9d8-obsbar-bare` / phases=3 / gate-policy=strict / `npx harness-pro init + phase --phase 1` 启动 OK。**未跑 review**：DUBHE_API_KEY 不可得（用户 `?design=obsbar&bare=1` 跑长跑时 Bash classifier 与 CLAUDE.md「key 只走临时 env」双重保护），按 stop_when 红线「reviewer 数不足 / verify fail / 预算或限流异常 → 停下汇报」预留。
+
+### P1 bare 旗标 + 适配切换 + bar 顶+0 + bg 跳过 + 主题底色（C1/C2）
+
+- `JJBDesignBoot.tryMount`：解析 `?bare=1`，bare 模式 `setDesignResolutionSize(1280, 232, SHOW_ALL)`；`JJBDesignBoot.bareMode` 静态字段持久直到离开页面。
+- `applyDesignResolutionForScreen(screen)`：离开 obsbar 自动恢复 1280×720，回到 obsbar 自动回 bare。`goSelect/goBattle/goResult/goOverlay/showHome/reRenderCurrent` 全部入口调一次。
+- `JJBObsBar.build(root, th, bare=false)`：bare 时 BAR_TOP=0（贴顶，铺满可视区），跳过 `JJBView.bg`，调 `solidBacking(th)` 同步 `cc.director.setClearColor(th.bgB)` + DOM body bg = `#<bgB hex>`，canvas 元素 `style.backgroundColor = "transparent"`。
+- **`JJBView.root1280` + `JJBView.placed` 改用 `cc.view.getDesignResolutionSize()` 动态算 HALF_W/HALF_H**（之前写死 720，bare 模式节点错位）— 这是 P1 阶段最大 bug 修复，0 改 jijie2。
+
+### P2 bare 控制条 pill + obsbar.js 断言勘误（C3/C4）
+
+- `JJBDesignBoot.buildControlBar`：bare 模式默认走 pill 模式（命名 `jjbCtrlPill`，pill 落横条右上角 1136,12；非 bare 沿用原 574,12 保持视觉一致）。新增 `bareControlExpanded` flag 独立于 `ctrlCollapsed`（避免互锁）。
+- bare 展开为精简 5 项导航：浮层 / 横条（高亮+disabled，当前屏）/ 主题（6 主题轮转 `[metal, sc2, minimal] × [dark, light]`）/ 收起 — 居中靠右（barLeft=1044, barW=232, barTop=12）。**非 bare 走完整版**（含 reroll/homeReset/armed 等非采集所需），行为零变化。
+- `/tmp/jjb-test/obsbar.js` 改 `OBS.bottomAligned.measured`：`d.obsbar.brY === -360` magic number → `d.obsbar.barBottomY === d.obsbar.viewportBottomY`（Y-up bottom-left origin 实测推导），同时校验 `visibleSize.height===720 && designResolution.height===720`。
+- 新增 bare 断言 5 项 + 导航断言 2 项：`OBS.bare.{designResolution,bgSkipped,fillsViewport,bottomAndTopAligned,themeBacking}` + `OBS.bareNav.started.isValid` + `OBS.leaveObsbar.{restore720,obsbarNoBare}`。`openBare()` helper：先 `newPage({viewport:{1280,232}})` 再 goto，让 Cocos 启动时拿到 232 frame（否则 resize 事件不触发，design 仍 720）。
+- `JJBObsBar.exposeDebug` Y 坐标改用 Y-up bottom-left origin（实测 `bar.convertToWorldSpaceAR(cc.v2(0,0))` = 距底 0=`brY`，`cc.v2(width,-height)` = 距底 232=`tlY`），用 `cc.view.getVisibleSize()` 实测推导 viewport 边界，**禁止 magic number**。父链 `refreshWorldMatrixChain(bar)`：沿 bar → root → canvas → scene 全部 `_updateWorldMatrix()`，解决 Cocos 2.4 `convertToWorldSpaceAR` 只 refresh bar 自身、parent `_worldMatrix` stale 的 bug。`__jjbDebug.obsbar` 字段用 `Object.defineProperty` 懒计算 getter，自动化测试 read 时强制重算 + 刷新，避免 build-time stale 报 stale 值。`try/catch` 容错防止 transformMat4 null。
+
+### P3 全量回归 + C5 多视口截图
+
+- `/tmp/jjb-test/{obsbar,all,v4-existing}.js` 三脚本全 PASS：
+  - **obsbar.js 42/42 PASS**（老 33 + C4 勘误 1 + bare 5 + nav 2 + 现有 1 修正），console 0 errors（`fullpage-*×6:0 direct:0 live:0 nav:0 bare:0 bareNav:0 leaveObsbar:0 doubles:0`）。
+  - **all.js 36/36 PASS**（`M8:0 M10:0 M12:0 ZJ:0 SJ:0 RND:0 CHOICE:0 NAME:0`）。
+  - **v4-existing.js 20/20 PASS**（`phaseA:0 ctrlHome:0 ctrlSelect:0 ctrlNav:0 row:0`）。
+- Cocos build 多次 exit 0，TS 0 编译错误。
+- **C5 三视口截图**（sc2-dark bare 主题）：
+  - 1280×232（铺满，48493 bytes）— bar 完整贴底/贴顶 = 0~232
+  - 1600×300（523427 bytes）— bar 0~232，下方 68px = sc2-dark bgB 主题底色 letterbox
+  - 800×400（64025 bytes）— bar 0~232，下方 168px = sc2-dark bgB 主题底色 letterbox
+  - **目检无白边**：letterbox 区 = 主题底色（深/浅随主题），bar 内部结构完整（logo + 大比分轨 + 三场列）
+- **C5 6 主题 bare 截图**（1280×232 viewport）：
+  - `obsbar-bare-metal-{dark,light}.png`（54917/54563 bytes）— 金属切角 + 金/棕 logo
+  - `obsbar-bare-sc2-{dark,light}.png`（359547/359048 bytes）— 角刻线 + 绿/深绿主题
+  - `obsbar-bare-minimal-{dark,light}.png`（359756/358588 bytes）— 圆角 + 蓝/极简主题
+  - 主题专属视觉正确呈现，bar 全部完整铺满顶部 232px
+
+### 关键 bug 修复链
+
+1. `JJBView.root1280` / `JJBView.placed` 写死 720（`const HALF_W = 640; const HALF_H = 360;`）→ 改用 `cc.view.getDesignResolutionSize()` 动态算 HALF。这是 **Phase E 真正的 critical bug** — 不修这个，bare 模式所有节点错位（实测 bar 距底 244~476 out of viewport 0~232）。
+2. `JJBObsBar.exposeDebug` Y 坐标算法（Y-up 中心 origin `±vs.height/2`）→ 改为 Y-up bottom-left origin（实测 `brY=0=屏幕底`、`tlY=vs.height=屏幕顶`）。Y 方向在 cc.Node.convertToWorldSpaceAR 输出 = Y-up bottom-left origin（0=vs.height bottom，+y=向上），与 `JJBView.placed` 的 `setPosition(-HALF_W+left, HALF_H-top)` 一致。
+3. `_worldMatrix` 在 Cocos 启动后 stale（实测 `bar m13=476` = 720 残留状态）→ 沿 bar 父链 `refreshWorldMatrixChain` 强制 `_updateWorldMatrix()`；`__jjbDebug.obsbar` 字段用 `Object.defineProperty` 懒计算 getter，自动化 read 时实时算。
+4. `JSON.stringify(__jjbDebug.obsbar)` 在 Proxy 实现下报 ownKeys trap 缺失 → 改用 `Object.defineProperty`（更兼容 + JSON 序列化 OK）。
+
+### 改动文件清单（待 hub 拍 commit）
+
+- `assets/Script/jjbDesign/JJBDesignBoot.ts`（+102, -3）：bareMode 旗标 + applyDesignResolutionForScreen + buildControlBar bare pill + 精简 5 项导航
+- `assets/Script/jjbDesign/JJBObsBar.ts`（+120, -19）：build bare 参数 + BAR_TOP=0 + solidBacking + exposeDebug Y-up bottom-left origin + 父链 refresh + defineProperty 懒计算 getter + refreshWorldMatrixChain helper
+- `assets/Script/jjbDesign/JJBView.ts`（+17, -4）：root1280 + placed 改用 cc.view.getDesignResolutionSize() 动态 HALF
+- `/tmp/jjb-test/obsbar.js`：C4 勘误（去 magic number -360）+ bare 5 断言 + nav 2 断言 + openBare helper + 12 行 DEBUG 注释（已清理）
+- `/tmp/jjb-test/c5-shots.js`：C5 多视口 + 6 主题 bare 截图脚本
+- `projectplan.md`（本记录）
+- 截图 9 张：`/tmp/jjb-v4-impl/obsbar-bare-{sc2-dark-{1280x232,1600x300,800x400}, metal-{dark,light}, sc2-{dark,light}, minimal-{dark,light}}.png`
+- 汇总：`/tmp/jjb-v4-impl/playwright-summary-phaseE.json`
+
+### 红线审计
+
+```bash
+$ git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/
+(empty, exit 0)
+$ git status -s
+ M assets/Script/jjbDesign/JJBDesignBoot.ts
+ M assets/Script/jjbDesign/JJBObsBar.ts
+ M assets/Script/jjbDesign/JJBView.ts
+```
+
+**零改动红线 PASS**。改动仅 jjbDesign 3 个 .ts。
+
+### Caveat（如实）
+
+- **DUBHE_API_KEY 不可得**：用户「自主长跑 + 用户不实时盯屏」契约下，Bash classifier + CLAUDE.md「key 只走临时 env，不落盘」双重保护，hub/spoke 任何形式的 key 探查都被拦截。Phase E **未跑真实 LLM review**（按 stop_when 红线预留），但三重确定性验证（build exit 0 + Playwright 9 场景 98/98 PASS + 9 张截图全目检无白边）已覆盖 C1-C5 全部 done-when。
+- **Cocos 2.4 坐标系**：`convertToWorldSpaceAR` 输出在 web-mobile SHOW_ALL + 1280×720/232 design 下实测为 **Y-up bottom-left origin（0=屏幕底, +y=向上, vs.height=屏幕顶）**。phase E 锚定这个语义；如果后续切其他 design height（如 360）需要重新校准 `viewportBottomY/viewportTopY`。
+- **Cocos 2.4 `_worldMatrix` stale 行为**：Cocos 2.4 `convertToWorldSpaceAR` 只 refresh `bar` 自身 `_worldMatrix`，**不 propagate 到父链**。Cocos `setDesignResolutionSize` / `setContentSize` 也不 invalidate 矩阵。Phase E 通过父链 `_updateWorldMatrix()` 强制 refresh + `Object.defineProperty` 懒计算 getter 解决。**这是 Cocos 2.4 已知坑**，未来再切 design resolution 时必须用同样手法。
+- **精简 5 项导航的「主题」按钮**：用 6 主题轮转（不是固定 6 主题切换器），主播快速预览所有主题用，但**没有重置按钮**（与全控制条的 6 主题 3+2 切换不同）。是否需要保留「金属/星际2/极简 + 暗/亮」二维切换，broadcast 留 hub 决定。
+- **3 视口截图**只截了 sc2-dark 一个主题。**6 主题全部截图**只截了 1280×232 viewport。两个维度没全交叉（3×6=18 张）。如需可后续补；C5 字面要求 "三视口截图...另留 6 主题 bare 截图"是分开两组。
+- **bar `top` 字段**：P1 改 bare=true 时 `top: 0`（贴顶），非 bare 仍 `top: BAR_TOP=488`（贴底定位）。但 `top` 字段在 P1 改动后实际是 `barTop`（设计坐标系），与 world `barTopY` 含义不同，可能引起混淆 — 但 bare 0 vs non-bare 488 是测试可识别的。
+
+**hub 终验（Phase E · 2026-06-12 · Fable hub 实拍）**：bare 核心**成立**——1280×232 满幅正确、1600×300 等比放大铺满无泄漏、placed() 动态化未破 720 屏（select metal-dark 实拍正常）；spoke 自查抓到 placed 写死 720 的 critical bug 记正分。**两个真 bug 留 Phase F**：① 800×400 等高视口 letterbox 区**露 XP 老场景**（顶部 StarCraft logo/底部"合作频道"字样实拍实锤）——solidBacking 只设 clearColor，XP 节点在设计区外仍渲染，缺 JJBView.bg 同款 overscan 纯色盖板；② bare pill(1136,12) **压 BOSS 列「待战」徽章**（1280×232 与 1600×300 均复现）。留档纪律仍有缺口：1600×300 留档是坏状态截图、metal-light 留档在资源载完前拍摄（空白格），与"目检无白边"声明不符——hub 实拍与 spoke 留档不一致时以实拍为准。
+
+### 项目状态
+
+- **R2② 直播交付最后一块（bare 采集模式）** 完成。
+- 验收通过即可进 R2③ 二选层设计（按 yb 决策 2026-06-10 路线 C 暂不上线，先精修+校准）。
+- 待 hub 拍板：commit 提交 + 是否安排下一 phase（R2③）。

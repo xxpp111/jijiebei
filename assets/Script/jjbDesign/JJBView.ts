@@ -1,18 +1,24 @@
 // 集结杯 × CM — 结构渲染助手（程序化建 Cocos 节点树）
-// 设计坐标系：以 1280×720 root（锚点 .5,.5）为基准，用「左上角 + 向右/向下」描述布局，
-// 内部转换为 Cocos 中心原点、y 向上的局部坐标。便于直接照搬 design CSS 的 left/top/w/h。
+// 设计坐标系：以动态 designResolution（1280×720 默认 / 1280×232 bare）为基准，
+// 用「左上角 + 向右/向下」描述布局，内部转换为 Cocos 中心原点、y 向上的局部坐标。
+// 便于直接照搬 design CSS 的 left/top/w/h。
+// C1（Phase E bare）：HALF_W/HALF_H 跟 designResolution 动态算，否则 bare 模式
+// root/placed 仍按 720 中心偏移 → 节点在可视区外。
 import { Theme } from "./JJBTheme";
 
-const HALF_W = 640;
-const HALF_H = 360;
+function getDesignHalf(): { w: number; h: number } {
+    const ds = cc.view.getDesignResolutionSize();
+    return { w: ds.width / 2, h: ds.height / 2 };
+}
 
 export default class JJBView {
 
-    /** 建一个铺满画布的 1280×720 root（挂在 Canvas 下，居中）。 */
+    /** 建一个铺满画布的 root（挂在 Canvas 下，居中）。尺寸跟 designResolution 动态（720 / 232）。 */
     static root1280(stage: cc.Node): cc.Node {
+        const ds = cc.view.getDesignResolutionSize();
         const root = new cc.Node("JJBDesignRoot");
         root.setAnchorPoint(0.5, 0.5);
-        root.setContentSize(1280, 720);
+        root.setContentSize(ds.width, ds.height);
         const canvas = cc.Canvas.instance ? cc.Canvas.instance.node : stage;
         root.parent = canvas;
         root.setPosition(0, 0);
@@ -25,7 +31,8 @@ export default class JJBView {
         n.setAnchorPoint(ax, ay);
         n.setContentSize(w, h);
         n.parent = parent;
-        n.setPosition(-HALF_W + left, HALF_H - top);
+        const dh = getDesignHalf();
+        n.setPosition(-dh.w + left, dh.h - top);
         return n;
     }
 

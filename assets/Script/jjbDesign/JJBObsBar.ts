@@ -35,16 +35,21 @@ interface ObsRow {
 
 export default class JJBObsBar {
 
-    static build(root: cc.Node, th: Theme): void {
+    static build(root: cc.Node, th: Theme, bare: boolean = false): void {
         // A1：全屏背景盖住 XP 老场景；OBS 端只裁底部 232px 区域，无副作用。
-        JJBView.bg(root, th);
+        // C2（Phase E bare）：bare 模式 designResolution 切 1280×232，整页可视区=仅横条，
+        //     bg 全屏层会盖 letterbox 适配带（SHOW_ALL 多余边）造成白边，跳过。
+        if (!bare) JJBView.bg(root, th);
+        else JJBObsBar.solidBacking(th);
 
         const data = JJBObsBar.resolveRows();
         const rows = data.rows;
         const score = JJBObsBar.deriveScore(rows);
         const heroIndex = JJBObsBar.heroIndex(rows);
 
-        const bar = JJBView.placed(root, 0, BAR_TOP, BAR_W, BAR_H);
+        // C2：bare 顶=可视区顶=0；非 bare 贴 720 舞台底（保持原行为）。
+        const barTop = bare ? 0 : BAR_TOP;
+        const bar = JJBView.placed(root, 0, barTop, BAR_W, BAR_H);
         bar.name = "jjbObsBar";
         JJBObsBar.drawBg(bar, th);
         JJBObsBar.box(bar, 0, 0, BAR_W, 3, JJBObsBar.alpha(th.accent, 235));
@@ -56,7 +61,27 @@ export default class JJBObsBar {
         bar.opacity = 0;
         cc.tween(bar).to(0.24, { opacity: 255 }, { easing: "quadOut" }).start();
 
-        JJBObsBar.exposeDebug(data.source, rows, score, heroIndex, data.finalState, bar);
+        JJBObsBar.exposeDebug(data.source, rows, score, heroIndex, data.finalState, bar, bare);
+    }
+
+    /** C2：bare 不画 JJBView.bg 全屏层；改由引擎 clearColor + DOM 底色承担 letterbox 适配带。
+     *  此处同步引擎 clearColor（不依赖 DOM 拿到时机，createScene 后即可调），与 th.bgB 同色。 */
+    private static solidBacking(th: Theme): void {
+        try { cc.director.setClearColor(th.bgB); } catch (e) { /* noop */ }
+        try {
+            const d: any = (typeof document !== "undefined") ? document : null;
+            const hex = "#" + JJBObsBar.toHex(th.bgB);
+            if (d && d.body) d.body.style.backgroundColor = hex;
+            if (d && d.getElementById) {
+                const cv: any = d.getElementById("GameCanvas");
+                if (cv && cv.style) cv.style.backgroundColor = "transparent";
+            }
+        } catch (e) { /* noop */ }
+    }
+
+    private static toHex(c: cc.Color): string {
+        const f = (n: number) => { const v = Math.max(0, Math.min(255, Math.round(n))); return (v < 16 ? "0" : "") + v.toString(16); };
+        return f(c.r) + f(c.g) + f(c.b);
     }
 
     private static resolveRows(): { source: string; rows: ObsRow[]; finalState: boolean } {
@@ -352,20 +377,37 @@ export default class JJBObsBar {
         return n;
     }
 
-    private static exposeDebug(source: string, rows: ObsRow[], score: { wins: number; total: number; pips: string[] }, heroIndex: number, finalState: boolean, bar: cc.Node): void {
+    private static exposeDebug(source: string, rows: ObsRow[], score: { wins: number; total: number; pips: string[] }, heroIndex: number, finalState: boolean, bar: cc.Node, bare: boolean = false): void {
         try {
             const w: any = window;
             w.__jjbDebug = w.__jjbDebug || {};
             const colUnits = rows.map((r, i) => i === heroIndex ? 1.52 : 1);
-            // A4：实测横条 1280×232 边界不越（用 convertToWorldSpaceAR 拿四到世界 Y-up 坐标）
-            // Cocos 2.4 Y-up 世界：画布范围 y=+360(顶) ~ y=-360(底)；design(1280x720) 中心(0,0) + HALF_H 偏移。
+            // C4（Phase E）：强制刷新世界矩阵全链（convertToWorldSpaceAR 只 refresh bar 自身，
+            //   但 parent (JJBDesignRoot) 的 _worldMatrix 在 view 切 / setContentSize 后可能 stale，
+            //   导致 bar 矩阵基于旧 root 矩阵算错位。沿父链 root → canvas 全部 _updateWorldMatrix。
+            //   同时把可读字段挂到 getter，自动化测试读 obsbar.* 时强制重算 + 刷新，避免 build-time stale。
+            JJBObsBar.refreshWorldMatrixChain(bar);
+            // A4：实测横条 1280×232 边界不越（用 convertToWorldSpaceAR 拿四到世界坐标）
+            // C4（Phase E）：期望值从 cc.view.getVisibleSize 实测推导，禁止 magic number。
+            // 实测确认 cc.Node.convertToWorldSpaceAR 在本项目（web-mobile SHOW_ALL, 1280×720/232 design）
+            //   返回 Y-up bottom-left origin 坐标（Y=0 = 屏幕底，Y=vs.height = 屏幕顶）。
+            //   bar 贴 720 design 底 → brY=0, tlY=232；bar 贴 232 design 顶 → brY=0, tlY=232。
+            const ds = cc.view.getDesignResolutionSize();
+            const vs = cc.view.getVisibleSize();
             const tl = bar.convertToWorldSpaceAR(cc.v2(0, 0));
             const br = bar.convertToWorldSpaceAR(cc.v2(bar.width, -bar.height));
-            // 横条贴底 → br.y 应≈-360（Y-up 世界底）；横条贴顶 → tl.y 应≈360。
-            const bottomAligned = Math.abs(br.y - (-360)) < 1.5;
-            const topAligned = Math.abs(tl.y - 360) < 1.5;
+            // viewport 边界（Y-up bottom-left）
+            const viewportBottom = 0;
+            const viewportTop = vs.height;
+            const barBottom = br.y;
+            const barTop = tl.y;
+            const bottomAligned = Math.abs(barBottom - viewportBottom) < 1.5;
+            const topAligned = Math.abs(barTop - viewportTop) < 1.5;
+            // 期望：bar 底==可视区底（贴底非 bare）/ 顶==可视区顶（贴顶 bare）
+            const expectedBottomY = viewportBottom;
+            const expectedTopY = viewportTop;
             const wFromBR = br.x - tl.x, hFromBR = tl.y - br.y;
-            // 实测：遍历 jjbObsBar 子节点包围盒校验不越 1280×232（用世界 Y-up）
+            // 实测：遍历 jjbObsBar 子节点包围盒校验不越 1280×232（用世界坐标）
             // 容忍 ≤1.5px 偏移（drawBg 8 段渐变重叠 1-2px 是已知的稳定 overflow，非视觉破相）
             let overflow = false;
             const overflowChips: any[] = [];
@@ -412,17 +454,26 @@ export default class JJBObsBar {
                 badgeEdgesDetail.push({ name: c.name, badgeRight: Math.round(badgeRight * 10) / 10, cardRightInner: Math.round(cardRightInner * 10) / 10, delta: Math.round(delta * 10) / 10 });
             }
             const allBadgesRightAligned = badgeEdgesOk.length > 0 && badgeEdgesOk.every((v) => v);
-            w.__jjbDebug.obsbar = {
+            // C2/C4：bar 填满可视区实测（bare=true 时）
+            //   期望：bar 底==可视区底 且 顶==底+BAR_H（实测推导，禁止 magic number）
+            //   非 bare 时仍要求贴底（保持原行为兼容）。
+            const barHeight = barTop - barBottom;
+            const expectedBarHeight = BAR_H;
+            const barFillsViewport = Math.abs(barBottom - expectedBottomY) < 1.5
+                && Math.abs(barTop - expectedTopY) < 1.5
+                && Math.abs(barHeight - expectedBarHeight) < 1.5;
+            // C4（Phase E）：可读字段用 Object.defineProperty getter，自动化测试读 obsbar.* 时强制重算 + 刷新，
+            //   避免 exposeDebug build-time 算时 _worldMatrix stale 报 stale 值。Proxy + JSON.stringify 不兼容，
+            //   改用 defineProperty 单字段 getter。
+            const o: any = {
                 source: source,
                 live: source === "live",
                 doubles: source === "doubles",
                 width: BAR_W,
                 height: BAR_H,
-                top: BAR_TOP,
-                bottomAligned: bottomAligned,
-                topAligned: topAligned,
-                tlY: Math.round(tl.y),
-                brY: Math.round(br.y),
+                top: bare ? 0 : BAR_TOP,
+                tlX: Math.round(tl.x),
+                brX: Math.round(br.x),
                 measuredW: Math.round(wFromBR),
                 measuredH: Math.round(hFromBR),
                 score: { wins: score.wins, total: score.total, label: finalState ? "终局 · 已胜场" : "当前局分 · 已胜场", pips: score.pips.slice() },
@@ -441,11 +492,65 @@ export default class JJBObsBar {
                 fullscreenBgNode: !!w.__jjbDebug.__jjbFullscreenBgNode,
                 finalState: finalState,
                 goldFactorsActive: rows.some((r) => (r.factors || []).some((f) => JJBBorder.isGoldFactor(f))),
+                bare: bare,
             };
+            const recompute = () => {
+                try {
+                    JJBObsBar.refreshWorldMatrixChain(bar);
+                    // 强制 init _worldMatrix（node destroy 后 or 第一次访问前 _worldMatrix 可能 null）
+                    try { (bar as any).getWorldMatrix((cc as any).Mat4.identity(new (cc as any).Mat4())); } catch (e2) { /* noop */ }
+                    const _ds = cc.view.getDesignResolutionSize();
+                    const _vs = cc.view.getVisibleSize();
+                    const _tl = bar.convertToWorldSpaceAR(cc.v2(0, 0));
+                    const _br = bar.convertToWorldSpaceAR(cc.v2(bar.width, -bar.height));
+                    return { _ds, _vs, _tl, _br, _ok: true };
+                } catch (e) {
+                    return { _ds: cc.view.getDesignResolutionSize(), _vs: cc.view.getVisibleSize(),
+                        _tl: cc.v2(0, 0), _br: cc.v2(0, 0), _ok: false };
+                }
+            };
+            const liveGetters: Array<[string, () => any]> = [
+                ["brY", () => { const r = recompute(); return Math.round(r._br.y); }],
+                ["tlY", () => { const r = recompute(); return Math.round(r._tl.y); }],
+                ["barBottomY", () => { const r = recompute(); return Math.round(r._br.y * 10) / 10; }],
+                ["barTopY", () => { const r = recompute(); return Math.round(r._tl.y * 10) / 10; }],
+                ["barHeightMeasured", () => { const r = recompute(); return Math.round((r._tl.y - r._br.y) * 10) / 10; }],
+                ["bottomAligned", () => { const r = recompute(); return Math.abs(r._br.y - 0) < 1.5; }],
+                ["topAligned", () => { const r = recompute(); return Math.abs(r._tl.y - r._vs.height) < 1.5; }],
+                ["barFillsViewport", () => {
+                    const r = recompute();
+                    return Math.abs(r._br.y - 0) < 1.5
+                        && Math.abs(r._tl.y - r._vs.height) < 1.5
+                        && Math.abs((r._tl.y - r._br.y) - BAR_H) < 1.5;
+                }],
+                ["designResolution", () => { const r = recompute(); return { width: r._ds.width, height: r._ds.height }; }],
+                ["visibleSize", () => { const r = recompute(); return { width: r._vs.width, height: r._vs.height }; }],
+                ["viewportBottomY", () => 0],
+                ["viewportTopY", () => { const r = recompute(); return r._vs.height; }],
+            ];
+            for (const [k, g] of liveGetters) {
+                Object.defineProperty(o, k, { get: g, enumerable: true, configurable: true });
+            }
+            w.__jjbDebug.obsbar = o;
             if (source === "doubles") JJBDoubles.exposeDebug();
         } catch (e) {
             cc.error("[JJBObsBar.exposeDebug] " + e);
         }
+    }
+
+    /** C4（Phase E）：沿 bar 父链 root → canvas 全部 _updateWorldMatrix。
+     *  Cocos 2.4 convertToWorldSpaceAR 只 refresh bar 自身，父链 (JJBDesignRoot) _worldMatrix
+     *  在 view 切 / setContentSize 后可能 stale，导致 bar 矩阵基于旧 root 矩阵算错位。 */
+    private static refreshWorldMatrixChain(bar: cc.Node): void {
+        try {
+            const chain: any[] = [];
+            let n: any = bar;
+            while (n) { chain.push(n); n = n.parent; }
+            for (let i = chain.length - 1; i >= 0; i--) {
+                const node: any = chain[i];
+                if (typeof node._updateWorldMatrix === "function") node._updateWorldMatrix();
+            }
+        } catch (e) { /* noop */ }
     }
 
     private static pipColor(th: Theme, p: string): cc.Color {

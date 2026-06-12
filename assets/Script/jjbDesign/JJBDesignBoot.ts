@@ -30,6 +30,13 @@ export default class JJBDesignBoot {
     private static ctrlCollapsed: boolean = false;
     private static armedAction: string = "";
     private static armedTimer: any = null;
+    // C1（Phase E bare 模式）：?design=obsbar&bare=1 启动时进入裸采集；
+    //   URL 旗标持久直到离开页面（页面内导航不重置）；离开 obsbar 自动恢复 1280×720，回到 obsbar 自动回 bare。
+    private static bareMode: boolean = false;
+    private static lastDesignRes: { w: number; h: number; policy: number } = { w: 1280, h: 720, policy: cc.ResolutionPolicy.SHOW_ALL };
+    // C3：bare 模式下控制条默认收起为 pill；点 pill 展开为精简 5 项导航。
+    //   独立 flag 避免与 ctrlCollapsed 共用（同 if 条件会互锁——一个进另一个就出不去）。
+    private static bareControlExpanded: boolean = false;
 
     /** XP 逻辑就绪后调用；仅 ?design=... 时挂载新前端。任何异常都吞掉，不影响正常游戏。 */
     static tryMount(stage: cc.Node): void {
@@ -42,9 +49,15 @@ export default class JJBDesignBoot {
             const jj = stage.getChildByName("jjUI");
             if (jj) jj.active = false; // 老 UI 隐藏但存活，XP 逻辑照常运行不报错
 
-            // OBS 浮层固定 1280×720：用 SHOW_ALL 保证整版完整可见（窗口非 16:9 时加黑边而非裁内容）。
-            // 否则默认 FIXED_HEIGHT 在非 16:9 窗口会裁掉左右各约 34px，让 design 的 38px 页边距看起来像 0。
-            try { cc.view.setDesignResolutionSize(1280, 720, cc.ResolutionPolicy.SHOW_ALL); } catch (e) { /* noop */ }
+            // C1（Phase E）：bare 旗标 → 适配切 1280×232 SHOW_ALL；其余维持 1280×720 SHOW_ALL。
+            //   旧的整版 bg overscan 在 bare 下由 JJBObsBar.solidBacking 改为 th.bgB 纯色 + clearColor 兜底。
+            JJBDesignBoot.bareMode = (q["design"] === "obsbar" && q["bare"] === "1");
+            const designW = JJBDesignBoot.bareMode ? 1280 : 1280;
+            const designH = JJBDesignBoot.bareMode ? 232 : 720;
+            try {
+                cc.view.setDesignResolutionSize(designW, designH, cc.ResolutionPolicy.SHOW_ALL);
+                JJBDesignBoot.lastDesignRes = { w: designW, h: designH, policy: cc.ResolutionPolicy.SHOW_ALL };
+            } catch (e) { /* noop */ }
 
             JJBDesignBoot.stage = stage;
             JJBDesignBoot.curStyle = q["style"] || "metal";
@@ -59,6 +72,18 @@ export default class JJBDesignBoot {
             cc.error("[JJBDesignBoot] 挂载失败，回落老 UI: " + e);
             try { const jj = stage.getChildByName("jjUI"); if (jj) jj.active = true; } catch (e2) { /* noop */ }
         }
+    }
+
+    /** C1/C3（Phase E）：离开 obsbar 自动恢复 1280×720；进 obsbar 按 bareMode 决定切 1280×232。 */
+    private static applyDesignResolutionForScreen(screen: string): void {
+        const wantBare = JJBDesignBoot.bareMode && screen === "obsbar";
+        const wantW = wantBare ? 1280 : 1280;
+        const wantH = wantBare ? 232 : 720;
+        if (JJBDesignBoot.lastDesignRes.w === wantW && JJBDesignBoot.lastDesignRes.h === wantH) return;
+        try {
+            cc.view.setDesignResolutionSize(wantW, wantH, cc.ResolutionPolicy.SHOW_ALL);
+            JJBDesignBoot.lastDesignRes = { w: wantW, h: wantH, policy: cc.ResolutionPolicy.SHOW_ALL };
+        } catch (e) { /* noop */ }
     }
 
     private static render(q: { [k: string]: string }): void {
@@ -137,6 +162,7 @@ export default class JJBDesignBoot {
     }
 
     private static showHome(): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("home");
         JJBDesignBoot.setScreen("home");
         JJBHome.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (i) => JJBDesignBoot.onMode(i),
             JJBDesignBoot.playerInput, (s) => { JJBDesignBoot.playerInput = s; });
@@ -271,34 +297,41 @@ export default class JJBDesignBoot {
 
     /** 端到端导航（同一会话内重建节点树，数据连续，不刷新页面）。 */
     private static goSelect(): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("select");
         JJBDesignBoot.setScreen("select");
         JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle());
         JJBDesignBoot.buildControlBar();
     }
     private static goBattle(): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("battle");
         JJBDesignBoot.setScreen("battle");
         JJBBattle.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goResult(), () => JJBDesignBoot.goOverlay(), () => JJBDesignBoot.goObsBar());
         JJBDesignBoot.buildControlBar();
     }
     private static goResult(): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("result");
         JJBDesignBoot.setScreen("result");
         JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
         JJBDesignBoot.buildControlBar();
     }
     /** GAP-17 浮层（OBS 浏览器源+Interact 单窗口）：battle ↔ overlay 互切，主题切换器照常。 */
     private static goOverlay(): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("overlay");
         JJBDesignBoot.setScreen("overlay");
         JJBOverlay.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle(), () => JJBDesignBoot.goObsBar());
         JJBDesignBoot.buildControlBar();
     }
     /** R2② OBS 底部横条：1280×232 贴 720 舞台底部，battle/overlay/result 可切入。 */
     private static goObsBar(): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("obsbar");
         JJBDesignBoot.setScreen("obsbar");
-        JJBObsBar.build(JJBDesignBoot.fresh(), JJBDesignBoot.th);
+        JJBObsBar.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, JJBDesignBoot.bareMode);
         JJBDesignBoot.buildControlBar();
     }
 
-    /** v4 全局控制条：导航 + 危险操作 + 主题 + 收起。保留原 jjbSwitcher 的置顶保活职责。 */
+    /** v4 全局控制条：导航 + 危险操作 + 主题 + 收起。保留原 jjbSwitcher 的置顶保活职责。
+     *  C3（Phase E bare）：obsbar+bare 模式下默认走收起 pill（与 collapsed 视觉共用），
+     *  展开为精简导航条（对战/浮层/横条/主题/收起 5 项），覆盖在横条上层。 */
     private static buildControlBar(): void {
         const canvas = cc.Canvas.instance ? cc.Canvas.instance.node : JJBDesignBoot.stage;
         if (!canvas) return;
@@ -317,12 +350,21 @@ export default class JJBDesignBoot {
         const canOverlay = canBattle;
         const canObsbar = canBattle;
 
-        if (JJBDesignBoot.ctrlCollapsed) {
-            const pill = JJBView.box(sw, 574, 12, 132, 22, th.panelBg, th.panelEdge, 1);
+        // C3：obsbar+bare 默认走 pill（即使 ctrlCollapsed=false）。非 bare 行为零变化。
+        const isObsBarBare = JJBDesignBoot.curScreen === "obsbar" && JJBDesignBoot.bareMode;
+        if (JJBDesignBoot.ctrlCollapsed || (isObsBarBare && !JJBDesignBoot.bareControlExpanded)) {
+            // C3：bare pill 落横条右上角内（design 1280×232 内坐标；JJBView.placed 用左上原点 → 1280-132-12=1136, 12）
+            //   非 bare 共用原 pill 位置（574, 12）保持切换器原视觉。
+            const pillLeft = isObsBarBare ? 1136 : 574;
+            const pill = JJBView.box(sw, pillLeft, 12, 132, 22, th.panelBg, th.panelEdge, 1);
             pill.name = "jjbCtrlPill";
             pill.opacity = 97;
-            JJBView.label(sw, 588, 16, 72, 14, "··· 控制", 11, th.muted, CT);
-            const hit = JJBView.hit(sw, 574, 12, 132, 22, () => { JJBDesignBoot.ctrlCollapsed = false; JJBDesignBoot.buildControlBar(); });
+            JJBView.label(sw, pillLeft + 14, 16, 72, 14, isObsBarBare ? "··· 控制" : "··· 控制", 11, th.muted, CT);
+            const hit = JJBView.hit(sw, pillLeft, 12, 132, 22, () => {
+                if (isObsBarBare) JJBDesignBoot.bareControlExpanded = true;
+                else JJBDesignBoot.ctrlCollapsed = false;
+                JJBDesignBoot.buildControlBar();
+            });
             hit.name = "jjbCtrl_expand";
             hit.on(cc.Node.EventType.MOUSE_ENTER, () => { if (cc.isValid(pill)) pill.opacity = 255; });
             hit.on(cc.Node.EventType.MOUSE_LEAVE, () => { if (cc.isValid(pill)) pill.opacity = 97; });
@@ -333,6 +375,50 @@ export default class JJBDesignBoot {
         if (JJBDesignBoot.armedAction) {
             const outside = JJBView.hit(sw, 0, 0, 1280, 720, () => JJBDesignBoot.cancelArmed());
             outside.name = "jjbCtrl_outsideCancel";
+        }
+
+        // C3：bare 模式展开 = 精简 5 项导航（覆盖在横条上层），不走完整版（含 reroll/homeReset/armed 等非采集所需）。
+        if (isObsBarBare) {
+            // 5 项 = 浮层 / 横条(高亮+disabled) / 主题(轮转 6 主题) / 收起 + 分隔。
+            //   居中靠右：barTop=12（同 pill y），barW=5*40+8*1+4*4 ≈ 224，barLeft=1280-12-224=1044。
+            const barTop = 12;
+            const barW = 232;
+            const barLeft = 1280 - 12 - barW;
+            if (th.style === "metal") JJBView.cutBox(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1, 10);
+            else JJBView.box(sw, barLeft, barTop, barW, 38, th.panelBg, th.panelEdge, 1);
+            const sep = (x: number) => JJBView.box(sw, x, barTop + 6, 1, 26, th.panelEdge, null);
+            const btn = (left: number, w: number, label: string, name: string, on: boolean, enabled: boolean, cb: () => void) => {
+                const top = 17;
+                const fill = on ? th.accent : null;
+                if (fill) JJBView.box(sw, left, top, w, 28, fill, null);
+                const col = enabled ? (on ? th.onAccent : th.muted) : th.muted;
+                const lab = JJBView.label(sw, left, top + 6, w, 16, label, 12, col, CT);
+                if (!enabled) lab.opacity = 82;
+                if (enabled) {
+                    const h = JJBView.hit(sw, left, top, w, 28, cb);
+                    h.name = name;
+                }
+            };
+            let x = barLeft + 8;
+            btn(x, 40, "对战", "jjbCtrl_battle", JJBDesignBoot.curScreen === "battle", canBattle, () => JJBDesignBoot.goBattle()); x += 42;
+            btn(x, 40, "浮层", "jjbCtrl_overlay", JJBDesignBoot.curScreen === "overlay", canOverlay, () => JJBDesignBoot.goOverlay()); x += 42;
+            btn(x, 40, "横条", "jjbCtrl_obsbar", true, false, () => { /* 当前屏 */ }); x += 42;
+            sep(x); x += 8;
+            // 主题：点击轮转 6 主题（metal/sc2/minimal × dark/light）
+            const cycleTheme = () => {
+                const seq: Array<[string, string]> = [
+                    ["metal", "dark"], ["metal", "light"],
+                    ["sc2", "dark"], ["sc2", "light"],
+                    ["minimal", "dark"], ["minimal", "light"],
+                ];
+                const i = seq.findIndex((s) => s[0] === JJBDesignBoot.curStyle && s[1] === JJBDesignBoot.curMode);
+                const next = seq[(i < 0 ? 0 : (i + 1) % seq.length)];
+                JJBDesignBoot.applyTheme(next[0], next[1]);
+            };
+            btn(x, 56, th.style + "·" + (th.mode === "dark" ? "暗" : "亮"), "jjbCtrl_themeCycle", false, true, cycleTheme); x += 58;
+            btn(x, 40, "«收起", "jjbCtrl_collapse", false, true, () => { JJBDesignBoot.bareControlExpanded = false; JJBDesignBoot.buildControlBar(); });
+            JJBDesignBoot.exposeControlDebug(canSelect, canBattle, canResult, canOverlay, canObsbar);
+            return;
         }
 
         const barLeft = JJBDesignBoot.armedAction ? 246 : 260;
@@ -472,6 +558,7 @@ export default class JJBDesignBoot {
 
     private static reRenderCurrent(): void {
         const s = JJBDesignBoot.curScreen;
+        JJBDesignBoot.applyDesignResolutionForScreen(s);
         if (s === "overlay") JJBDesignBoot.goOverlay();
         else if (s === "obsbar") JJBDesignBoot.goObsBar();
         else if (s === "select") JJBDesignBoot.goSelect();
