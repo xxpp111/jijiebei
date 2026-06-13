@@ -10,7 +10,11 @@
   "packable": true,
   "width": 1280,
   "height": 720,
-  "platformSettings": {},
+  "platformSettings": {
+    "web-mobile": {
+      "compressTexture": true
+    }
+  },
   "subMetas": {
     "jjb-bg-light": {
       "ver": "1.0.6",

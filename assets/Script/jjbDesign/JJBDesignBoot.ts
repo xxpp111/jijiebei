@@ -15,6 +15,8 @@ import JJBDoubles, { DOUBLES_CONFIG } from "./JJBDoubles";
 import JJBObsBar from "./JJBObsBar";
 import JijieControl from "../jijie2/JijieContro";
 import JijieData from "../jijie2/JijieData";
+import JijieMain from "../jijie2/JijieMain";
+import ConfigData from "../jijie2/data/JJConfigData";
 
 export default class JJBDesignBoot {
 
@@ -28,6 +30,31 @@ export default class JJBDesignBoot {
     private static autoPath: string = "";    // 自动化旗标 ?path=manual|random：标准模式二选层自动选路
     private static currentModeIdx: number = -1;
     private static ctrlCollapsed: boolean = false;
+
+    // P1：缓存 JijieMain 5 个 TextAsset.text，每局重调 JJConfigData.init 还原母池（jijie2 零改动）
+    private static _cfgTexts: { rule: string; map: string; commander: string; factor: string; ban: string } | null = null;
+
+    /** 首次进入时缓存 ConfigData 原始文本（boot 时 JijieMain.instance 已就绪）。 */
+    private static ensureCfgTexts(): void {
+        if (JJBDesignBoot._cfgTexts) return;
+        const m = JijieMain.instance;
+        if (!m) return;
+        JJBDesignBoot._cfgTexts = {
+            rule: m.ruleTxt ? m.ruleTxt.text : "",
+            map: m.mapTxt ? m.mapTxt.text : "",
+            commander: m.commanderTxt ? m.commanderTxt.text : "",
+            factor: m.factorTxt ? m.factorTxt.text : "",
+            ban: m.commandeBanTxt ? m.commandeBanTxt.text : "",
+        };
+    }
+
+    /** 还原 ConfigData 母池（重调 init 重建 factorList/commanderList/mapGrid/commadnerGroupList）。 */
+    private static restoreConfigData(): void {
+        JJBDesignBoot.ensureCfgTexts();
+        if (!JJBDesignBoot._cfgTexts) return;
+        const t = JJBDesignBoot._cfgTexts;
+        ConfigData.init(t.rule, t.map, t.commander, t.factor, t.ban);
+    }
     private static armedAction: string = "";
     private static armedTimer: any = null;
     // C1（Phase E bare 模式）：?design=obsbar&bare=1 启动时进入裸采集；
@@ -51,6 +78,30 @@ export default class JJBDesignBoot {
             cc.debug.setDisplayStats(false);
             const jj = stage.getChildByName("jjUI");
             if (jj) jj.active = false; // 老 UI 隐藏但存活，XP 逻辑照常运行不报错
+            // P3 尽力项：释放老 UI 背景大图（~3MB），实现运行时延迟加载——
+            // 新 UI 程序化 JJBView.bg 不用位图，老场景 active=false 后渲染管线已跳过。
+            // 释放 SpriteFrame 引用 + GPU 纹理 + assetManager 依赖，使 Cocos 引擎可回收。
+            // 若老 UI 需重新显示（?design=off 逃生），Cocos 会按需重新加载。
+            // 释放失败不阻塞（try-catch 兜底），记录日志。
+            try {
+                const bgUuids = [
+                    "366a5fc3-3e82-45fa-af4e-62e3c996261b", // jjb-bg-main
+                    "c4fd55bc-a230-4613-9c9f-a4b0859d20d6", // jjb-bg-light
+                    "29dd3b79-f44f-4de0-9ce5-5e8cecaaa043", // 背景1
+                ];
+                for (const uuid of bgUuids) {
+                    try {
+                        const asset = cc.assetManager.assets.get(uuid);
+                        if (asset) {
+                            asset.decRef();
+                            cc.assetManager.assets.remove(uuid);
+                        }
+                    } catch (_) { /* per-uuid safe */ }
+                }
+                cc.log("[JJBDesignBoot] P3: deferred bg assets released (assetManager decRef)");
+            } catch (e) {
+                cc.log("[JJBDesignBoot] P3: bg release skipped (non-blocking): " + e);
+            }
 
             // C1（Phase E）：bare 旗标 → 适配切 1280×232 SHOW_ALL；其余维持 1280×720 SHOW_ALL。
             //   旧的整版 bg overscan 在 bare 下由 JJBObsBar.solidBacking 改为 th.bgB 纯色 + clearColor 兜底。
@@ -168,6 +219,8 @@ export default class JJBDesignBoot {
     }
 
     private static showHome(): void {
+        // P1：回首页重置 JijieData（防 SPA 累积），但保留 ConfigData（下一局 onMode 开头才 restore）
+        try { JijieData.initStart(); JijieData.reset(); } catch (e) { /* noop */ }
         JJBDesignBoot.applyDesignResolutionForScreen("home");
         JJBDesignBoot.setScreen("home");
         JJBHome.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (i) => JJBDesignBoot.onMode(i),
@@ -185,14 +238,20 @@ export default class JJBDesignBoot {
             JJBDesignBoot.startDoubles();
             return;
         }
+        // P1：每局无条件重置 JijieData + 还原 ConfigData 母池——根治累积 bug（问题1+6）+ flag 污染隐患。
+        // 必须在 XP onClickX 之前：initStart 清空 mapList/pool（防 push 累积），
+        // reset 复位所有 mode flag（防拯救/随机残留到标准模式），restoreConfigData 重建 factorList（防枯竭）。
         JJBDoubles.reset();
+        JijieData.initStart();
+        JijieData.reset();
+        JJBDesignBoot.restoreConfigData();
         try {
             const ip: any = JijieControl.jjUI.initPanel;
             // GAP-16：把 home EditBox 真实输入写进 XP 老输入框，XP onClickX 自己读它写 JijieData.playerName（零语义漂移）
             const nm = (JJBDesignBoot.playerInput || "").trim();
             if (ip && ip.txtName) ip.txtName.string = nm || "选手";
             // 赛制（土豆确认 2026-06）：单刷一律打满 3 场——不沿用老 UI「modeIsRandom=falsy 输一场即终局」语义。
-            // 显式置 false 防多局残留（XP initStart 不重置该 flag）；「随机抽签」路径由 XP onRandomClick 置 true。
+            // reset() 已将 modeIsRandom 复位为 false；保留显式赋值作为双重保险（XP onRandomClick 会置 true）。
             JijieData.modeIsRandom = false;
             const handlers = ["onClick2", "onClick3", "onClick13", "onClick4", "onClickSuiji"]; // 极难(onClickHard)暂不上 home（土豆决策），XP 代码路径保留
             const fn = handlers[i] || "onClick3";
@@ -253,28 +312,35 @@ export default class JJBDesignBoot {
         JJBDesignBoot.goSelect();
     }
 
-    /** GAP-12 随机抽签：调 XP public onRandomClick（置 modeIsRandom=true + 抽 3 指挥官/全部因子写进
-     *  隐藏老 UI 组件字段 + 内部 toBattle 到 status=3）→ 镜像写回 9 格契约（新 battle 屏才渲染得出）。
-     *  已知 XP 副作用（与线上老 UI 行为一致，单局无影响）：onRandomClick 直接 splice ConfigData.commanderList
-     *  抽走 3 人——本前端单局流程（result 后无"再来一局"，刷新开新局）不受影响；后续加局内重开时需注意。 */
+    /** GAP-12 随机抽签（P2 重写）：弃用 XP onRandomClick（无 A/B 分池、不抽锁定因子、自重算 factorCount），
+     *  改用 JijieControl.toSelect() 产出符合 A4/B2 分池的 randomCommanderPoorA/B + randomFactorPoor，
+     *  再前端随机填 9 格契约。toSelect 已处理 smallRate/极难/拯救/onePick 等全部特判。 */
     private static startRandom(): void {
         try {
-            const jjUI: any = JijieControl.jjUI;
-            jjUI.onRandomClick(null); // XP：抽取 + 填老 UI 组件 + toBattle（status=3）
+            JijieData.modeIsRandom = true; // P2：先置 true，让 toSelect 走随机因子数逻辑
+            // toSelect 会从 ConfigData 抽取锁定因子+随机因子+指挥官池，写 JijieData.random*
+            JijieControl.toSelect();
+            // 前端随机填 9 格契约：指挥官从 A+B 池随机分配到 3 场，因子从 randomFactorPoor 随机填槽
             JijieData.selectedCommanderList = [null, null, null];
             JijieData.selectedFactorList = new Array(9).fill(null);
-            for (let m = 1; m <= 3; m++) {
-                const match: any = jjUI["map" + m];
-                if (!match) continue;
-                JijieData.selectedCommanderList[m - 1] = match.spCommander ? (match.spCommander.cname || null) : null;
-                for (let f = 1; f <= 3; f++) {
-                    const fct = match["factor" + f];
-                    if (fct && fct.node && fct.node.active && fct.factorName) {
-                        JijieData.selectedFactorList[facFlatIdx(m - 1, f - 1)] = fct.factorName;
-                    }
+            // 指挥官分配：A池+自选 填前几场，B池填剩余（对齐 XP onRandomClick 的视觉结果）
+            const cmdA = (JijieData.randomCommanderPoorA || []).filter((c: string) => c && c !== "自选");
+            const cmdB = (JijieData.randomCommanderPoorB || []).filter((c: string) => c && c !== "自选");
+            const allCmds = cmdA.concat(cmdB);
+            // 随机分配 3 个指挥官到 3 场
+            for (let i = 0; i < 3 && i < allCmds.length; i++) {
+                JijieData.selectedCommanderList[i] = allCmds[i];
+            }
+            // 因子填槽：从 randomFactorPoor 随机分配
+            const factors = (JijieData.randomFactorPoor || []).slice();
+            let fIdx = 0;
+            for (let slot = 0; slot < 3; slot++) {
+                for (let k = 0; k < 3 && fIdx < factors.length; k++) {
+                    JijieData.selectedFactorList[facFlatIdx(slot, k)] = factors[fIdx++];
                 }
             }
             JijieData.winLoseList = [];
+            JijieData.status = 3; // 随机模式直进对战（对齐 XP onRandomClick 内部调 toBattle 的效果）
         } catch (e) {
             cc.warn("[JJBDesignBoot] startRandom 调 XP 逻辑出错: " + e);
         }

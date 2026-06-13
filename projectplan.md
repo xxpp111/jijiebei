@@ -625,3 +625,49 @@ $ git status -s
 - **红线**：`git diff --stat -- assets/Script/jijie2/ assets/Scene/ assets/resources/jjdata/ design/` 输出为空。
 
 **hub 终验（Phase G · 2026-06-13 · Fable hub）**：全项通过。差距矩阵 3 条 mismatch 全部为演示态语义（与 hub 预判一致），双侧行号证据抽查属实；**核心结论成立：live 路径与 XP 零差距**（每场单指挥官/槽数恒等式/校验三规则/winCount 语义/随机抽签镜像逐维确认）。修正实拍复核：DEMO BOSS 单指挥官槽+无双打标、「演示数据」红角标 topbar 可见、live 复核当前 build 双打 label=0。四套回归 48/48+42/42+36/36+20/20 全绿 console 0；harness 三 phase 全 PASS、stop/audit 完成（partial=已知工具性原因）；红线为空。顺手收益：JJBView.label 同步加了 contentSize 防御（localLabel 教训推广）。
+
+## v4 R3 调研：六问题根因（2026-06-13 · Fable hub · 运行时探针 + workflow 三 agent）
+
+**触发**：用户贴脸验收报 6 问题——①非8因子点进去全是演示数据 ②其他人加载慢 ③随机选择不按逻辑 ④未对齐后端因子选择逻辑 ⑤网页名还是 huiguibei ⑥地图随机是固定的。
+**方法**：hub 运行时探针（`/tmp/jjb-test/probe-modes.js` 各模式 `?auto=N` 单测 + `probe-cumulative.js` 同 page 累积复现）+ workflow 三 agent（性能量化 / 因子对账 / 状态重置审计，run `wf_e67db55a`）+ 静态对照 jijie2 权威。探针硬证据：单测 5 模式全 status=2/live=true/console0；累积 R4 maps=12/pool=26/poolIdentity=false/errCount=0。
+
+**核心结论**：6 问题 = 1 个核心累积 bug（问题1+6 同根）+ 1 个随机逻辑分叉 bug（问题3）+ flag 污染隐患 + 3 独立项。
+
+| # | 问题 | 根因 | 关键证据 | 修复方向 |
+|---|---|---|---|---|
+| 1+6 | 非8因子回演示数据 / 地图固定（**同根因**） | onMode 进新局不调 initStart，控制条「首页」→showHome 也不调 → SPA 连续切模式时 JijieData.mapList/池 累积（toStart/toSelect 是 push），sessionMatches 固定读 mapList[0..2]=第1局（**地图固定**）；ConfigData.factorList 被 popFactor 只删不还，约第3-4局枯竭→getJijieFactor `while(true)` 空数组 `factorList[0][1]` 抛 TypeError 被 onMode/startManual try/catch 吞→status<2→jjbLive=false→**回 DEMO** | 探针累积 R4 maps 累积 12 个 / pool 26 / poolIdentity=false；JJBDesignBoot.onMode:181 无 initStart；showHome:170 不调；JijieContro.toStart:81 push / getJijieFactor while(true) | onMode 开头无条件 `initStart()+reset()` + 还原 ConfigData 母池（缓存 JijieMain 5 个 TextAsset.text 重调 ConfigData.init；jijie2 零改动） |
+| 3 | 随机抽签不按逻辑 | startRandom 调 JJUI.onRandomClick——与手选用的 toSelect 是**两套不一致随机**：onRandomClick 无视 A/B 组分池(A4/B2)、不抽锁定因子、自重算 factorCount 丢掉 smallRate/极难/拯救/onePick 全部特判，对整张 commanderList 无差别 splice 抽 3 | JJUI.ts:120-126 vs JijieContro.toSelect:134-264；调用点 JJBDesignBoot:262 | startRandom 改用 toSelect 抽池 + 前端随机填槽，弃用 onRandomClick 这套并行实现 |
+| 4 | 未对齐后端因子选择 | live 路径**已对齐**（manualSlots/锁定隐藏/随机 factorCount=0/池来源全镜像 XP，逐模式对账无 mismatch）；"假数据"观感来自 standalone：FACTORS 硬编码 6 名 vs XP 42 因子实抽 5/7/9 | JJBData:42 FACTORS=6；JJBSelect:48 standalone `shuffle(FACTORS)` | 确保对外/主播走 live（优先）；standalone 池改读 ConfigData.factorList 真实名单 |
+| 2 | 加载慢（16MB） | debug 构建（未压缩） + physics.js 455KB（项目**零物理**命中） + 老 UI bg 死图约 3.9MB（新 UI 程序化 JJBView.bg 不用位图背景） + 指挥官/因子图未压缩；懒加载架构本身正确 | 零 physics grep 命中；builder.json 无 compressTexture/webp；cocos2d-js 4.2MB(gz693) | 发版 `debug=false` + 关物理引擎模块 + 大图 webp/降尺寸 + 老 UI bg 延迟加载 + Cloudflare Pages/CDN 替隧道 |
+| 5 | 网页名 huiguibei | XP 老代号「回归杯」残留 | settings/builder.json:11 + project.json:5 | title→「集结杯」（重 build 生效） |
+| 隐患 | flag 污染（独立第二 bug） | onClick2/3/13 不复位 modeIsZhengjiu/Feiqiu/Suiji（仅 reset() 全量复位，不在 onMode 链上）→ 先点拯救/随机再点标准模式 = 脏 live（指挥官混入 / 标准模式空池） | InitPanel.onClick*；JijieData.initStart 不含 flag 复位 | onMode 补 `reset()` 一并解决 |
+
+**修复分层 / 待拍板**：
+- **A（问题1+6+flag污染，发版阻塞）**：onMode 开头 `initStart()+reset()` + ConfigData 母池还原。需在 jjbDesign 侧缓存 JijieMain 的 5 个 TextAsset.text 以便重调 ConfigData.init（jijie2 零改动红线内）。
+- **B（问题3，行为改动）**：随机观感会从「无差别全池」变为「A4/B2 分组」——是对齐 XP 的正确方向，但需土豆确认是否影响主播既有习惯。
+- **C/D/E（问题4/2/5）**：相对独立，可随发版一起做。
+- 探针留档：`/tmp/jjb-test/probe-modes.js`、`probe-cumulative.js`（累积污染复现）。
+
+## v4 R3 收口：spoke 交付 + hub 终验（2026-06-13 · Fable hub）
+
+**派发**：Claude Code + mh-glm-5.1（fallback deepseek-v4-pro）经 Dubhe，harness-pro round；reviewer 去 glm 保 disjoint（`config/harness-pro-reviewers-exec-glm.json`，5 个：gpt/qwen/deepseek/kimi/gemini）。
+
+**spoke 交付**：10 文件 152+/26-，停工作树未 commit。实现符合契约：onMode 开头 `initStart()+reset()+restoreConfigData()`（缓存 JijieMain 5 个 TextAsset.text 重调 ConfigData.init 还原母池，jijie2 零改动）；showHome 加 initStart+reset；startRandom 弃用 onRandomClick 改 `JijieControl.toSelect()`+前端填槽；JJBSelect standalone 池改读 ConfigData.factorList；title→集结杯；剔 14 模块 + debug=false + 纹理压缩 + bg 延迟释放。
+
+**harness round 实情（hub 揭穿，记为教训）**：phase-manifest 暴露 `planned_phases=[1]`（非契约 phases=3）、`gate_decision=bootstrap_pass`、`stub_bleed_detected=true`、`degradation_level=stub-mode`、`gate_policy=majority`、`driver_model=claude-sonnet-4-6`（glm env 未生效）。gate-matrix 5 reviewer 全 PASS 但 `bootstrap_pass_due_to_stub=true`——**reviewer 评审是 stub 空转，无真实多模型 gate**。本轮质量保证全靠 hub 亲验补。Dubhe glm lane 需排查为何 driver/reviewer 落 stub。
+
+**hub 终验（亲拍，不信 spoke 自报 proof）**：
+- 问题1+6 根治：`hub-verify.js` 10 轮累积 FAILS=0、每轮 mapCount 恒=3（修复前 R4=12）、live 全 true 不回 DEMO、poolId 全 true、pool 值全模式正确(5/7/9/7/0)、同模式两轮地图都变化。
+- 问题3：`hub-verify2.js` 随机抽签 cmdA=4/cmdB=2 分池 + lockFactors=3 + 直进 battle(status=3)。
+- 问题4：standalone 池 poolFactorCount=42（真实因子，修复前 6 假）。
+- 问题5：build title=集结杯（grep index.html 确认）。
+- 问题2：physics.js 剔除、体积 16→13M(debug)、模块剔除后 4 屏实拍渲染全存活无破图。
+- 4 套回归全绿：all 36/36、obsbar 42/42、v4-existing 20/20、phaseG 48/48；console errors=0。
+- 红线 jijie2/Scene/jjdata/design diff 空。
+
+**hub 修复一处真缺陷**：spoke P3 bg 释放用了 Cocos 2.4 已移除的 `cc.textureCache.removeTextureForKey`（引擎主动 log error，try-catch 兜不住，1 个 console error）→ 删两行，保留 assetManager.decRef 释放。重 build 后 console errors 1→0。
+
+**遗留 caveat**：
+- 随机抽签上场指挥官取 allCmds 前 3（偏 A 池），与 XP onRandomClick 全池随机有细微差异——功能正确（池本身随机），如需严格对齐可再调。
+- bg 运行时释放是边际尽力项（新 UI 本就不加载 bg 位图）；性能主收益 = physics 剔除 + 纹理压缩 + debug=false。
+- 实拍留档 `/tmp/jjb-v4-impl/r3-{home,cumulative-select-10,random-battle,standalone-select}.png`；终验探针 `/tmp/jjb-test/hub-verify.js`、`hub-verify2.js`、`hub-shots.js`。

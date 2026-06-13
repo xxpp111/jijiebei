@@ -10,7 +10,11 @@
   "packable": true,
   "width": 1884,
   "height": 1060,
-  "platformSettings": {},
+  "platformSettings": {
+    "web-mobile": {
+      "compressTexture": true
+    }
+  },
   "subMetas": {
     "背景2": {
       "ver": "1.0.6",

@@ -44,10 +44,14 @@ export default class JJBSelect {
         // 数据源：真实会话→真实抽取；否则→DEMO。
         // standalone 洗牌：演示因子/指挥官同样走随机抽取逻辑（不写死这几个）；真实会话直接用 XP 随机池。
         const shuffle = (arr: string[]): string[] => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
+        // P2：standalone 池改读 ConfigData 真实名单（消除 6 个写死假因子），读不到时 fallback 到 JJBData 常量
+        const cfgFactors = (() => { try { return (ConfigData.factorList || []).map((arr: any[]) => arr[0] as string); } catch (e) { return FACTORS; } })();
+        const cfgGroupA = (() => { try { const g = ConfigData.commadnerGroupList; return (g && g["A"]) ? g["A"].slice() : GROUP_A; } catch (e) { return GROUP_A; } })();
+        const cfgGroupB = (() => { try { const g = ConfigData.commadnerGroupList; return (g && g["B"]) ? g["B"].slice() : GROUP_B; } catch (e) { return GROUP_B; } })();
         const matches: any[] = doubles ? doublesMatches() : (live ? sessionMatches() : DEMO_MATCHES);
-        const factorPool: string[] = doubles ? JJBDoubles.factorPool.slice() : (live ? (dAny.randomFactorPoor || []).filter((f: string) => !!f) : shuffle(FACTORS));
-        const cmdPoolA: string[] = doubles ? JJBDoubles.commanderPool.slice() : (live ? (dAny.randomCommanderPoorA || []).filter((c: string) => c && c !== "自选") : shuffle(GROUP_A));
-        const cmdPoolB: string[] = doubles ? [] : (live ? (dAny.randomCommanderPoorB || []).filter((c: string) => c && c !== "自选") : shuffle(GROUP_B));
+        const factorPool: string[] = doubles ? JJBDoubles.factorPool.slice() : (live ? (dAny.randomFactorPoor || []).filter((f: string) => !!f) : shuffle(cfgFactors));
+        const cmdPoolA: string[] = doubles ? JJBDoubles.commanderPool.slice() : (live ? (dAny.randomCommanderPoorA || []).filter((c: string) => c && c !== "自选") : shuffle(cfgGroupA));
+        const cmdPoolB: string[] = doubles ? [] : (live ? (dAny.randomCommanderPoorB || []).filter((c: string) => c && c !== "自选") : shuffle(cfgGroupB));
         const cmdAll = cmdPoolA.concat(cmdPoolB);
 
         // 本地选择状态（standalone 仅本地；真实会话同时写 JijieData）。

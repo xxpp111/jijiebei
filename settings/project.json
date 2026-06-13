@@ -4,7 +4,22 @@
       true
     ]
   ],
-  "excluded-modules": [],
+  "excluded-modules": [
+    "Physics",
+    "3D Physics/cannon.js",
+    "3D Physics/Builtin",
+    "3D Physics Framework",
+    "3D",
+    "3D Primitive",
+    "3D Particle",
+    "TiledMap",
+    "Spine Skeleton",
+    "DragonBones",
+    "VideoPlayer",
+    "WebView",
+    "MotionStreak",
+    "Mesh"
+  ],
   "group-list": [
     "default"
   ],
