@@ -4,7 +4,7 @@
 // 用法：localhost:7777/?design=home&style=metal&mode=dark   （&auto=0 可自动点第0个模式，便于截图/验证）
 // 主题：右上角常驻切换器（精修金属/星际2质感/极简 × 暗/亮，6 套 runtime 切换，重渲染当前屏，JijieData 数据保留）。
 import { getTheme, Theme } from "./JJBTheme";
-import { facFlatIdx } from "./JJBData";
+import { facFlatIdx, manualSlots } from "./JJBData";
 import JJBView from "./JJBView";
 import JJBHome from "./JJBHome";
 import JJBOverlay from "./JJBOverlay";
@@ -13,6 +13,8 @@ import JJBBattle from "./JJBBattle";
 import JJBResult from "./JJBResult";
 import JJBDoubles, { DOUBLES_CONFIG } from "./JJBDoubles";
 import JJBObsBar from "./JJBObsBar";
+import JJBDock from "./JJBDock";
+import JJBBp from "./JJBBp";
 import JijieControl from "../jijie2/JijieContro";
 import JijieData from "../jijie2/JijieData";
 import JijieMain from "../jijie2/JijieMain";
@@ -63,7 +65,10 @@ export default class JJBDesignBoot {
     // 置顶停靠形态：?design=obsbar&bartop=1（非 bare）。横条挂页面顶部，主播把缩小后的源
     // 贴画布底边停靠，多余背景坠到画布外——直播姬窗口捕获零裁剪出横条（用户流程拍板）。
     private static barTopMode: boolean = false;
+    // 直播停靠浮层 Dock：?design=dock。1280×160 压扁横条，控制 UI 同 bare/bartop 走 pill（采集线外）。
+    private static dockMode: boolean = false;
     private static lastDesignRes: { w: number; h: number; policy: number } = { w: 1280, h: 720, policy: cc.ResolutionPolicy.SHOW_ALL };
+    private static cappedPolicy: any = null;
     // C3：bare 模式下控制条默认收起为 pill；点 pill 展开为精简 5 项导航。
     //   独立 flag 避免与 ctrlCollapsed 共用（同 if 条件会互锁——一个进另一个就出不去）。
     private static bareControlExpanded: boolean = false;
@@ -109,12 +114,12 @@ export default class JJBDesignBoot {
             // bartop 不要求 design=obsbar：主播从首页开局玩整局，?bartop=1 随会话持久，
             // 任何时刻切到横条都是置顶停靠形态。
             JJBDesignBoot.barTopMode = (q["bartop"] === "1" && !JJBDesignBoot.bareMode);
-            const designW = JJBDesignBoot.bareMode ? 1280 : 1280;
-            const designH = JJBDesignBoot.bareMode ? 232 : 720;
-            try {
-                cc.view.setDesignResolutionSize(designW, designH, cc.ResolutionPolicy.SHOW_ALL);
-                JJBDesignBoot.lastDesignRes = { w: designW, h: designH, policy: cc.ResolutionPolicy.SHOW_ALL };
-            } catch (e) { /* noop */ }
+            JJBDesignBoot.dockMode = (q["design"] === "dock");
+            const designW = 1280;
+            const designH = JJBDesignBoot.dockMode ? 160 : (JJBDesignBoot.bareMode ? 232 : 720);
+            // 满屏 720 系列（非 dock/bare/bartop 广播停靠）封顶 1×，避免动态 Label 被窗口放大采样发虚。
+            const fillMode = JJBDesignBoot.dockMode || JJBDesignBoot.bareMode || JJBDesignBoot.barTopMode;
+            JJBDesignBoot.fitView(designW, designH, !fillMode);
 
             JJBDesignBoot.stage = stage;
             JJBDesignBoot.curStyle = q["style"] || "metal";
@@ -133,13 +138,51 @@ export default class JJBDesignBoot {
 
     /** C1/C3（Phase E）：离开 obsbar 自动恢复 1280×720；进 obsbar 按 bareMode 决定切 1280×232。 */
     private static applyDesignResolutionForScreen(screen: string): void {
+        const wantDock = JJBDesignBoot.dockMode && screen === "dock";
         const wantBare = JJBDesignBoot.bareMode && screen === "obsbar";
-        const wantW = wantBare ? 1280 : 1280;
-        const wantH = wantBare ? 232 : 720;
+        const wantW = 1280;
+        const wantH = wantDock ? 160 : (wantBare ? 232 : 720);
+        const fillMode = wantDock || wantBare || JJBDesignBoot.barTopMode;
         if (JJBDesignBoot.lastDesignRes.w === wantW && JJBDesignBoot.lastDesignRes.h === wantH) return;
+        JJBDesignBoot.fitView(wantW, wantH, !fillMode);
+    }
+
+    /** 适配画布。full（满屏 720 系列）→ 自定义 ResolutionPolicy 把内容缩放钳到 ≤1×、viewport 居中：
+     *  内容 1:1 原生绘制不被窗口上采样，动态 Label Retina 锐利；窗口大于设计尺寸时四周黑边 letterbox
+     *  （OBS 定源友好），窗口小于设计尺寸仍缩小适配。dock/bare/bartop 广播停靠 → 原生 SHOW_ALL 填充不变。
+     *  注：Cocos web 动态 Label 字形纹理按设计像素生成，scale>1 即被放大采样发虚——唯一解是不上采样；
+     *  setFrameSize 在 web-mobile 模板会被引擎按 window 重导出覆盖（实测无效），故走 ContentStrategy。 */
+    private static fitView(designW: number, designH: number, full: boolean): void {
         try {
-            cc.view.setDesignResolutionSize(wantW, wantH, cc.ResolutionPolicy.SHOW_ALL);
-            JJBDesignBoot.lastDesignRes = { w: wantW, h: wantH, policy: cc.ResolutionPolicy.SHOW_ALL };
+            const v: any = cc.view;
+            if (full) {
+                if (!JJBDesignBoot.cappedPolicy) {
+                    const cur: any = v.getResolutionPolicy();
+                    const baseContainer = cur._containerStrategy;
+                    const baseContent = cur._contentStrategy;
+                    const Capped = cc.ContentStrategy.extend({
+                        apply: function (view: any, designedResolution: any) {
+                            baseContent.apply(view, designedResolution); // 复用基础策略初始化 GL viewport 等
+                            const cw = cc.game.canvas.width, ch = cc.game.canvas.height;
+                            const dpr = (cc.view.getDevicePixelRatio && cc.view.getDevicePixelRatio()) || 1;
+                            let s = Math.min(cw / designedResolution.width, ch / designedResolution.height);
+                            if (s > dpr) s = dpr; // 封顶=原生分辨率（Retina dpr 倍物理像素）：禁止超原生上采样。
+                            //   钳到 1 会在 Retina(dpr=2) 上欠采样→内容只占半窗、更糊（headless dpr=1 碰巧无碍）
+                            const vw = designedResolution.width * s, vh = designedResolution.height * s;
+                            return { scale: [s, s], viewport: cc.rect((cw - vw) / 2, (ch - vh) / 2, vw, vh) };
+                        }
+                    });
+                    JJBDesignBoot.cappedPolicy = new cc.ResolutionPolicy(baseContainer, new Capped());
+                }
+                v.resizeWithBrowserSize(true); // backing 仍跟随窗口；缩放由 capped 策略钳在 1× 居中
+                v.setResolutionPolicy(JJBDesignBoot.cappedPolicy);
+                v.setDesignResolutionSize(designW, designH, JJBDesignBoot.cappedPolicy);
+            } else {
+                v.resizeWithBrowserSize(true);
+                v.setResolutionPolicy(cc.ResolutionPolicy.SHOW_ALL);
+                v.setDesignResolutionSize(designW, designH, cc.ResolutionPolicy.SHOW_ALL);
+            }
+            JJBDesignBoot.lastDesignRes = { w: designW, h: designH, policy: cc.ResolutionPolicy.SHOW_ALL };
         } catch (e) { /* noop */ }
     }
 
@@ -154,6 +197,8 @@ export default class JJBDesignBoot {
             if (screen === "overlay") { JJBDesignBoot.goOverlay(); }
             else if (screen === "select") { JJBDesignBoot.setScreen("select"); JJBSelect.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, () => JJBDesignBoot.goBattle()); }
             else if (screen === "battle") { JJBDesignBoot.goBattle(); }
+            else if (screen === "dock") { JJBDesignBoot.goDock(); }
+            else if (screen === "bp") { JJBDesignBoot.goBp(q["pick"]); }
             else if (screen === "result") { JJBDesignBoot.setScreen("result"); JJBResult.build(JJBDesignBoot.fresh(), JJBDesignBoot.th); }
             else if (screen === "obsbar") {
                 if (q["doubles"] === "1") JJBDoubles.start();
@@ -334,8 +379,12 @@ export default class JJBDesignBoot {
             // 因子填槽：从 randomFactorPoor 随机分配
             const factors = (JijieData.randomFactorPoor || []).slice();
             let fIdx = 0;
+            // P2-fix（2026-06-14 土豆实测 4+4+2）：每场按手选槽数 manualSlots(slot) 填
+            //   （8因子 1/2/2、10因子 2/2/3、12因子 3/3/3），加每场 1 锁定因子 → 屏上 8=2/3/3 / 10=3/3/4 / 12=4/4/4。
+            //   原硬编码 k<3 贪心填把 7 个因子塞成 3/3/1（+锁定=4/4/2）= bug。manualSlots 三场之和 = 随机因子池数，正好用光。
             for (let slot = 0; slot < 3; slot++) {
-                for (let k = 0; k < 3 && fIdx < factors.length; k++) {
+                const cap = manualSlots(slot);
+                for (let k = 0; k < cap && fIdx < factors.length; k++) {
                     JijieData.selectedFactorList[facFlatIdx(slot, k)] = factors[fIdx++];
                 }
             }
@@ -401,6 +450,22 @@ export default class JJBDesignBoot {
         JJBDesignBoot.buildControlBar();
     }
 
+    /** 直播停靠浮层 Dock：1280×160 压扁横条（对战页压缩+放大核心版），battle/overlay/result/obsbar 可切入。 */
+    private static goDock(): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("dock");
+        JJBDesignBoot.setScreen("dock");
+        JJBDock.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, JJBDesignBoot.dockMode);
+        JJBDesignBoot.buildControlBar();
+    }
+
+    /** v4 R3 BP 面板：开局二选一（Ban 1 因子 / 自选 1 指挥官）全屏模态。?design=bp&pick=A|B|none。 */
+    private static goBp(pick?: string): void {
+        JJBDesignBoot.applyDesignResolutionForScreen("bp");
+        JJBDesignBoot.setScreen("bp");
+        JJBBp.build(JJBDesignBoot.fresh(), JJBDesignBoot.th, (pick === "A" || pick === "B" || pick === "none") ? pick : "A");
+        JJBDesignBoot.buildControlBar();
+    }
+
     /** v4 全局控制条：导航 + 危险操作 + 主题 + 收起。保留原 jjbSwitcher 的置顶保活职责。
      *  C3（Phase E bare）：obsbar+bare 模式下默认走收起 pill（与 collapsed 视觉共用），
      *  展开为精简导航条（对战/浮层/横条/主题/收起 5 项），覆盖在横条上层。 */
@@ -427,7 +492,7 @@ export default class JJBDesignBoot {
 
         // C3：obsbar+bare 默认走 pill（即使 ctrlCollapsed=false）。非 bare 行为零变化。
         // bartop 停靠形态同走 pill：完整控制条会叠在置顶横条上，广播捕获会穿帮。
-        const isObsBarBare = JJBDesignBoot.curScreen === "obsbar" && (JJBDesignBoot.bareMode || JJBDesignBoot.barTopMode);
+        const isObsBarBare = (JJBDesignBoot.curScreen === "obsbar" && (JJBDesignBoot.bareMode || JJBDesignBoot.barTopMode)) || JJBDesignBoot.curScreen === "dock";
         if (JJBDesignBoot.ctrlCollapsed || (isObsBarBare && !JJBDesignBoot.bareControlExpanded)) {
             // F5：bare pill 放入比分区空位，避开右侧三列徽章/地图/阵容内容；非 bare 沿用原位置。
             // bartop：pill 挪到 232px 采集线以下的空背景区——观众画面零控制 UI，主播浏览器内可见。
@@ -727,6 +792,7 @@ export default class JJBDesignBoot {
         JJBDesignBoot.applyDesignResolutionForScreen(s);
         if (s === "overlay") JJBDesignBoot.goOverlay();
         else if (s === "obsbar") JJBDesignBoot.goObsBar();
+        else if (s === "dock") JJBDesignBoot.goDock();
         else if (s === "select") JJBDesignBoot.goSelect();
         else if (s === "battle") JJBDesignBoot.goBattle();
         else if (s === "result") JJBDesignBoot.goResult();

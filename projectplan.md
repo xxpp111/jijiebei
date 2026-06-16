@@ -671,3 +671,39 @@ $ git status -s
 - 随机抽签上场指挥官取 allCmds 前 3（偏 A 池），与 XP onRandomClick 全池随机有细微差异——功能正确（池本身随机），如需严格对齐可再调。
 - bg 运行时释放是边际尽力项（新 UI 本就不加载 bg 位图）；性能主收益 = physics 剔除 + 纹理压缩 + debug=false。
 - 实拍留档 `/tmp/jjb-v4-impl/r3-{home,cumulative-select-10,random-battle,standalone-select}.png`；终验探针 `/tmp/jjb-test/hub-verify.js`、`hub-verify2.js`、`hub-shots.js`。
+
+## 知识库画板新配色重画 ·【迭代循环工具链】(2026-06-15)
+
+**目标**：把知识库画板 `S7CywyuINhCXinbHlilcLHvMnsg`（迭代循环工具链）按统一调色板重画，覆盖写回。
+
+**改法**：
+- 删除飞轮中央无语义的橙色虚线大圆（原越界元素）。
+- "AI 工具"高饱和紫底 → 降为主色-中 `#3E5871` 浅底带，工具子卡白底+灰描边。
+- 竖排"对策本"标签 → 横向警示 chip「不通过 → 回改设计稿」，挂在 hub 终验回设计轮的虚线回路上。
+- 全图换新配色：深 `#1F2D3D` / 中 `#3E5871` / 浅 `#DCE4ED` 明度分层；金棕 `#B8893A` 仅两道标题分隔线 + 验证体系左强调条；警示 `#C0563B` 仅"不通过"回路；成功 `#5B8C6E` 仅"通过"箭头 + 收口角标。三色封顶、留白充足。
+
+**路线**：Claude → SVG（routes/svg.md）→ whiteboard-cli --check（0 error / 0 warning / textOverflow 0 / nodeOverlap 0 / textOcclusion 0，47 节点 11 连接）→ Read 目检 → `whiteboard +update --overwrite` 写回（idempotent `20260615-jjb-iterloop-recolor-2`，114 节点）。
+
+**产物**：源 `diagrams/2026-06-15T000000/diagram.svg`；新 PNG `kb-whiteboards/whiteboard_S7CywyuINhCXinbHlilcLHvMnsg.png`。
+
+## v4 R3 — BP 面板 ①② + 全局渲染锐化（2026-06-16）
+
+**范围**：① BP 开局二选一面板（Ban 1 因子 / 自选 1 指挥官）+ ② Ban 因子标记，照 Claude Design 项目 `b4fe41ec`（bp-panel.jsx / r2.css / spec-r2.jsx）程序化复刻；外加发现并修复一个**全局渲染发虚** bug。
+
+**新增**：`assets/Script/jjbDesign/JJBBp.ts`（two-card 弹层 + 字母徽标 + ✓角标 + banned ⊘ + 确认按钮，6 主题），`JJBDesignBoot` 接 `?design=bp[&pick=A|B|none]`（import + render 分支 + `goBp()`）。三态（pick=A/B/none）× 三主题 hub 终验版式/交互态全对。
+
+**坐标系 bug（已修）**：首版用 `JJBView.placed` 套 `placed` 建子容器——`placed` 硬假设父锚原点=屏幕中心（`-dh.w+left`），嵌套后子节点整体被甩出左上角。改为「全屏居中分组节点（锚 0.5,0.5、pos 0,0）+ 屏幕绝对坐标」，dim 靠 `group.opacity`。
+
+**全局锐化（capped ResolutionPolicy）**：满窗下 Cocos web 把 1280×720 上采样铺满 → 动态 Label 字形纹理按设计像素生成、被放大采样发虚（糊）。机理实测：糊倍率 = 帧CSS宽/1280，与 devicePixelRatio 无关（超采样无效）。**唯一解 = 不上采样**。
+- 死路（均 live 实测无效，勿重试）：`setFrameSize` / 包 div 当 `_frame` / 直接设 `cv.width` / 提高 `_devicePixelRatio`——引擎按 `window.innerWidth` 强制 canvas=窗口尺寸。
+- 解法：`JJBDesignBoot.fitView` 自定义 `cc.ContentStrategy` 把 `scale` 钳到 ≤1、viewport 居中（`cc.ResolutionPolicy`）。满屏 720 系列（home/select/battle/result/overlay/bp）封顶 1× 居中 + 四周黑边 letterbox（OBS 定源友好）；dock/bare/bartop 广播停靠走原生 SHOW_ALL 填充不变。
+
+**hub 终验（构建版端到端，非 live patch；1880×1040 大窗）**：
+- 满屏 BP `scaleX=1.0000`、`vpRect={300,160,1280,720}` 居中 letterbox；
+- dock `scaleX=1.4688`(填充)/designRes 1280×160、obsbar bare `scaleX=1.4688`/1280×232 —— 填充模式**未被误钳**（最大风险点已排除）；
+- 构建 exit 0、TS 0 错、console 0 error（产物 `index.01e46.js`）；
+- subagent 目检 3 张大窗截图：letterbox 全生效、文字三张全判「锐利」（vs 修复前糊）、三态版式/交互全对。
+
+**spoke 勘误**：派发的 `jjb-bp-sharpfit` /goal 误把"现有无效 setFrameSize 版"当终态、只 build+测（未执行契约要求的 fitView 替换），测出 1.25 失败 = 测错版本。已由 hub 接手完成替换（capped 版）+ 终验。spoke 一条有效结论（dock/obsbar 填充不被误钳）已并入终验。
+
+**遗留**：暗色主题内容区顶部偏右一团椭圆暗灰光晕（JJBView.bg 装饰渐变，与本次无关，可后续单调）；③自选页/④点金/⑤额外难度 设计待 Claude Design 后续轮。

@@ -70,3 +70,14 @@ Thumbs.db
 /package.json
 /package-lock.json
 
+#//////////////////////////
+# 调试 / 导出中转产物（可重生成/从飞书重导，非源）
+# 注：knowledge-base/ 与 mode-rules-truth-table.md 是知识资产、入库，不在此列
+#//////////////////////////
+
+/jjb-sharpen-*.png
+/jjb-guide-home.png
+/kb-guide/
+/kb-whiteboards/
+/diagrams/**/crop_*.png
+
