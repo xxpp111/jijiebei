@@ -13,6 +13,10 @@
 /* 地图缩略更高更明确（design 475/85 偏矮 → 提高到 475/120，地图画面更清晰） */
 .obsbar .obs-map .mapthumb { aspect-ratio: 475 / 120; }
 
+/* live hero 场修正：更宽(mapW 412)下 475/120 把地图等比拉到 mapH 104，挤得「指挥官+因子行」溢出卡片底 +34（实测）。
+   钳 live 地图为非 live 等高 68，hero 强调靠更宽体现、不靠更高，内容行回到卡内对齐其它场。 */
+.obsbar .obs-match.live .obs-map .mapthumb { aspect-ratio: auto; height: 68px; }
+
 /* 因子行与指挥官底对齐、间距匀 */
 .obsbar .obs-line { gap: 12px; }
 .obsbar .obs-facs { gap: 7px; }

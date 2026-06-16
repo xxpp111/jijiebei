@@ -1,7 +1,6 @@
 import { CommanderCard } from './CommanderCard';
 import { FactorFrame } from './FactorFrame';
-import { dz } from '../lib/designAssets';
-import { cmdRel, facRel, mapRelByIdx } from '../lib/nameAsset';
+import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 
 // VBtn / MatchRow — 承接 design/v4-r2/components/battle-screen.jsx，接 onClick 写真实 winLoseList。
 function VBtn({ label, kind, on, onClick }: { label: string; kind: string; on: boolean; onClick: () => void }) {
@@ -33,18 +32,18 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
       </div>
       <div className="match-map">
         <span className="mapthumb">
-          <img src={dz(mapRelByIdx(idx))} alt="" />
+          <img src={mapUrl(mapName)} alt="" />
         </span>
         <span className="match-map-name">{mapName}</span>
       </div>
       <div className="match-cmds">
         {cmds.map((c, i) => (
-          <CommanderCard key={i} src={cmdRel(c)} name={c} w={54} h={64} />
+          <CommanderCard key={i} src={cmdUrl(c)} name={c} w={54} h={64} />
         ))}
       </div>
       <div className="match-factors">
         {factors.map((f, i) => (
-          <FactorFrame key={i} src={facRel(f)} size={64} tag={f === lock ? '锁定' : null} />
+          <FactorFrame key={i} src={facUrl(f)} size={64} tag={f === lock ? '锁定' : null} />
         ))}
       </div>
       <div className="verdict">

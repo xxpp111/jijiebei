@@ -7,7 +7,7 @@ const BORDER_NORMAL = dz('input/border-factor-normal.png');
 const BORDER_GOLD = dz('input/border-factor-gold.png');
 
 export interface FactorFrameProps {
-  src: string; // design-relative, e.g. "assets/factor-void.png"
+  src: string; // 图 URL（screen 层用 realAsset 算好；边框仍走 design dz）
   size?: number;
   gold?: boolean;
   sel?: boolean;
@@ -25,7 +25,7 @@ export function FactorFrame({
     .filter(Boolean).join(' ');
   return (
     <div className={cls} style={{ '--fxz': size + 'px' } as React.CSSProperties}>
-      <img className="fx-art" src={dz(src)} alt="" />
+      <img className="fx-art" src={src} alt="" />
       <img className="fx-frame" src={gold ? BORDER_GOLD : BORDER_NORMAL} alt="" />
       <span className="fx-ring"></span>
       {check && <span className="fx-check">✓</span>}

@@ -1,7 +1,6 @@
 import { CommanderCard } from './CommanderCard';
 import { FactorFrame } from './FactorFrame';
-import { dz } from '../lib/designAssets';
-import { cmdRel, facRel, mapRelByIdx, logoRel } from '../lib/nameAsset';
+import { mapUrl, cmdUrl, facUrl, logoUrl } from '../lib/realAsset';
 
 // ObsBar — 承接 design/v4-r2/components/obs-bar.jsx 的 OBSBar/OBSMatch/OBSBadge。
 // 直播采集横条（1280×232）：左品牌+比分+pips，右 3 场列（live 场 hero 加宽）。
@@ -51,19 +50,19 @@ function ObsMatch({ row }: { row: ObsRow }) {
       </div>
       <div className="obs-map">
         <span className="mapthumb">
-          <img src={dz(mapRelByIdx(row.idx))} alt="" />
+          <img src={mapUrl(row.mapName)} alt="" />
         </span>
         <span className="obs-map-name">{row.mapName}</span>
       </div>
       <div className="obs-line">
         <div className="obs-cmds">
           {row.cmds.map((c, i) => (
-            <CommanderCard key={i} src={cmdRel(c)} name={c} w={ccW} h={ccH} />
+            <CommanderCard key={i} src={cmdUrl(c)} name={c} w={ccW} h={ccH} />
           ))}
         </div>
         <div className="obs-facs">
           {row.factors.map((f, i) => (
-            <FactorFrame key={i} src={facRel(f)} size={fxz} tag={f === row.lock ? '锁定' : null} />
+            <FactorFrame key={i} src={facUrl(f)} size={fxz} tag={f === row.lock ? '锁定' : null} />
           ))}
         </div>
       </div>
@@ -72,7 +71,7 @@ function ObsMatch({ row }: { row: ObsRow }) {
 }
 
 export function ObsBar({ style, mode, rows, wins, total }: { style: string; mode: string; rows: ObsRow[]; wins: number; total: number }) {
-  const logo = dz(logoRel(style, mode));
+  const logo = logoUrl(style, mode);
   const pips = rows.map((r) =>
     r.status === 'live' ? 'live' : r.status === 'wait' ? 'wait' : r.verdict === 'win' || r.verdict === 'bonus' ? 'win' : r.verdict === 'lose' ? 'lose' : 'wait',
   );

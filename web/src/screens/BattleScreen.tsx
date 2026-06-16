@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
 import { startRandomSession, getSessionMatches, setVerdict, getScore } from '../logic/jjbSession';
-import { dz } from '../lib/designAssets';
-import { logoRel } from '../lib/nameAsset';
+import { logoUrl } from '../lib/realAsset';
 
 // React 版 Battle 屏（段1 PoC）：读真实 JijieData（经 JJBData.sessionMatches）渲染 3 场，
 // 点判定写 winLoseList + 重算记分。整屏布局承接 design/v4-r2/components/battle-screen.jsx。
@@ -25,7 +24,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
 
   const matches = getSessionMatches();
   const score = getScore();
-  const logo = dz(logoRel(style, mode));
+  const logo = logoUrl(style, mode);
   const rows: MatchRowData[] = matches.map((m, i) => ({
     idx: i,
     slot: m.slot,

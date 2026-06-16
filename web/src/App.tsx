@@ -40,12 +40,8 @@ export default function App() {
   );
 
   if (screen === 'obs') {
-    return (
-      <>
-        <ObsScreen style={style} mode={mode} />
-        {switcher}
-      </>
-    );
+    // OBS 直播横条：默认不挂主题切换条（对外采集产物）；主题由 URL ?style=&mode= 控制。
+    return <ObsScreen style={style} mode={mode} />;
   }
 
   if (screen === 'battle') {

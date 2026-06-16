@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ObsBar, type ObsRow } from '../components/ObsBar';
-import { startRandomSession, getSessionMatches } from '../logic/jjbSession';
+import { startRandomSession, getSessionMatches, exposeObsbarDebug } from '../logic/jjbSession';
 
 // ObsScreen — 直播采集 OBS 横条（饱满版）。读真实 JijieData（sessionMatches），
 // 模拟直播进行态：第 1 场已判定(胜利) / 第 2 场进行中(live hero) / BOSS 待战。
@@ -33,6 +33,7 @@ export function ObsScreen({ style, mode }: { style: string; mode: string }) {
     verdict: i === 0 ? 'win' : undefined,
   }));
   const wins = rows.filter((r) => r.status === 'done' && (r.verdict === 'win' || r.verdict === 'bonus')).length;
+  exposeObsbarDebug(rows, wins, 3);
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>

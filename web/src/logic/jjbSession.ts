@@ -190,3 +190,16 @@ export function exposeBattleDebug(): void {
     /* noop */
   }
 }
+
+/** OBS 横条 debug 同形透出（jjb-verify obsbar 回归读 __jjbDebug.obsbar；screen 覆盖为 obsbar）。
+ *  须在 startRandomSession（内部写 screen=battle）之后调用，以覆盖 screen 为 obsbar。 */
+export function exposeObsbarDebug(rows: unknown[], wins: number, total: number): void {
+  try {
+    const w: any = window;
+    w.__jjbDebug = w.__jjbDebug || {};
+    w.__jjbDebug.screen = 'obsbar';
+    w.__jjbDebug.obsbar = { matches: sessionMatches(), wins, total, rows };
+  } catch (e) {
+    /* noop */
+  }
+}
