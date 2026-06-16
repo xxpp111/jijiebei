@@ -10,7 +10,10 @@
 // 读：JJBData.sessionMatches()（真实桥，0 改）。写回：winLoseList[i]=RESULT_VAL（lose0/win1/bonus2）。
 import JijieData from '@logic/JijieData';
 import ConfigData from '@logic/data/JJConfigData';
-import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, type MatchVM } from '@jjb/JJBData';
+import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, type MatchVM } from '@jjb/JJBData';
+
+// jjbLive re-export（段2 Phase 1 BattleScreen/e2e 读当前局是否开局用；非 9 模式逻辑，仅透出）
+export { jjbLive };
 
 // 真实 csv（\r\n 分隔），编译期 raw 捆绑——无 fetch 时序、build 后亦可用。
 const csv = import.meta.glob('../../../assets/resources/jjdata/*.txt', {
@@ -348,6 +351,9 @@ export function exposeStartSession(): void {
   w.__jjb.startSession = startSession;
   w.__jjb.startRandomSession = startRandomSession;
   w.__jjb.exposeSelectDebug = exposeSelectDebug;
+  w.__jjb.getSelectState = getSelectState;
+  w.__jjb.randomFillAndStart = randomFillAndStart;
+  w.__jjb.jjbLive = jjbLive;
 }
 
 // ===== 旧版 Battle 屏接缝（startRandomSession）—— 段1 PoC 兼容 =====
@@ -441,4 +447,114 @@ export function exposeObsbarDebug(rows: unknown[], wins: number, total: number):
   } catch (e) {
     /* noop */
   }
+}
+
+// ===== 段2 Phase 1：select 屏透出 + 随机填满进 battle（不动 startSession/9 模式逻辑） =====
+
+/** select 屏给 React 屏绑真身数据用的视图模型（0 改 JijieData 内部）。
+ *  mode 从 __jjbDebug.select.mode 读（exposeSelectDebug 已写；startSession 不动）。 */
+export interface SelectState {
+  mode: SessionMode;
+  playerName: string;
+  status: number;
+  modeIsRandom: boolean;
+  modeIsVeryHard: boolean;
+  modeIsVeryHard2: boolean;
+  modeIsZhengjiu: boolean;
+  modeIsOnePick: boolean;
+  modeFeiqiu: boolean;
+  modeSuiji: boolean;
+  modelFactorCount: number;
+  mapList: string[];
+  lockFactorList: string[];
+  randomFactorPoor: string[];
+  randomCommanderPoorA: string[];
+  randomCommanderPoorB: string[];
+  selectedFactorList: (string | null)[];
+  selectedCommanderList: (string | null)[];
+  manualSlots: [number, number, number];
+  sumSlots: number;
+  identityPass: boolean;
+  jjbLive: boolean;
+  selfPool: string[]; // 自选区真实全量池（ConfigData 全量 ban 后减已入 A/B 池；mode 门控）
+  selfShow: boolean; // 是否显示自选区（拯救/随机/极难①/非酋 = false）
+}
+
+/** select 屏纯只读透出。React SelectScreen/HomeScreen 直接用本函数绑数据 + e2e 跑断言。
+ *  startSession 内部零改：mode 字段从上次 exposeSelectDebug 残留读，无残留则回落 'std8'。 */
+export function getSelectState(): SelectState {
+  const d: any = JijieData;
+  const slots: [number, number, number] = [manualSlots(0), manualSlots(1), manualSlots(2)];
+  const sumSlots = slots[0] + slots[1] + slots[2];
+  const poolLen = (d.randomFactorPoor || []).length;
+  const w: any = (typeof window !== 'undefined' ? window : null);
+  const lastMode = (w && w.__jjbDebug && w.__jjbDebug.select && w.__jjbDebug.select.mode) || 'std8';
+  // 自选区真实全量池（镜像 JJBSelect.ts:373-394）：ConfigData.commanderList 全量(ban后) 减已入 A/B 池；
+  // 拯救/随机/极难①/非酋 无自选区（selfShow=false）。
+  const cmdInPool: Record<string, boolean> = {};
+  (d.randomCommanderPoorA || []).forEach((c: string) => { if (c && c !== '自选') cmdInPool[c] = true; });
+  (d.randomCommanderPoorB || []).forEach((c: string) => { if (c) cmdInPool[c] = true; });
+  const selfShow = !d.modeSuiji && !d.modeIsZhengjiu && (!d.modeIsVeryHard || d.modeIsVeryHard2) && !d.modeFeiqiu;
+  let selfPool: string[] = [];
+  if (selfShow) {
+    try {
+      selfPool = ((ConfigData.commanderList as any[]) || [])
+        .map((arr: any[]) => arr[0] as string)
+        .filter((c: string) => c && !cmdInPool[c]);
+    } catch (e) { selfPool = []; }
+  }
+  return {
+    mode: lastMode,
+    playerName: d.playerName || '',
+    status: d.status || 0,
+    modeIsRandom: !!d.modeIsRandom,
+    modeIsVeryHard: !!d.modeIsVeryHard,
+    modeIsVeryHard2: !!d.modeIsVeryHard2,
+    modeIsZhengjiu: !!d.modeIsZhengjiu,
+    modeIsOnePick: !!d.modeIsOnePick,
+    modeFeiqiu: !!d.modeFeiqiu,
+    modeSuiji: !!d.modeSuiji,
+    modelFactorCount: d.modelFactorCount || 0,
+    mapList: (d.mapList || []).slice(),
+    lockFactorList: (d.lockFactorList || []).slice(),
+    randomFactorPoor: (d.randomFactorPoor || []).slice(),
+    randomCommanderPoorA: (d.randomCommanderPoorA || []).slice(),
+    randomCommanderPoorB: (d.randomCommanderPoorB || []).slice(),
+    selectedFactorList: ((d.selectedFactorList || []) as any[]).slice(),
+    selectedCommanderList: ((d.selectedCommanderList || []) as any[]).slice(),
+    manualSlots: slots,
+    sumSlots,
+    identityPass: poolLen === sumSlots,
+    jjbLive: jjbLive(),
+    selfPool,
+    selfShow,
+  };
+}
+
+/** Phase 1 开始按钮入口：把当前 select 局的 selectedCommanderList/selectedFactorList
+ *  随机填满（pool+cmdPool → 9 格）后切 status=3、调 exposeBattleDebug()，让 BattleScreen 直接渲染本局。
+ *  不重开 toStart/toSelect；不破坏 9 模式开局；与 startRandomSession 的 9 格契约填充同语义，
+ *  但只在「当前 select 局已开局（jjbLive）」时执行；非 jjbLive 时 noop。 */
+export function randomFillAndStart(): void {
+  const d: any = JijieData;
+  if (!jjbLive()) return;
+  d.selectedCommanderList = [null, null, null];
+  d.selectedFactorList = new Array(9).fill(null);
+  // 指挥官池合并去 '自选'（对齐 startRandomSession 9 格契约填充）
+  const cmdA = (d.randomCommanderPoorA || []).filter((c: string) => c && c !== '自选');
+  const cmdB = (d.randomCommanderPoorB || []).filter((c: string) => c && c !== '自选');
+  const allCmds = cmdA.concat(cmdB);
+  for (let i = 0; i < 3 && i < allCmds.length; i++) d.selectedCommanderList[i] = allCmds[i];
+  // 因子池按 manualSlots(i) 槽位填（与 JJBDesignBoot.startRandom 对齐）
+  const factors = (d.randomFactorPoor || []).slice();
+  let fIdx = 0;
+  for (let slot = 0; slot < 3; slot++) {
+    const cap = manualSlots(slot);
+    for (let k = 0; k < cap && fIdx < factors.length; k++) {
+      d.selectedFactorList[facFlatIdx(slot, k)] = factors[fIdx++];
+    }
+  }
+  d.winLoseList = [];
+  d.status = 3;
+  exposeBattleDebug();
 }

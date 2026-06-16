@@ -3,12 +3,17 @@ import { FactorFrame } from './components/FactorFrame';
 import { CommanderCard } from './components/CommanderCard';
 import { BattleScreen } from './screens/BattleScreen';
 import { ObsScreen } from './screens/ObsScreen';
+import { HomeScreen } from './screens/HomeScreen';
+import { SelectScreen } from './screens/SelectScreen';
 import { startSession, exposeStartSession, type SessionMode } from './logic/jjbSession';
+import JijieData from '@logic/JijieData';
 
-// 路由（query）：?screen=battle 真实数据 Battle 屏（Phase 3 接缝）；默认 foundation 组件地基（Phase 2）。
-// ?style=metal|sc2|minimal & ?mode=dark|light 初始主题；?bare=1 隐藏切换条（纯净截图）。
+// 路由（query）：?screen=home|select|battle|obs|phase0|foundation；?style=metal|sc2|minimal & ?mode=dark|light 初始主题。
+// 段2 Phase 1：home/select/battle 三屏路由串通；Phase 0 屏保留向后兼容；foundation 屏保留组件地基。
+// 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
+type Screen = 'home' | 'select' | 'battle' | 'obs' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -16,12 +21,27 @@ function q(k: string, d = ''): string {
 }
 
 export default function App() {
-  const screen = q('screen', 'foundation');
+  const initialScreen = (q('screen', 'home') as Screen);
   const bare = q('bare') === '1';
   const [style, setStyle] = useState<(typeof STYLES)[number]>((q('style', 'sc2') as any));
   const [mode, setMode] = useState<(typeof MODES)[number]>((q('mode', 'dark') as any));
+  const [screen, setScreen] = useState<Screen>(initialScreen);
 
-  const switcher = bare ? null : (
+  // select 屏兜底（?screen=select 直跳）：JijieData 还没开局就开一局 std8（按 stop_when 第 5 条）。
+  useEffect(() => {
+    if (screen === 'select') {
+      try {
+        const d: any = JijieData;
+        if (!d || !Array.isArray(d.mapList) || d.mapList.length < 3) {
+          startSession('std8');
+        }
+      } catch (e) {
+        console.error('[App] select 屏兜底开局失败:', e);
+      }
+    }
+  }, [screen]);
+
+  const switcher = (
     <div
       className={`jjb style-${style} mode-${mode}`}
       style={{
@@ -30,37 +50,81 @@ export default function App() {
         padding: '5px 8px', background: 'var(--panel-bg)', border: '1px solid var(--panel-edge)',
       }}
     >
+      <button
+        className={'ctrl-btn' + (screen === 'home' ? ' on' : '')}
+        onClick={() => setScreen('home')}
+        data-nav-home
+      >home</button>
+      <button
+        className={'ctrl-btn' + (screen === 'select' ? ' on' : '')}
+        onClick={() => setScreen('select')}
+        data-nav-select
+      >select</button>
+      <button
+        className={'ctrl-btn' + (screen === 'battle' ? ' on' : '')}
+        onClick={() => setScreen('battle')}
+        data-nav-battle
+      >battle</button>
+      <button
+        className={'ctrl-btn' + (screen === 'obs' ? ' on' : '')}
+        onClick={() => setScreen('obs')}
+        data-nav-obs
+      >obs</button>
+      <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       {STYLES.map((s) => (
-        <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => setStyle(s)}>{s}</button>
+        <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => setStyle(s)} data-style-btn={s}>{s}</button>
       ))}
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       {MODES.map((m) => (
-        <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => setMode(m)}>{m}</button>
+        <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => setMode(m)} data-mode-btn={m}>{m}</button>
       ))}
     </div>
   );
 
-  if (screen === 'obs') {
-    // OBS 直播横条：默认不挂主题切换条（对外采集产物）；主题由 URL ?style=&mode= 控制。
-    return <ObsScreen style={style} mode={mode} />;
+  if (screen === 'home') {
+    return (
+      <>
+        <HomeScreen
+          style={style}
+          mode={mode}
+          onStart={(_m: SessionMode, _name: string) => setScreen('select')}
+        />
+        {!bare && switcher}
+      </>
+    );
   }
 
-  if (screen === 'phase0') {
-    // 段2 Phase 0 全模式开局屏：默认开局 std8 一次（9 模式可由浏览器 ?mode=std8|std10|... 或
-    // window.__jjb.startSession(mode) 切换）；裸屏无切换条。
-    return <Phase0Screen />;
+  if (screen === 'select') {
+    return (
+      <>
+        <SelectScreen
+          style={style}
+          mode={mode}
+          onStart={() => setScreen('battle')}
+        />
+        {!bare && switcher}
+      </>
+    );
   }
 
   if (screen === 'battle') {
     return (
       <>
         <BattleScreen style={style} mode={mode} />
-        {switcher}
+        {!bare && switcher}
       </>
     );
   }
 
-  // Phase 2 foundation: 6-theme switch + FactorFrame / CommanderCard
+  if (screen === 'obs') {
+    return <ObsScreen style={style} mode={mode} />;
+  }
+
+  if (screen === 'phase0') {
+    return <Phase0Screen />;
+  }
+
+  // foundation: 6-theme switch + FactorFrame / CommanderCard
   return (
     <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`foundation-${style}-${mode}`}>
       <div className="jjb-bg">

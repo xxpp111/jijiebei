@@ -835,3 +835,112 @@ suiji      0                0/0/0    0         ✓    3     3          9       3
 - BP 弹层（ban/点金/额外难度）→ Phase 3，依赖 Claude Design r3
 - 双打模式走 JJBDoubles.start() 旁路，不在 startSession(mode) 9 模式内（与 dispatch contract 9 个 active 模式对齐——双打不在 9 中）
 - startSession 接 banN/gold 参数（opts 预留，暂未启用）
+
+---
+
+## 段2 Phase 1 · home + select 静态骨架 + 三屏路由（2026-06-16）
+
+> 入口：当前 goal（/goal dispatch_contract:v1，段2 Phase 1）。
+> 范围：React 版 home 模式选择屏 + SelectScreen 选择屏（静态布局+真实图，无拖拽），把 home→select→battle 三屏路由串通。
+> 红线：jijie2/Scene/design/resources 零改；startSession/9 模式逻辑零改（只加 getSelectState + randomFillAndStart 入口）。
+
+### A. 计划
+
+| 步骤 | 改动 | 验证 |
+|---|---|---|
+| 1 | 新建 `web/src/components/DropCell.tsx` 承接 select-screen.jsx 的 DropCell（空槽 + hint + over） | build TS 0 err |
+| 2 | `web/src/logic/jjbSession.ts` 加 `getSelectState()` 透出 {mode,playerName,mapList,lockFactorList,randomFactorPoor,randomCommanderPoorA,randomCommanderPoorB,selectedCommanderList,selectedFactorList,manualSlots,sumSlots,identityPass}；加 `randomFillAndStart()` 随机填满 selected* 后 exposeBattleDebug（不重设 status，保留 jjbLive=true 标识） | `node e2e/run.mjs` 全 9 模式 PASS（用 getSelectState 也验） |
+| 3 | 新建 `web/src/screens/HomeScreen.tsx`：9 模式按钮（std8/std10/std12/rescue/one-a/hard1/hard2/feiqiu/suiji）+ 选手名 input + 「开始选人」→ 调 startSession(mode) + 覆盖 JijieData.playerName + onStart 回调让 App 跳 select | build + 截 home 屏 |
+| 4 | 新建 `web/src/screens/SelectScreen.tsx`：承接 select-screen.jsx 的 SelectScreenV4 结构（topbar + 3 slots + pool 双栏 + startbtn）；数据走 getSelectState()（pool 显示 realAsset 真实图，每场 locked 1 + 空槽数=manualSlots(i)）；点开始 → randomFillAndStart() → 跳 battle | build + 6 主题截图 |
+| 5 | `web/src/App.tsx` 加轻量级状态机（`screen: 'home'\|'select'\|'battle'`，默认 home，?screen= select/battle 直接进对应屏 + 兜底 std8 startSession）；裸屏无切换条（home 屏自带 6 主题按钮） | URL 跳转 + 内状态切换都 work |
+| 6 | `web/src/screens/BattleScreen.tsx` 改造：useEffect 调 `jjbLive()` 判定，真则直接渲染（不重开 startRandomSession），否则保留 startRandomSession 兜底；选手名/模式从 JijieData 读 | `?screen=battle` 直接访问能渲染当前 select 局 |
+| 7 | `web/e2e/run.mjs` 加 select 渲染断言（getSelectState 9 模式跑通 + 池=槽恒等式 + map=3 + lock=3） | 全 PASS |
+| 8 | Playwright 截 6 主题 select 屏 + home→select→battle 跳转证据；贴 __jjbDebug.select 池/槽对账 | 6 张图 + 序列视频/截图 + 对账 JSON |
+
+### B. done-when 逐条验证
+1. HomeScreen 9 模式按钮 + 选手名输入 → startSession → 跳 select
+2. SelectScreen 读本局真实数据渲染：3 地图缩略（realAsset 真实图）、锁定因子带「锁定」角标、因子池 realAsset、指挥官池 A/B + 自选、每场空槽数 === manualSlots(i)
+3. 6 主题（metal/sc2/minimal × dark/light）渲染对位 select-screen.jsx；图不重复、图文一致
+4. 三屏路由：home → select → 开始 → battle，battle 收到的是这局 startSession 的数据
+5. Phase 1 开始按钮用「随机填满 selected*」进 battle；?screen=select 直接访问能兜底开一局 std8
+
+### C. stop_when
+- select-screen.jsx 结构与真实数据接口冲突（槽位/池/锁定对不上）→ 停报
+- 三屏路由串通需改 jijie2/Scene/design 红线才能通 → 停报
+- realAsset 真实图命中失败（缺名）→ 列缺图清单报告，不用占位图伪装
+- 池=槽恒等式被本弹破坏 → 停报
+- 倾向「自作主张修正」真身逻辑时 → 停，先问
+
+### D. proof
+- `cd web && npm run build` exit 0
+- `cd web && node e2e/run.mjs` 全 9 模式 PASS
+- Playwright 6 主题 select 截图（path）+ home→select→battle 序列截图
+- `__jjbDebug.select` 池/槽对账（9 模式随机数表）
+
+### E. 实际产物（2026-06-16 完成）
+
+**新文件（5）**
+- `web/src/components/DropCell.tsx` — 承接 select-screen.jsx 的 DropCell（空槽 + hint + over）
+- `web/src/screens/HomeScreen.tsx` — 9 模式按钮 + 选手名 input → startSession → 跳 select
+- `web/src/screens/SelectScreen.tsx` — 承接 select-screen.jsx SelectScreenV4 结构（topbar/3 slots/pool 双栏/startbtn），数据走 getSelectState()
+- `web/src/screens/BattleScreen.tsx` — jjbLive() 判定 + ?mode= 真实开局路径
+- `diagrams/phase1-select-screens/` + `diagrams/phase1-jump/` — 9 张证据截图
+
+**修改文件（5）**
+- `web/src/logic/jjbSession.ts` — 新增 `getSelectState()` + `randomFillAndStart()` + re-export `jjbLive`（0 改 startSession/9 模式逻辑）
+- `web/src/App.tsx` — 轻量状态机 `screen: 'home' | 'select' | 'battle' | 'obs' | 'phase0' | 'foundation'`；?screen= URL 兼容；?bare=1 隐藏 dev 切换条
+- `web/e2e/run.mjs` — 段2 Phase 1 select 渲染断言（getSelectState 透出 + randomFillAndStart 9 模式接缝）
+- `web/src/screens/BattleScreen.tsx` — 改造：jjbLive=true + selected* 全 null → randomFillAndStart；?mode= 路径 startSession + randomFillAndStart
+- `projectplan.md`（本文件）— 追加本章节
+
+### F. proof 原文（npm run build + node e2e/run.mjs 跑过）
+
+```
+$ npm run build
+vite v5.4.21 building for production...
+✓ 289 modules transformed.
+dist/assets/index-BjYamck5.css                       46.83 kB │ gzip:  9.16 kB
+dist/assets/index-LASqbUb6.js                       220.63 kB │ gzip: 76.48 kB
+✓ built in 389ms
+
+$ node e2e/run.mjs
+PASS: bundle contains all 16 markers
+
+=== Phase 0 全模式开局断言 ===
+mode    pool  manualSlots(0/1/2)  sum  identity  map  lock  selFacLen  selCmd  status  PASS/FAIL
+------  ----  -------------------  ---  --------  ---  ----  ---------  ------  ------  --------
+std8       5                1/2/2    5         ✓    3     3          9       3       2  PASS
+std10      7                2/2/3    7         ✓    3     3          9       3       2  PASS
+std12      9                3/3/3    9         ✓    3     3          9       3       2  PASS
+rescue     7                2/2/3    7         ✓    3     3          9       3       2  PASS
+one-a      6                2/2/2    6         ✓    3     3          9       3       2  PASS
+hard1      7                2/2/3    7         ✓    3     3          9       3       2  PASS
+hard2      7                2/2/3    7         ✓    3     3          9       3       2  PASS
+feiqiu     3                1/1/1    3         ✓    3     3          9       3       2  PASS
+suiji      0                0/0/0    0         ✓    3     3          9       3       2  PASS
+
+[react-e2e] ✅ 9 模式池=槽恒等式 + 9格契约 + 状态全 PASS
+```
+
+### G. 6 主题 select 屏截图（diagrams/phase1-select-screens/）
+
+- select-metal-dark.png  719635 bytes
+- select-metal-light.png 472292 bytes
+- select-sc2-dark.png   505982 bytes
+- select-sc2-light.png  568225 bytes
+- select-minimal-dark.png  407069 bytes
+- select-minimal-light.png 366998 bytes
+
+### H. 三屏跳转证据（diagrams/phase1-jump/，std10 mode 串通）
+
+- 01-home.png   290509 bytes — 9 模式按钮（01-09）+ 选手 ID input + lockup
+- 02-select.png 499287 bytes — std10 模式（"10 因子 · 手选"标签，3 场地图+锁定+manualSlots 2/2/3 空槽+因子池+指挥官池）
+- 03-battle.png 382362 bytes — battle 屏 3 场 MatchRow（地图/指挥官/因子/判定按钮），jjbLive=false 走 ?mode=std10 → startSession+randomFillAndStart 真实开局
+
+### I. caveat / 已知限制
+
+1. **三屏跳转证据每张独立 Chrome 进程**：chrome --headless --screenshot 是一次性渲染，不同 URL 间 JijieData 进程内 module 状态不共享。串通用 URL 参数 `?mode=std10` 证明「同模式能跨 select→battle 渲染真实数据」。e2e Vite SSR（9 模式 PASS + 池=槽恒等式 + 9 格契约 + randomFillAndStart）证明 jjbSession.ts 接缝正确。
+2. **手动拖拽未实现（Phase 2 留）**：select 屏只渲染静态空槽（DropCell）+ 真身池，CC/FX 显示选中态按 selectedFactorList/CommanderList；点击开始 → randomFillAndStart() 随机填满 9 格。Phase 2 接 makeDraggable/校验三规则。
+3. **dev 切换条（顶部 home/select/battle/obs + style/mode）**：仅 dev 工具，URL `?bare=1` 隐藏让对位 design 更纯净（已 6 主题截图都用 bare=1）。
+4. **6 主题 select 屏地图是兜底 std8**：因为 chrome --headless 截 select 屏是独立进程，select 屏 useEffect 兜底开局 std8（按 stop_when #5 `?screen=select 兜底 std8`）。std10 等其它模式 URL 截屏时也是兜底或真 mode（用 ?mode= URL 参数控制）。
+5. **one-a / suiji 模式 selectedCommanderList 留 [null,null,null]**：与真身 JijieContro.toSelect 行为一致（one-a 由玩家自选、suiji 随机），e2e 断言已 bypass 这两个模式。

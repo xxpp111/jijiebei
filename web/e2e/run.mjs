@@ -87,7 +87,7 @@ const server = await createServer({
 try {
   // 加载 jjbSession（顶部 import 链会拉 JijieData + JJConfigData + JJBData + GameData + PlayerData，无 cc 依赖）
   const mod = await server.ssrLoadModule('/src/logic/jjbSession.ts');
-  const { startSession, exposeSelectDebug } = mod;
+  const { startSession, exposeSelectDebug, getSelectState, randomFillAndStart, jjbLive } = mod;
 
   // 9 模式循环
   for (const mode of MODES) {
@@ -125,6 +125,35 @@ try {
       console.log(
         `${mode.padEnd(6)}  ${String(randomFactorPoorLen).padStart(4)}  ${manualSlots.join('/').padStart(19)}  ${String(sumSlots).padStart(3)}  ${(identityPass ? '✓' : '✗').padStart(8)}  ${String(mapCount).padStart(3)}  ${String(lockCount).padStart(4)}  ${String(selectedFactorListLen).padStart(9)}  ${String(selectedCommanderList.length).padStart(6)}  ${String(status).padStart(6)}  ${passed ? 'PASS' : 'FAIL'}`,
       );
+
+      // ===== 段2 Phase 1 select 渲染断言（getSelectState 9 模式透出 + randomFillAndStart 接缝） =====
+      // getSelectState 透出 + 池=槽恒等式（与 __jjbDebug.select 一致）
+      const sState = getSelectState();
+      if (!sState) fail(`${mode}: getSelectState() 返回 undefined`);
+      if (sState && (sState.mode !== mode || !sState.jjbLive || sState.mapList.length !== 3 || sState.lockFactorList.length !== 3 || sState.sumSlots !== sumSlots || sState.manualSlots.join('/') !== manualSlots.join('/') || sState.randomFactorPoor.length !== randomFactorPoorLen)) {
+        fail(`${mode}: getSelectState 字段不一致 mode=${sState && sState.mode} jjbLive=${sState && sState.jjbLive} map=${sState && sState.mapList && sState.mapList.length} lock=${sState && sState.lockFactorList && sState.lockFactorList.length} pool=${sState && sState.randomFactorPoor && sState.randomFactorPoor.length} sumSlots=${sState && sState.sumSlots}`);
+      }
+
+      // randomFillAndStart 接缝：填充后 jjbLive 仍 true、status=3、9 格 selectedFactorList 全非空、3 场指挥官均非空
+      randomFillAndStart();
+      if (!jjbLive()) fail(`${mode}: randomFillAndStart 后 jjbLive=false`);
+      const d = globalThis.window.__jjbDebug;
+      const battle = d && d.battle;
+      const selFac2 = (battle && d.selectedFactorList) || [];
+      const selCmd2 = (battle && d.selectedCommanderList) || [];
+      if (selFac2.length !== 9) fail(`${mode}: randomFillAndStart 后 selectedFactorList 长 ${selFac2.length} ≠ 9`);
+      if (selCmd2.length !== 3) fail(`${mode}: randomFillAndStart 后 selectedCommanderList 长 ${selCmd2.length} ≠ 3`);
+      // one-a / suiji 模式真身 toSelect 不预填 randomCommanderPoorA/B（one-a 由玩家自选、suiji 随机），
+      // randomFillAndStart 无池可填时 selectedCommanderList 保留 [null,null,null]（与真身一致，不强制）。
+      const noCmdPool = mode === 'one-a' || mode === 'suiji';
+      if (!noCmdPool) {
+        const allCmdFilled = selCmd2.every((c) => c != null && c !== '');
+        if (!allCmdFilled) fail(`${mode}: randomFillAndStart 后 selectedCommanderList 未全填=${JSON.stringify(selCmd2)}`);
+      }
+      // 至少应填 manualSlots(0)+manualSlots(1)+manualSlots(2) 个因子（jjbLive 模式下 pool=Σ 槽）
+      const sumSlotsNum = manualSlots[0] + manualSlots[1] + manualSlots[2];
+      const facFilledCnt = selFac2.filter((f) => f != null && f !== '').length;
+      if (sumSlotsNum > 0 && facFilledCnt !== sumSlotsNum) fail(`${mode}: randomFillAndStart 后 selectedFactorList 填 ${facFilledCnt} ≠ ΣmanualSlots ${sumSlotsNum}`);
     } catch (e) {
       fail(`${mode}: 异常 ${e && e.message ? e.message : e}`);
       console.log(`${mode.padEnd(6)}  ----  -------------------  ---  --------  ---  ----  ---------  ------  ------  FAIL`);
