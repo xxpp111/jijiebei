@@ -1,24 +1,34 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { DropCell } from '../components/DropCell';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
-import { getSelectState, randomFillAndStart, startSession, type SessionMode } from '../logic/jjbSession';
-import { facFlatIdx } from '@jjb/JJBData';
+import {
+  getSelectState,
+  startSession,
+  startFromSelection,
+  setSelectedCmd,
+  setSelectedFac,
+  clearCmdSlot,
+  clearFacSlot,
+  type SessionMode,
+} from '../logic/jjbSession';
+import { facFlatIdx, GOLD_FACTORS } from '@jjb/JJBData';
+import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
 
-// 集结杯 × CM — 选择面板整屏（段2 Phase 1：静态布局 + 真实图，无拖拽）。
+// 集结杯 × CM — 选择面板整屏（段2 Phase 2：拖拽手选 + 校验 + 手选进 battle）。
 // 严格承接 design/v4-r2/components/select-screen.jsx 的 SelectScreenV4 DOM/className：
 //   topbar / .slots (3×.slot) / .pool (pool-factors + pool-cmd) / .startbtn
 // 数据走 getSelectState() 读真身 JijieData（0 改 jijie2；status=2 时渲染开局后的池/槽/地图/锁定）。
-// Phase 1 行为：点开始 → randomFillAndStart()（按 pool+cmdPool 填 9 格后切 status=3）→ 跳 battle。
-// 手动拖选（makeDraggable/校验三规则）留 Phase 2，本屏只展示静态空槽。
+// Phase 2 新增：HTML5 pointer 自写拖拽吸附（lib/dragdrop.ts）+ 校验三规则（jjbSession.validate）+ 手选进 battle。
+// 手动校验三规则镜像真身 JJBSelect.validate（JJBData.manualSlots + ConfigData.commadnerGroupList['B'] 查表）。
 
 const SLOT_TITLES = ['第 1 场', '第 2 场', 'BOSS 战'];
 
 export interface SelectScreenProps {
   style: string;
   mode: string;
-  onStart: () => void; // 调 randomFillAndStart 后切 battle
+  onStart: () => void; // 校验通过 → 手选进 battle → 切屏
 }
 
 export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
@@ -34,26 +44,89 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
       try { startSession(m); setTick((x) => x + 1); } catch (e) { console.error('[Select] 兜底开局失败:', e); }
     }
   }, []);
+  // 校验失败 toast：开始按钮按下时塞
+  const [toast, setToast] = useState<{ msg: string; count: number } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const s = getSelectState();
   const live = s.jjbLive;
-  // 引用 tick 让 React 知道本屏依赖兜底后状态变化
   void tick;
 
-  // 6 主题下因子池/指挥官池只取一段子集渲染（沿用 design 6+4+2+6 张图排版）。
-  // 渲染真实完整池（不截断；对齐 Cocos 真身整池渲染，修 M3 把 design mock 上限当真实上限的偏差）。
-  const factorRow = useMemo(() => s.randomFactorPoor, [s.randomFactorPoor]);
+  // 因子池/指挥官池（真实完整池，不截断；对齐 Cocos 真身整池渲染；6 主题渲染由 design 排版约束）
+  const factorRow = useMemo(() => s.randomFactorPoor.slice(), [s.randomFactorPoor]);
   const cmdA = useMemo(() => s.randomCommanderPoorA.filter((c) => c !== '自选'), [s.randomCommanderPoorA]);
   const cmdB = useMemo(() => s.randomCommanderPoorB.filter((c) => c !== '自选'), [s.randomCommanderPoorB]);
-  const selfCmd = s.selfPool; // 真实全量自选池（ConfigData 全量 ban 后减已入池；按 mode 门控 selfShow）
+  // 自选池：用 getSelectState 透出的真实 selfPool/selfShow（正确读 JijieData，ConfigData 全量减已入 A/B 池 + mode 门控）。
+  // 替换 spoke 本地 computeSelfPool（修两 bug：showSelfPool 误传 window 致门控恒真 + randomCommanderPoorC 读错 ConfigData）。
+  const selfPool = s.selfPool;
 
   const modeLabel = modeMeta(s);
 
+  // ===== Drop target refs（用 ref 注册到 dragdrop 模块） =====
+  // 槽位总表：3 场 × 1 cmd + manualSlots(i) factor = 3 + Σ manualSlots 个 target
+  const targetRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const setTarget = (k: string) => (el: HTMLSpanElement | null) => {
+    if (el && targetRefs.current[k] !== el) {
+      targetRefs.current[k] = el;
+    } else if (!el && targetRefs.current[k]) {
+      delete targetRefs.current[k];
+    }
+  };
+
+  useEffect(() => {
+    const unregisters: Array<() => void> = [];
+    const regAll = () => {
+      for (const k in targetRefs.current) {
+        const el = targetRefs.current[k];
+        if (!el) continue;
+        const [kind, slotStr, idxStr] = k.split(':');
+        unregisters.push(registerTarget({
+          kind: kind as 'cmd' | 'factor',
+          slot: Number(slotStr),
+          idx: Number(idxStr),
+          el,
+        }));
+      }
+    };
+    regAll();
+    return () => { unregisters.forEach((u) => u()); };
+  });
+
+  // ===== 拖拽源 onPointerDown =====
+  const onPoolPointerDown = (ev: React.PointerEvent, kind: 'cmd' | 'factor', name: string, el: HTMLElement) => {
+    ev.preventDefault();
+    startDrag({
+      kind, name, el,
+      onDrop: (slot, idx) => {
+        if (kind === 'cmd') {
+          setSelectedCmd(slot, name);
+        } else {
+          setSelectedFac(slot, idx, name);
+        }
+        // 强制重渲（setSelected* 是 module-level 写 JijieData，React 不知）
+        setTick((x) => x + 1);
+      },
+    }, ev.nativeEvent);
+  };
+
+  // ===== 点击已填槽清除 =====
+  const onClearCmd = (slot: number) => { clearCmdSlot(slot); setTick((x) => x + 1); };
+  const onClearFac = (slot: number, k: number) => { clearFacSlot(slot, k); setTick((x) => x + 1); };
+
+  // ===== 开始按钮：校验 + 手选进 battle =====
   const handleStart = () => {
-    randomFillAndStart();
+    const r = startFromSelection();
+    if (!r.ok) {
+      setToast({ msg: r.firstError, count: r.errors.length });
+      return;
+    }
     onStart();
   };
 
-  // 直跳 ?screen=select 首渲（兜底开局未完成）时不渲染地图/池，避免 mapName='—' 占位 + 缺图 warn。
   if (!live) {
     return (
       <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720, color: '#fff', padding: 40 }}>
@@ -120,13 +193,20 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 <div className="slot-targets">
                   <div className="t-cmds">
                     {selCmd ? (
-                      <CommanderCard src={cmdUrl(selCmd)} name={selCmd} w={56} h={67} />
+                      <span
+                        ref={setTarget(`cmd:${i}:0`)}
+                        data-slot-cmd={i}
+                        onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i); }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <CommanderCard src={cmdUrl(selCmd)} name={selCmd} w={56} h={67} fill />
+                      </span>
                     ) : (
-                      <DropCell w={56} h={67} hint="指挥官" />
+                      <DropCell ref={setTarget(`cmd:${i}:0`)} w={56} h={67} hint="指挥官" />
                     )}
                   </div>
                   <div className="t-facs">
-                    {/* 锁定因子（自动）打头 */}
+                    {/* 锁定因子（自动）打头 — 不可拖不可清 */}
                     {lock ? (
                       <FactorFrame src={facUrl(lock)} size={52} tag="锁定" />
                     ) : (
@@ -136,9 +216,17 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                     {Array.from({ length: slots }).map((_, k) => {
                       const v = s.selectedFactorList[facFlatIdx(i, k)];
                       return v ? (
-                        <FactorFrame key={k} src={facUrl(v)} size={52} gold />
+                        <span
+                          key={k}
+                          ref={setTarget(`factor:${i}:${k}`)}
+                          data-slot-fac={`${i}:${k}`}
+                          onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <FactorFrame src={facUrl(v)} size={52} gold={GOLD_FACTORS.includes(v)} />
+                        </span>
                       ) : (
-                        <DropCell key={k} w={52} h={52} hint="因子" />
+                        <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
                       );
                     })}
                   </div>
@@ -160,7 +248,17 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 <span style={{ color: 'var(--muted)', fontSize: 12 }}>本局无随机因子（随机模式）</span>
               )}
               {factorRow.map((f, i) => (
-                <FactorFrame key={i} src={facUrl(f)} size={66} />
+                <span
+                  key={i}
+                  data-pool-fac={f}
+                  onPointerDown={(ev) => {
+                    const el = (ev.currentTarget as HTMLElement);
+                    onPoolPointerDown(ev, 'factor', f, el);
+                  }}
+                  style={{ cursor: 'grab', touchAction: 'none' }}
+                >
+                  <FactorFrame src={facUrl(f)} size={66} gold={GOLD_FACTORS.includes(f)} />
+                </span>
               ))}
             </div>
           </div>
@@ -176,7 +274,17 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                     <span style={{ color: 'var(--muted)', fontSize: 12 }}>（本模式无 A 组）</span>
                   )}
                   {cmdA.map((c, i) => (
-                    <CommanderCard key={i} src={cmdUrl(c)} name={c} />
+                    <span
+                      key={i}
+                      data-pool-cmd={c}
+                      onPointerDown={(ev) => {
+                        const el = (ev.currentTarget as HTMLElement);
+                        onPoolPointerDown(ev, 'cmd', c, el);
+                      }}
+                      style={{ cursor: 'grab', touchAction: 'none' }}
+                    >
+                      <CommanderCard src={cmdUrl(c)} name={c} />
+                    </span>
                   ))}
                 </div>
               </div>
@@ -189,32 +297,57 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                     <span style={{ color: 'var(--muted)', fontSize: 12 }}>（本模式无 B 组）</span>
                   )}
                   {cmdB.map((c, i) => (
-                    <CommanderCard key={i} src={cmdUrl(c)} name={c} />
+                    <span
+                      key={i}
+                      data-pool-cmd={c}
+                      onPointerDown={(ev) => {
+                        const el = (ev.currentTarget as HTMLElement);
+                        onPoolPointerDown(ev, 'cmd', c, el);
+                      }}
+                      style={{ cursor: 'grab', touchAction: 'none' }}
+                    >
+                      <CommanderCard src={cmdUrl(c)} name={c} />
+                    </span>
                   ))}
                 </div>
               </div>
             </div>
-            {s.selfShow && (
+            {s.selfShow && selfPool.length > 0 && (
               <div className="grp">
                 <div className="block-head sm">
                   <span className="block-title">自选指挥官</span>
-                  <span className="block-note">全量可选 · 拖入场次槽位（Phase 2 启用）</span>
+                  <span className="block-note">全量可选 · 拖入场次槽位（B 组占用合并计数）</span>
                 </div>
-                <div className="avatar-grid" style={{ gap: 11, flexWrap: 'wrap' }} data-pool-cmds-self>
-                  {selfCmd.map((c, i) => (
-                    <CommanderCard key={i} src={cmdUrl(c)} name={c} w={60} h={72} />
+                <div className="avatar-grid" style={{ gap: 11 }} data-pool-cmds-self>
+                  {selfPool.map((c, i) => (
+                    <span
+                      key={i}
+                      data-pool-cmd={c}
+                      onPointerDown={(ev) => {
+                        const el = (ev.currentTarget as HTMLElement);
+                        onPoolPointerDown(ev, 'cmd', c, el);
+                      }}
+                      style={{ cursor: 'grab', touchAction: 'none' }}
+                    >
+                      <CommanderCard src={cmdUrl(c)} name={c} w={60} h={72} />
+                    </span>
                   ))}
                 </div>
               </div>
             )}
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16 }}>
+              {toast && (
+                <div className="toastv" data-toast-err>
+                  <span className="toastv-ico">!</span>
+                  <span className="toastv-tx">{toast.msg}</span>
+                  {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
+                </div>
+              )}
               <button
                 className="startbtn"
                 data-start-btn
                 style={{ margin: 0 }}
                 onClick={handleStart}
-                disabled={!live}
-                title={live ? '随机填满 selected* 后进 battle' : '等待 home 选模式开局'}
               >
                 比赛开始 <span className="startbtn-arrow">▶</span>
               </button>
@@ -242,5 +375,4 @@ function modeMeta(s: ReturnType<typeof getSelectState>): string {
   return `${factorLabel} · ${modeLabel}`;
 }
 
-// 留 Phase 2 备查：mode 字符串类型（不导出但 tsc 校验依赖）
 export type _SelectMode = SessionMode;

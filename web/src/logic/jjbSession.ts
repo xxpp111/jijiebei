@@ -558,3 +558,104 @@ export function randomFillAndStart(): void {
   d.status = 3;
   exposeBattleDebug();
 }
+
+// ===== 段2 Phase 2：手选写回 + 校验三规则 + 手选进 battle =====
+// 严格镜像真身 JJBSelect.fillTarget/clearTarget/validate（assets/Script/jjbDesign/JJBSelect.ts），
+// 0 改 jijie2 / 0 改 9 模式开局逻辑；只新增对 JijieData.selectedCommanderList/selectedFactorList 的读写 + 校验。
+// （ConfigData 已在文件顶部 import，此处不重复）
+
+/** name → group（commadnerGroupList['B'].includes(name) 直查；A 池混入的 B 组也命中——commadnerGroupList
+ *  按 commanderList 全量分组，与真身 groupMap 查表语义一致）。 */
+function isGroupB(name: string): boolean {
+  try {
+    const g = (ConfigData.commadnerGroupList as any) || {};
+    const arrB: string[] = g['B'] || [];
+    return arrB.includes(name);
+  } catch { return false; }
+}
+
+/** 写第 slot 场指挥官（idx=0 唯一；后续若接双打可扩 2）。jjbLive=false 时静默 noop（不破坏数据接缝）。 */
+export function setSelectedCmd(slot: number, name: string): void {
+  const d: any = JijieData;
+  if (!jjbLive()) return;
+  if (!Array.isArray(d.selectedCommanderList)) d.selectedCommanderList = [null, null, null];
+  if (slot < 0 || slot > 2) return;
+  d.selectedCommanderList[slot] = name;
+}
+
+/** 写第 slot 场第 k 槽因子（按 facFlatIdx(slot,k) 写扁平 9 格）。 */
+export function setSelectedFac(slot: number, k: number, name: string): void {
+  const d: any = JijieData;
+  if (!jjbLive()) return;
+  if (!Array.isArray(d.selectedFactorList)) d.selectedFactorList = new Array(9).fill(null);
+  if (slot < 0 || slot > 2 || k < 0 || k > 2) return;
+  d.selectedFactorList[facFlatIdx(slot, k)] = name;
+}
+
+/** 清第 slot 场指挥官（回填 null）。 */
+export function clearCmdSlot(slot: number): void { setSelectedCmd(slot, null as any); }
+
+/** 清第 slot 场第 k 槽因子。 */
+export function clearFacSlot(slot: number, k: number): void { setSelectedFac(slot, k, null as any); }
+
+/** 校验三规则（镜像真身 JJBSelect.validate）。
+ *  ① 每场指挥官未选→err
+ *  ② 按 manualSlots(i) 槽数逐格判因子未选→err（禁按 length/null 计数）
+ *  ③ B 组指挥官 ≤1：仅 !modeIsOnePick && modelFactorCount > 2 生效；A 池混入的 B 组也计（commadnerGroupList['B'] 查表）
+ *  返回 { ok, errors, firstError }：ok=true 校验通过；firstError 给 toast 用第一条。 */
+export interface ValidationResult { ok: boolean; errors: string[]; firstError: string; }
+export function validate(): ValidationResult {
+  const d: any = JijieData;
+  const errs: string[] = [];
+  if (!jjbLive()) {
+    return { ok: false, errors: ['本局未开局（请先 home 选模式）'], firstError: '本局未开局（请先 home 选模式）' };
+  }
+  const selCmd = (d.selectedCommanderList || []) as (string | null)[];
+  const selFac = (d.selectedFactorList || []) as (string | null)[];
+  for (let i = 0; i < 3; i++) {
+    if (!selCmd[i]) errs.push('第' + (i + 1) + '场指挥官未选择');
+  }
+  for (let i = 0; i < 3; i++) {
+    const cap = manualSlots(i);
+    for (let k = 0; k < cap; k++) {
+      const v = selFac[facFlatIdx(i, k)];
+      if (!v) errs.push('第' + (i + 1) + '场因子' + (k + 1) + '未选择');
+    }
+  }
+  if (!d.modeIsOnePick && d.modelFactorCount > 2) {
+    let b = 0;
+    for (let i = 0; i < 3; i++) {
+      const c = selCmd[i];
+      if (c && isGroupB(c)) b++;
+    }
+    if (b > 1) errs.push('B组指挥官只能选1个');
+  }
+  return { ok: errs.length === 0, errors: errs, firstError: errs[0] || '' };
+}
+
+/** 手选进 battle：校验通过→保留 selected*、status=3、exposeBattleDebug。
+ *  校验失败→no-op（让 UI 走 toast 路径）。
+ *  替换 Phase 1 的 randomFillAndStart（用户手选而非随机）。 */
+export function startFromSelection(): ValidationResult {
+  const r = validate();
+  if (!r.ok) {
+    exposeSelectError(r.firstError, r.errors.length);
+    return r;
+  }
+  const d: any = JijieData;
+  d.winLoseList = [];
+  d.status = 3;
+  exposeBattleDebug();
+  return r;
+}
+
+/** 校验失败时把错误写到 __jjbDebug.select.error（真身 updateDebug 同样字段语义），并保留错误条数。 */
+export function exposeSelectError(msg: string, count: number): void {
+  try {
+    const w: any = window;
+    w.__jjbDebug = w.__jjbDebug || {};
+    w.__jjbDebug.select = w.__jjbDebug.select || {};
+    w.__jjbDebug.select.error = msg;
+    w.__jjbDebug.select.errorCount = count;
+  } catch { /* noop */ }
+}
