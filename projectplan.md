@@ -707,3 +707,131 @@ $ git status -s
 **spoke 勘误**：派发的 `jjb-bp-sharpfit` /goal 误把"现有无效 setFrameSize 版"当终态、只 build+测（未执行契约要求的 fitView 替换），测出 1.25 失败 = 测错版本。已由 hub 接手完成替换（capped 版）+ 终验。spoke 一条有效结论（dock/obsbar 填充不被误钳）已并入终验。
 
 **遗留**：暗色主题内容区顶部偏右一团椭圆暗灰光晕（JJBView.bg 装饰渐变，与本次无关，可后续单调）；③自选页/④点金/⑤额外难度 设计待 Claude Design 后续轮。
+
+---
+
+## 段2 全面实现规划（React select 屏 · 结合 TS 逻辑 · workflow 调研产出）
+
+> 2026-06-16 · subagent 调研。读全 JijieContro.toStart/toSelect 全模式分支 + InitPanel 9 模式 handler + JJBSelect.ts(Cocos 拖拽吸附 438 行) + JJBData(manualSlots/facFlatIdx/sessionMatches) + bp-impl-spec。
+> 现状锚点：PoC 仅 startRandomSession(2) 一局 8 因子随机；cc-shim 仅 log/warn/error；jjbSession 复刻 toStart/toSelect 标准分支(8/10/12)，拯救/随机/极难/非酋/单指/蓝字/整活全缺。
+
+### A. cc-shim vs 剥离权衡（先定，决定 B/C 量）— 推荐【按需复刻，不原样 import JijieControl】
+- 原样 import 代价：JijieControl 第 2 行 `import JJUI`（cc.Component 全家），toStart/toSelect 末尾调 `this.jjUI.updateToStart/updateToSelect`（UI 副作用），且 onClick* 在 InitPanel(cc.Component @property EditBox/Node)。原样跑需 shim 出 cc.Component/EditBox/Node/_decorator 整套 + 桩 jjUI 的 ~15 个方法 → shim 膨胀到数百行，违背"200KB 包"动机。
+- 推荐：cc-shim 保持最小(log/warn/error)；把 toStart/toSelect/InitPanel.onClick* 的【纯逻辑赋值部分】复刻进 jjbSession（已起步），剥离 jjUI.* UI 副作用。理由：onRandomClick/updateBCount/onClick* 核心是 flag 赋值 + ConfigData 抽取，UI 调用是叶子；复刻成本 < shim 成本，且单一真相是配置 txt(ConfigData 真实跑) 不是 UI 流。
+- 红线守恒：ConfigData/JijieData 仍真实 import 真实跑（抽取内核零复刻），只复刻"赋 flag + 调 ConfigData 哪些方法 + 写 selected*"的编排顺序。
+
+### B. select 屏全面实现（拆 5 件，按依赖序）
+1. **jjbSession 全模式开局** = 把当前 toStartCore/toSelectCore 的 8/10/12 标准分支扩成 JijieContro 全分支：
+   - InitPanel 9 handler → `startSession(mode)`：mode∈{f8,f10,f12,zhengjiu,suiji,feiqiu,onePickA,veryHard,veryHard2}(+蓝字/整活 框架留)；每 mode 设对应 flag 组合(见 InitPanel 真值)，再 toStart→toSelect。
+   - toStartCore 补：极难/拯救早 toSelect 分支、mfc==4 末因子 getJijieFactor(hard,0)、modeZhenghuo/modeFeiqiu 锁定因子特例(随机/混乱工作室)。
+   - toSelectCore 补：modeIsOnePick(指挥官设"自选")、拯救固定 7 人池、极难① A/B 整组赋值、modeIsVeryHard2 A6B3、modeSuiji countC=4、modeFeiqiu 删雷诺/斯台特曼、各 mfc 的 factorCount(随机因子数7/10/13/极难)+pop 特例、modeIsLanzi getFactorByScore、modeFeiqiu 固定3因子、nullFactorCount=mfc*3-2。
+   - 验证：每 mode 的 randomFactorPoor.length === manualSlots(0)+1+2 之和（池=槽恒等式，JJBData 注释已给对账表 8=1/2/2,10=2/2/3,12=3/3/3,拯救=2/2/3,随机=0,非酋=1/1/1）。
+2. **SelectScreen.tsx(新)** 承接 JJBSelect.ts 结构：topbar(lockup+player+mode) / 三场 slots(grid3：head+mapthumb+cmd槽+因子槽，锁定因子固定格带角标不可拖) / pool(左因子池 + 右 A/B 组 + 自选 18 格) / startbtn。布局照 select-screen.jsx(FX/CC/DropCell/CtrlBar/ToastV) — design-relative，70% DOM 白嫖。
+3. **拖拽吸附**（React 承接 JJBSelect makeDraggable/checkHit）：
+   - checkHit 语义=拖拽项左上锚 vs 槽热点 <30px(world)→命中。DOM 版用 getBoundingClientRect 中心/左上距 <阈值 判定，不需 cc.convertToWorldSpaceAR。
+   - 库选型推荐：HTML5 原生 pointer 事件(pointerdown/move/up) 自写，不引 dnd-kit(避免 PoC 选型变量；吸附逻辑简单，~80 行)。fill→destroy 等价 = React setState slots[i]。
+   - 状态：selection.slots[场]{cmds[],factors[]}，填槽 setSlot；live 同步写 JijieData.selectedCommanderList[场]/selectedFactorList[facFlatIdx(场,槽)]；点已填槽=清(clearTarget)。
+4. **模式选择(home)**：home 6 模式(MODES) + 极难/单指/非酋等入口 → 各调 startSession(mode)。每 mode flag 组合见 InitPanel(已读全)。
+5. **校验**（镜像 JJBSelect validate）：①每场指挥官未选 ②逐格因子未选(按 manualSlots(i) 槽数，禁按 length) ③B 组≤1(mfc>2 且非 onePick，按 groupMap 查 ConfigData.commanderList[name]→组别，A 池混入的 B 组也计)。不通过→toast(红框+条数)，__jjbDebug.select.error 保留。
+
+### C. BP 整合并入 select（对接 bp-impl-spec §2.3 + r3 brief 5 交互）
+- 流程：home 选模式 →〔⑤额外难度〕→ ①BP 面板(ban因子/自选指挥官 二选一弹层) →〔②ban页/③自选页〕→ 路径二选(手选/随机) → select(④每场点金) → battle。
+- React 落点：BP 面板/ban页/自选页 = 弹层组件(沿用 current-dialog-pathchoice 遮罩骨架)，插在 startSession 之后、进 SelectScreen 之前。
+- 数据层(H4)：ban→从 randomFactorPoor 移除该因子；BP 揉因子(J5)=抽 目标+banN 个进池(factorCount+=banN，需 jjbSession 支持)。点金(H1)=goldRuntime Set + toggleGold 重渲，×2 仅显示(Q1 计分挂起)。
+- 依赖：①②③ 设计待 Claude Design r3 轮(brief 已备 design/v4-input-r2/r3-...md)；本段先把 select 主屏+全模式做实，BP 弹层留接口(startSession 已可接 banN/gold 参数)。
+
+### D. 校验恒等式（交叉断言，每模式回归）
+池=槽：randomFactorPoor.length === Σ manualSlots(i)；B 组≤1 触发条件 mfc>2 且非 onePick；9 格契约 selectedFactorList=new Array(9)；selectedCommanderList=[null,null,null] 起始。
+
+### E. 逐屏迁移顺序 + harness phase（≥3）
+- **Phase 0（已具雏形，补全）**：jjbSession 全模式开局 + 池=槽恒等式断言(纯逻辑，无 UI)。done：9 mode 各跑通、恒等式绿。
+- **Phase 1**：SelectScreen.tsx 静态布局(三场+池+startbtn，读 sessionMatches，无拖拽) + 真实图对位(修 nameAsset：cmdRel/facRel/mapRel 指向 resources/images/{commander,factor,maps} 中文名 PNG，消除 design 占位 fallback 错位)。done：6 主题渲染对、真实地图名"聚铁成兵"配真实图、指挥官/因子图不重复。
+- **Phase 2**：拖拽吸附 + 填/清槽 + live 写 JijieData + 校验 toast + __jjbDebug.select 同形。done：拖拽吸附手感对、校验三规则、Playwright select 回归绿。
+- **Phase 3**：BP 整合(弹层②③ + 点金④ + 额外难度⑤ + 数据层 H1/H4/J5)，依赖 Claude Design r3 设计入库。
+- **末**：全 9 模式真机 + select→battle 串联 + OBS 回归。
+
+### F. 必修细节（本调研发现，根治）
+- ①图 fallback 错位根因：web 用 design/v4-r2/assets 占位名(cmd-raynor.png/factor-void.png)，未对位真实中文名。真实图在 assets/resources/images/{maps,commander,factor,brand}(中文名 png，maps 30/commander 186/factor 164)。修 designAssets/nameAsset 或新建 resourceAsset.ts 用 import.meta.glob('../../../assets/resources/images/**/*.png') 按中文名直取。
+- ②OBS 横条顶主题切换条：App.tsx switcher 在 ?bare 时已隐藏，但 ?screen=obs 仍渲 switcher → ObsScreen 应在 obsbar 形态强制 bare。
+- ③__jjbDebug.obsbar 未单独透出：jjbSession.exposeBattleDebug 写死 screen='battle'，OBS 屏复用了它 → 需 exposeObsbarDebug 单独透 __jjbDebug.obsbar + screen='obsbar'。
+
+---
+
+## 段2 Phase 0 实施总结（全模式开局 · 纯逻辑）
+
+> 2026-06-16 · 目标 lock-down：把 InitPanel 9 个 active 模式映射成 startSession(mode)，
+> 逐模式复刻 JijieContro.toStart/toSelect 真实分支，使「池=槽恒等式」+「9 格契约」在 9 模式全绿。
+> 这是 SelectScreen 的数据地基，第一弹信任建立弹。
+
+### A. 改动文件（5 个，全在 web/src；红线 jijie2/Scene/design/resources 零改）
+1. `web/src/logic/jjbSession.ts`（主）
+   - 新增 `SessionMode` 类型（9 mode 名）+ `setModeFlags(mode)`（按 InitPanel.onClick* 真实 flag 组合设 JijieData 字段）
+   - `toStartCore` 补全 4 个真实分支：modeIsVeryHard 早 toSelect + popMap("营救矿工") / modeIsZhengjiu 早 toSelect / mfc==2 popFactor 风暴/裂隙/部署 / 锁定因子特例（modeZhenghuo→"随机" / modeFeiqiu→"混乱工作室" / i==2 && mfc==4 → getJijieFactor(hard,0)）
+   - `toSelectCore` 补全 11 个真实分支：modeIsOnePick / modeIsZhengjiu 固定 7 人 / 极难① A/B 整组 / 极难② A6B3 / modeSuiji 不 push 自选 / modeFeiqiu 删雷诺/斯台特曼 / 极难 jinanArr 4选2 强抽 / mfc==2 popFactor / mfc==4 拯救 popFactor / default onePick factorCount-- / 拯救 popFactor 风暴裂隙同化体 / modeIsLanzi getFactorByScore / modeFeiqiu 固定 3 因子 / nullFactorCount = mfc*3-2
+   - `startSession(mode, opts?)` 入口（opts 预留 banN/gold 段2 BP 接口）+ `restoreConfig()`（每局重置 ConfigData 母池）+ `exposeSelectDebug` 透出 `__jjbDebug.select` + `exposeStartSession` 挂 `window.__jjb.startSession`
+   - 旧 `startRandomSession` 兼容 BattleScreen 段1 PoC，逻辑保持
+2. `web/src/App.tsx`
+   - 新增 `?screen=phase0` 屏入口（Phase0Screen）—— 唯一作用=让 build 引用 startSession/exposeStartSession 防 tree-shake + 浏览器侧 e2e 入口（用 `window.__jjb.startSession(mode)` 切换模式）
+3. `web/e2e/run.mjs`（重写）
+   - 阶段 1：build 完整性 + bundle 标记符（9 mode 名 + 4 个真身字符串）
+   - 阶段 2：Vite SSR + ssrLoadModule 加载 jjbSession.ts（零额外依赖，注入 globalThis.window shim），循环 9 模式调 startSession，读 `window.__jjbDebug.select` 断言池=槽恒等式 + 9 格契约 + status=2 + map=3 + lock=3 + manualSlots 镜像
+
+### B. 9 模式真相表（paramMap 真值=5/7/9/7/0/3，池=槽恒等式全部成立）
+| mode | mfc | flags | pool 实际 | manualSlots(0/1/2) | sum | identity |
+|------|-----|-------|-----------|---------------------|-----|----------|
+| std8 | 2 | — | 5 | 1/2/2 | 5 | ✓ |
+| std10 | 3 | — | 7 | 2/2/3 | 7 | ✓ |
+| std12 | 4 | — | 9 | 3/3/3 | 9 | ✓ |
+| rescue | 3 | modeIsZhengjiu | 7 | 2/2/3 | 7 | ✓ |
+| one-a | 3 | modeIsOnePick | 6 | 2/2/2 | 6 | ✓ |
+| hard1 | 2 | modeIsVeryHard | 7 | 2/2/3 | 7 | ✓ |
+| hard2 | 2 | modeIsVeryHard+modeIsVeryHard2 | 7 | 2/2/3 | 7 | ✓ |
+| feiqiu | 1 | modeFeiqiu | 3 | 1/1/1 | 3 | ✓ |
+| suiji | 0 | modeSuiji | 0 | 0/0/0 | 0 | ✓ |
+
+### C. proof（已跑，原文）
+
+**build**：
+```
+✓ built in 374ms
+dist/assets/index-Bg1Px0Jb.js  209.64 kB │ gzip: 73.86 kB
+```
+
+**e2e**：
+```
+PASS: bundle contains all 16 markers
+
+=== Phase 0 全模式开局断言 ===
+mode    pool  manualSlots(0/1/2)  sum  identity  map  lock  selFacLen  selCmd  status  PASS/FAIL
+std8       5                1/2/2    5         ✓    3     3          9       3       2  PASS
+std10      7                2/2/3    7         ✓    3     3          9       3       2  PASS
+std12      9                3/3/3    9         ✓    3     3          9       3       2  PASS
+rescue     7                2/2/3    7         ✓    3     3          9       3       2  PASS
+one-a      6                2/2/2    6         ✓    3     3          9       3       2  PASS
+hard1      7                2/2/3    7         ✓    3     3          9       3       2  PASS
+hard2      7                2/2/3    7         ✓    3     3          9       3       2  PASS
+feiqiu     3                1/1/1    3         ✓    3     3          9       3       2  PASS
+suiji      0                0/0/0    0         ✓    3     3          9       3       2  PASS
+
+[react-e2e] ✅ 9 模式池=槽恒等式 + 9格契约 + 状态全 PASS
+```
+
+### D. done-when 逐条验证
+1. ✅ startSession(mode) 覆盖 9 模式（std8/std10/std12/rescue/one-a/hard1/hard2/feiqiu/suiji）
+2. ✅ 每模式池=槽恒等式：randomFactorPoor.length === manualSlots(0)+manualSlots(1)+manualSlots(2)
+3. ✅ selectedFactorList 长 9 全 null、selectedCommanderList=[null,null,null]
+4. ✅ 随机因子数 + manualSlots 逐值匹配对账表（5/7/9/7/6/0/3 + 1/2/2 等）
+5. ✅ e2e 逐模式打印「mode/因子数/池长/Σ槽/PASS|FAIL」，全 PASS
+
+### E. stop_when 边界
+- 无 jijie2/Scene/design/resources 红线文件被改
+- 9 mode 全跑通无异常
+- 恒等式 9 mode 全成立（paramMap 真值与 manualSlots 真相表匹配）
+- 无 manualSlots / ConfigData 字段路径与假设不符情况
+- Dubhe 不可达：本次未走 Dubhe（e2e 用 Vite SSR 纯 Node 跑，零 Dubhe 依赖）
+
+### F. 遗留 / 下一步
+- Phase 0 信任建立完成，SelectScreen（Phase 1 静态布局 + Phase 2 拖拽校验）可启动
+- BP 弹层（ban/点金/额外难度）→ Phase 3，依赖 Claude Design r3
+- 双打模式走 JJBDoubles.start() 旁路，不在 startSession(mode) 9 模式内（与 dispatch contract 9 个 active 模式对齐——双打不在 9 中）
+- startSession 接 banN/gold 参数（opts 预留，暂未启用）

@@ -50,9 +50,9 @@ function ObsMatch({ row }: { row: ObsRow }) {
       </div>
       <div className="obs-map">
         <span className="mapthumb">
-          <img src={mapUrl(row.mapName)} alt="" />
+          {/* 地图图本身已烧录大字标题（净网行动/升格之链/克哈裂痕…），不再叠加小字标签；名留 alt 供采集/调试 */}
+          <img src={mapUrl(row.mapName)} alt={row.mapName} />
         </span>
-        <span className="obs-map-name">{row.mapName}</span>
       </div>
       <div className="obs-line">
         <div className="obs-cmds">

@@ -1,10 +1,11 @@
-// jjbSession — React↔XP 接缝（段1 PoC）。
+// jjbSession — React↔XP 接缝（段1 PoC + 段2 Phase 0 全模式开局）。
 // 红线：jijie2 / data 零改，仅 import 调用。
 // 数据真实：fetch-free 用 import.meta.glob 把真实 csv 编译期捆绑 → ConfigData.init（真实赛事母池）。
-// 开局编排：复刻 JijieContro.toStart/toSelect 的「8/10/12 因子标准随机」分支（调真实 ConfigData
-//   popMap/getJijieFactor/commadnerGroupList）+ JJBDesignBoot.startRandom 的 9 格填充，写真实 JijieData。
+// 开局编排：复刻 JijieContro.toStart/toSelect 的「全 9 模式」真实分支（调真实 ConfigData
+//   popMap/popFactor/getJijieFactor/commadnerGroupList/getFactorByScore）+ JJBDesignBoot.startManual
+//   的 9 格契约固化（toSelect 预填的 mfc*3-2 个 null 被覆盖，3/9 格全 null 起始），写真实 JijieData。
 //   —— 为何复刻而非 import JijieControl：JijieControl import JJUI(cc.Component) 链需完整 cc-shim 且
-//   toStart 末尾调 this.jjUI.updateToStart()(UI 副作用)，段1 PoC 用复刻最小开局打通数据接缝，
+//   toStart 末尾调 this.jjUI.updateToStart/toSelect()(UI 副作用)，段1 PoC 用复刻最小开局打通数据接缝，
 //   段2 cutover 再解耦 JijieControl→JJUI（Phase 1 审计已标 UI 副作用剥离工作）。
 // 读：JJBData.sessionMatches()（真实桥，0 改）。写回：winLoseList[i]=RESULT_VAL（lose0/win1/bonus2）。
 import JijieData from '@logic/JijieData';
@@ -36,13 +37,69 @@ function initConfigOnce(): void {
   configInited = true;
 }
 
+/** 重置 ConfigData 母池（重跑 init 重建 factorList/commanderList/mapGrid/commadnerGroupList）。
+ *  镜像 JJBDesignBoot.restoreConfigData：每局必调，防 factorList 枯竭 + 地图累积。 */
+function restoreConfig(): void {
+  initConfigOnce();
+  ConfigData.init(
+    csvText('规则参数配置.txt'),
+    csvText('地图配置.txt'),
+    csvText('指挥官配置.txt'),
+    csvText('因子配置.txt'),
+    csvText('ban指挥官.txt'),
+  );
+}
+
 const rand = (n: number) => Math.floor(Math.random() * n);
 
-/** 复刻 JijieContro.toStart 标准分支：随机 3 地图 + 3 锁定因子（调真实 ConfigData）。 */
+// ===== 9 模式入口（段2 Phase 0 全模式开局） =====
+export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'suiji';
+
+/** 设各 mode 的 JijieData flag 组合（参照 InitPanel.onClick* 真实 handler）。 */
+function setModeFlags(mode: SessionMode): void {
+  const d: any = JijieData;
+  d.initStart();
+  d.reset();
+  d.modeIsRandom = false; // Phase 0 默认手选契约（与 startManual 一致）
+  d.playerName = 'Phase0 选手';
+  switch (mode) {
+    case 'std8':
+      d.modelFactorCount = 2; break;
+    case 'std10':
+      d.modelFactorCount = 3; break;
+    case 'std12':
+      d.modelFactorCount = 4; break;
+    case 'rescue':
+      d.modelFactorCount = 3; d.modeIsZhengjiu = true; break;
+    case 'one-a':
+      d.modelFactorCount = 3; d.modeIsOnePick = true; break;
+    case 'hard1':
+      d.modelFactorCount = 2; d.modeIsVeryHard = true; break;
+    case 'hard2':
+      d.modelFactorCount = 2; d.modeIsVeryHard = true; d.modeIsVeryHard2 = true; break;
+    case 'feiqiu':
+      d.modelFactorCount = 1; d.modeFeiqiu = true; break;
+    case 'suiji':
+      d.modelFactorCount = 0; d.modeSuiji = true; break;
+  }
+}
+
+/** 复刻 JijieContro.toStart 真实分支（除 UI 副作用 this.jjUI.updateToStart 外）。
+ *  含极难/拯救的「早 toSelect」（递归调 toSelectCore）；startSession 末尾按 status 决定是否再调。 */
 function toStartCore(): void {
   const d: any = JijieData;
   d.status = 1;
   const mfc = d.modelFactorCount;
+
+  // toStart 早 toSelect：极难/拯救（镜像 JijieContro.toStart 第 47-56 行）
+  if (d.modeIsVeryHard) {
+    toSelectCore(); // 极难：A/B 整组 + 因子 jinanArr 强抽+循环
+    ConfigData.popMap('营救矿工');
+  } else if (d.modeIsZhengjiu) {
+    toSelectCore(); // 拯救：固定 7 人 + 因子走 mfc==3 default
+  }
+
+  // 3 地图随机（JijieContro.toStart 第 58-83 行）
   for (let i = 0; i < 3; i++) {
     let map = '';
     let guard = 0;
@@ -55,41 +112,118 @@ function toStartCore(): void {
     ConfigData.popMap(map);
     d.mapList.push(map);
   }
+
+  // mfc==2 popFactor 风暴/裂隙/部署（JijieContro.toStart 第 85-90 行）
   if (mfc === 2) {
     ConfigData.popFactor('风暴英雄');
     ConfigData.popFactor('虚空裂隙');
     ConfigData.popFactor('进攻部署');
   }
+
+  // 3 锁定因子（JijieContro.toStart 第 92-105 行）
   for (let i = 0; i < 3; i++) {
-    const lockFactor = i === 2 && mfc === 4 ? ConfigData.getJijieFactor(false, 0) : ConfigData.getJijieFactor(false);
+    let lockFactor: string;
+    if (d.modeZhenghuo) {
+      lockFactor = '随机';
+    } else if (d.modeFeiqiu) {
+      lockFactor = '混乱工作室';
+    } else if (i === 2 && mfc === 4) {
+      lockFactor = ConfigData.getJijieFactor(d.modeIsVeryHard, 0);
+    } else {
+      lockFactor = ConfigData.getJijieFactor(d.modeIsVeryHard);
+    }
     ConfigData.popFactor(lockFactor);
     d.lockFactorList.push(lockFactor);
   }
 }
 
-/** 复刻 JijieContro.toSelect 标准分支：随机指挥官 A4/B2 + 随机因子池 + null 槽位预填。 */
+/** 复刻 JijieContro.toSelect 真实分支（除 UI 副作用 this.jjUI.updateToSelect + map*.spCommander.setCName 外）。 */
 function toSelectCore(): void {
   const d: any = JijieData;
   d.status = 2;
   const mfc = d.modelFactorCount;
-  let groupList = (ConfigData.commadnerGroupList as any)['A'].slice();
-  for (let i = 0; i < 4; i++) {
-    const ri = rand(groupList.length);
-    d.randomCommanderPoorA.push(groupList[ri]);
-    groupList.splice(ri, 1);
+
+  // ===== 指挥官（JijieContro.toSelect 第 116-187 行） =====
+  if (d.modeIsOnePick) {
+    // UI 副作用：map1/2/3.spCommander.setCName("自选") —— 忽略；末尾 selectedCommanderList 推 3 null
+  } else if (d.modeIsZhengjiu) {
+    // 拯救 hardcode 7 人（不含 ban 过滤）—— 第 120-127 行
+    d.randomCommanderPoorA.push('雷诺');
+    d.randomCommanderPoorA.push('凯瑞甘');
+    d.randomCommanderPoorA.push('阿塔尼斯');
+    d.randomCommanderPoorA.push('斯旺');
+    d.randomCommanderPoorA.push('沃拉尊');
+    d.randomCommanderPoorA.push('斯图科夫');
+    d.randomCommanderPoorA.push('米拉');
+  } else {
+    if (d.modeIsVeryHard && !d.modeIsVeryHard2) {
+      // 极难① 整 A/B 组（第 129-132 行）—— slice() 防污染
+      d.randomCommanderPoorA = (ConfigData.commadnerGroupList as any)['A'].slice();
+      d.randomCommanderPoorB = (ConfigData.commadnerGroupList as any)['B'].slice();
+    } else {
+      // 默认抽 A4/B2；极难② A6/B3；modeSuiji countC=4（死代码未启用）—— 第 134-143 行
+      let countA = 4;
+      let countB = 2;
+      if (d.modeIsVeryHard2) { countA = 6; countB = 3; }
+      // modeSuiji countC=4 死代码省略（C 组未实现）
+
+      // A 组抽取（第 145-159 行）
+      let groupList: string[] = (ConfigData.commadnerGroupList as any)['A'].slice();
+      if (d.modeFeiqiu) {
+        const idx = groupList.indexOf('雷诺');
+        if (idx >= 0) groupList.splice(idx, 1);
+      }
+      for (let i = 0; i < countA; i++) {
+        const ri = rand(groupList.length);
+        const cmder = groupList[ri];
+        d.randomCommanderPoorA.push(cmder);
+        groupList.splice(ri, 1);
+      }
+
+      // B 组抽取（第 161-171 行）
+      groupList = (ConfigData.commadnerGroupList as any)['B'].slice();
+      if (d.modeFeiqiu) {
+        const idx = groupList.indexOf('斯台特曼');
+        if (idx >= 0) groupList.splice(idx, 1);
+      }
+      for (let i = 0; i < countB; i++) {
+        const ri = rand(groupList.length);
+        const cmder = groupList[ri];
+        d.randomCommanderPoorB.push(cmder);
+        groupList.splice(ri, 1);
+      }
+
+      // 自选门控（第 181-183 行）—— modeSuiji/modeFeiqiu 不 push
+      if (!d.modeSuiji && !d.modeFeiqiu) {
+        d.randomCommanderPoorA.push('自选');
+      }
+    }
   }
-  groupList = (ConfigData.commadnerGroupList as any)['B'].slice();
-  for (let i = 0; i < 2; i++) {
-    const ri = rand(groupList.length);
-    d.randomCommanderPoorB.push(groupList[ri]);
-    groupList.splice(ri, 1);
+
+  // ===== 因子（JijieContro.toSelect 第 190-264 行） =====
+  // 进攻部署 popFactor（modeFeiqiu 不 pop）—— 第 192-194 行
+  if (!d.modeFeiqiu) {
+    ConfigData.popFactor('进攻部署');
   }
-  d.randomCommanderPoorA.push('自选');
-  ConfigData.popFactor('进攻部署');
+
   let factorCount = 0;
   let smallRate = 1;
   const pm: any = ConfigData.paramMap;
-  if (mfc === 2) {
+
+  if (d.modeIsVeryHard) {
+    // 极难：factorCount=随机因子数极难 + jinanArr 4选2 强抽 + factorCount-=2 —— 第 199-210 行
+    factorCount = pm['随机因子数极难'];
+    const jinanArr: string[] = ['风暴英雄', '虚空裂隙', '给我死吧', '虚空重生者'];
+    for (let i = 0; i < 2; i++) {
+      const ra = rand(jinanArr.length);
+      const f = jinanArr[ra];
+      jinanArr.splice(ra, 1);
+      ConfigData.popFactor(f);
+      d.randomFactorPoor.push(f);
+    }
+    factorCount -= 2;
+  } else if (mfc === 2) {
+    // 8 因子 —— 第 211-220 行
     factorCount = pm['随机因子数7'];
     ConfigData.popFactor('风暴英雄');
     ConfigData.popFactor('虚空裂隙');
@@ -97,24 +231,131 @@ function toSelectCore(): void {
     if (Math.random() < 0.3) ConfigData.popFactor('同化体');
     smallRate = 0.9;
   } else if (mfc === 4) {
+    // 12 因子 —— 第 221-229 行
     factorCount = pm['随机因子数13'];
+    if (d.modeIsZhengjiu) {
+      // 12 因子 + 拯救（注：实际 mfc=4 走这里；拯救 mfc=3 走 default 分支，见下）
+      ConfigData.popFactor('风暴英雄');
+      ConfigData.popFactor('虚空裂隙');
+      if (Math.random() < 0.3) ConfigData.popFactor('同化体');
+    }
+  } else if (d.modeSuiji) {
+    // 随机模式 —— 第 230-231 行
+    factorCount = 0;
   } else {
+    // 10 因子 / 拯救（mfc=3） / 单指（mfc=3） —— 第 232-245 行
     factorCount = pm['随机因子数10'];
+    if (d.modeIsOnePick) factorCount--;
+    if (d.modeIsZhengjiu) {
+      ConfigData.popFactor('风暴英雄');
+      ConfigData.popFactor('虚空裂隙');
+      if (Math.random() < 0.3) ConfigData.popFactor('同化体');
+    }
     smallRate = 0.9;
   }
-  for (let i = 0; i < factorCount; i++) {
-    const f = ConfigData.getJijieFactor(false, smallRate);
-    ConfigData.popFactor(f);
-    d.randomFactorPoor.push(f);
+
+  // 因子填充（第 247-264 行）
+  if (d.modeIsLanzi) {
+    // 蓝字模式（InitPanel.onClickLanzi；未上 home，预留）—— 第 247-253 行
+    factorCount = 3;
+    for (let i = 0; i < factorCount; i++) {
+      const f = ConfigData.getFactorByScore(i + 1);
+      ConfigData.popFactor(f);
+      d.randomFactorPoor.push(f);
+    }
+  } else if (d.modeFeiqiu) {
+    // 非酋固定 3 因子（第 254-257 行）
+    d.randomFactorPoor.push('风暴英雄');
+    d.randomFactorPoor.push('虚空裂隙');
+    d.randomFactorPoor.push('礼尚往来');
+  } else {
+    // 通用 getJijieFactor 循环（第 258-263 行）
+    for (let i = 0; i < factorCount; i++) {
+      const f = ConfigData.getJijieFactor(d.modeIsVeryHard, smallRate);
+      ConfigData.popFactor(f);
+      d.randomFactorPoor.push(f);
+    }
   }
+
+  // null 预填（第 267-277 行）—— 后被 startSession 9 格契约覆盖
   const nullFactorCount = mfc * 3 - 2;
   for (let i = 0; i < nullFactorCount; i++) d.selectedFactorList.push(null);
   d.selectedCommanderList.push(null, null, null);
 }
 
+/** 9 模式入口：InitPanel 9 handler → startSession(mode)。
+ *  跑 toStartCore（内部按 status 决定是否已调过 toSelectCore；极难/拯救内部已调），
+ *  末尾对非极难/非拯救再调 toSelectCore 一次，最后固化 9 格契约。
+ *  opts 预留段2 BP 接口（banN/gold 暂未启用）。 */
+export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: string[] }): void {
+  restoreConfig(); // 每局重置 ConfigData 母池，防枯竭
+  setModeFlags(mode);
+  toStartCore();
+  // 极难/拯救在 toStartCore 内部已调 toSelectCore，status=2；其他模式需补调
+  if ((JijieData as any).status < 2) {
+    toSelectCore();
+  }
+  // 9 格契约固化（覆盖 toSelect 预填的 mfc*3-2 个 null + 清上局残留）
+  (JijieData as any).selectedCommanderList = [null, null, null];
+  (JijieData as any).selectedFactorList = new Array(9).fill(null);
+  (JijieData as any).winLoseList = [];
+  exposeSelectDebug(mode);
+}
+
+/** 暴露 __jjbDebug.select 给 e2e 读恒等式断言。 */
+export function exposeSelectDebug(mode: SessionMode): void {
+  try {
+    const d: any = JijieData;
+    const slots = [manualSlots(0), manualSlots(1), manualSlots(2)];
+    const sumSlots = slots[0] + slots[1] + slots[2];
+    const poolLen = (d.randomFactorPoor || []).length;
+    const selFacLen = (d.selectedFactorList || []).length;
+    const selCmd = (d.selectedCommanderList || []).slice();
+    const identityPass = poolLen === sumSlots;
+    const w: any = window;
+    w.__jjbDebug = w.__jjbDebug || {};
+    w.__jjbDebug.screen = 'select';
+    w.__jjbDebug.select = {
+      mode,
+      modeIsRandom: !!d.modeIsRandom,
+      modeIsVeryHard: !!d.modeIsVeryHard,
+      modeIsVeryHard2: !!d.modeIsVeryHard2,
+      modeIsZhengjiu: !!d.modeIsZhengjiu,
+      modeIsOnePick: !!d.modeIsOnePick,
+      modeFeiqiu: !!d.modeFeiqiu,
+      modeSuiji: !!d.modeSuiji,
+      modelFactorCount: d.modelFactorCount,
+      status: d.status,
+      mapCount: (d.mapList || []).length,
+      lockCount: (d.lockFactorList || []).length,
+      randomFactorPoorLen: poolLen,
+      randomCommanderPoorALen: (d.randomCommanderPoorA || []).length,
+      randomCommanderPoorBLen: (d.randomCommanderPoorB || []).length,
+      manualSlots: slots,
+      sumSlots,
+      selectedFactorListLen: selFacLen,
+      selectedFactorList: (d.selectedFactorList || []).slice(),
+      selectedCommanderList: selCmd,
+      identityPass,
+    };
+  } catch (e) {
+    /* noop */
+  }
+}
+
+/** 暴露 startSession 到 window.__jjb，供 e2e 与 Phase 0 调试调用。 */
+export function exposeStartSession(): void {
+  const w: any = window;
+  w.__jjb = w.__jjb || {};
+  w.__jjb.startSession = startSession;
+  w.__jjb.startRandomSession = startRandomSession;
+  w.__jjb.exposeSelectDebug = exposeSelectDebug;
+}
+
+// ===== 旧版 Battle 屏接缝（startRandomSession）—— 段1 PoC 兼容 =====
 /** 一局随机开局（复刻 onClick{2,3,13} + toStart + startRandom 9 格填充）。modelFactorCount: 2=8因子/3=10/4=12。 */
 export function startRandomSession(modelFactorCount = 2): void {
-  initConfigOnce();
+  restoreConfig();
   const d: any = JijieData;
   d.initStart();
   d.reset();
@@ -129,7 +370,7 @@ export function startRandomSession(modelFactorCount = 2): void {
   d.modeIsRandom = false;
   toStartCore();
   d.modeIsRandom = true;
-  toSelectCore();
+  if ((JijieData as any).status < 2) toSelectCore();
   // startRandom 9 格契约填充（JJBDesignBoot.startRandom）
   d.selectedCommanderList = [null, null, null];
   d.selectedFactorList = new Array(9).fill(null);

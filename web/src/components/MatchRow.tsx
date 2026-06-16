@@ -32,9 +32,9 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
       </div>
       <div className="match-map">
         <span className="mapthumb">
-          <img src={mapUrl(mapName)} alt="" />
+          {/* 地图图本身已烧录大字标题，不再叠加小字标签；名留 alt 供采集/调试 */}
+          <img src={mapUrl(mapName)} alt={mapName} />
         </span>
-        <span className="match-map-name">{mapName}</span>
       </div>
       <div className="match-cmds">
         {cmds.map((c, i) => (
