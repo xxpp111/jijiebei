@@ -1,0 +1,11 @@
+/* Foundation styles: Google Fonts + design/v4-r2 css (single source of truth, imported in place).
+   Load order mirrors design/v4-r2/_review-battle.html: theme → styles → v4. */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&family=Oswald:wght@500;700&family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap');
+@import '../../../design/v4-r2/theme.css';
+@import '../../../design/v4-r2/styles.css';
+@import '../../../design/v4-r2/v4.css';
+@import '../../../design/v4-r2/obs.css';
+@import './obs-fuller.css';
+
+html, body { margin: 0; background: #0a0b0e; }
+#react-root { display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 18px; }

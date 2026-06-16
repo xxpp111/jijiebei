@@ -1,0 +1,18 @@
+/* 直播浮层饱满优化（用户反馈：缩短侧边距 + 地图/指挥官/因子明确放大）。
+   覆盖 design obs.css（@import 在前），只收紧间距、放大地图缩略，不改 design 红线文件。 */
+
+/* 缩短侧边距：obsbar-inner padding 24 → 14，列间距收紧 */
+.obsbar .obsbar-inner { padding: 13px 16px 14px; gap: 16px; }
+
+/* 比分轨略收窄，把横向空间让给 3 场（地图/指挥官/因子） */
+.obsbar .obs-score { flex: 0 0 168px; }
+
+/* 场次卡内边距收紧，元素占满 */
+.obsbar .obs-match { padding: 9px 12px 11px; gap: 8px; }
+
+/* 地图缩略更高更明确（design 475/85 偏矮 → 提高到 475/120，地图画面更清晰） */
+.obsbar .obs-map .mapthumb { aspect-ratio: 475 / 120; }
+
+/* 因子行与指挥官底对齐、间距匀 */
+.obsbar .obs-line { gap: 12px; }
+.obsbar .obs-facs { gap: 7px; }
