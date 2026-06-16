@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { DropCell } from '../components/DropCell';
-import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
+import { mapUrl, cmdUrl, facUrl, logoUrl, titleUrl } from '../lib/realAsset';
 import {
   getSelectState,
   startSession,
@@ -174,11 +174,9 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
         {/* topbar */}
         <div className="topbar">
           <div className="lockup lockup-sm">
-            <img className="lockup-mark" src="assets/logo-cm-gold.png" alt="CM" />
+            <img className="lockup-mark" src={logoUrl(style, mode)} alt="CM" />
             <span className="lockup-div"></span>
-            <div className="lockup-word">
-              <span className="lockup-cn">集结杯</span>
-            </div>
+            <img className="lockup-title" src={titleUrl(style, mode)} alt="集结杯" style={{ height: 30, display: 'block' }} />
           </div>
           <div className="topbar-meta">
             <div className="meta-row">

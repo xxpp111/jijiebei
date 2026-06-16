@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
 import { startRandomSession, startSession, getSessionMatches, setVerdict, getScore, getSelectState, exposeBattleDebug, randomFillAndStart, type SessionMode } from '../logic/jjbSession';
-import { logoUrl } from '../lib/realAsset';
+import { logoUrl, titleUrl } from '../lib/realAsset';
 
 const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji']);
 
@@ -83,9 +83,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
           <div className="lockup lockup-sm">
             <img className="lockup-mark" src={logo} alt="CM" />
             <span className="lockup-div"></span>
-            <div className="lockup-word">
-              <span className="lockup-cn">集结杯</span>
-            </div>
+            <img className="lockup-title" src={titleUrl(style, mode)} alt="集结杯" style={{ height: 30, display: 'block' }} />
           </div>
           <div className="topbar-meta">
             <div className="meta-row">

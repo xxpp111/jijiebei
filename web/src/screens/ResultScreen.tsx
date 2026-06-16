@@ -1,6 +1,6 @@
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
-import { mapUrl, cmdUrl, facUrl, logoUrl } from '../lib/realAsset';
+import { mapUrl, cmdUrl, facUrl, logoUrl, titleUrl } from '../lib/realAsset';
 import { getSessionMatches, getScore, getSelectState } from '../logic/jjbSession';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
@@ -28,9 +28,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
           <div className="lockup lockup-sm">
             <img className="lockup-mark" src={logo} alt="CM" />
             <span className="lockup-div"></span>
-            <div className="lockup-word">
-              <span className="lockup-cn">集结杯</span>
-            </div>
+            <img className="lockup-title" src={titleUrl(style, mode)} alt="集结杯" style={{ height: 30, display: 'block' }} />
           </div>
           <div className="topbar-meta">
             <div className="meta-row">
