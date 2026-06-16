@@ -207,7 +207,6 @@ function toSelectCore(): void {
   }
 
   let factorCount = 0;
-  let smallRate = 1;
   const pm: any = ConfigData.paramMap;
 
   if (d.modeIsVeryHard) {
@@ -229,7 +228,6 @@ function toSelectCore(): void {
     ConfigData.popFactor('虚空裂隙');
     ConfigData.popFactor('进攻部署');
     if (Math.random() < 0.3) ConfigData.popFactor('同化体');
-    smallRate = 0.9;
   } else if (mfc === 4) {
     // 12 因子 —— 第 221-229 行
     factorCount = pm['随机因子数13'];
@@ -251,7 +249,6 @@ function toSelectCore(): void {
       ConfigData.popFactor('虚空裂隙');
       if (Math.random() < 0.3) ConfigData.popFactor('同化体');
     }
-    smallRate = 0.9;
   }
 
   // 因子填充（第 247-264 行）
@@ -269,9 +266,10 @@ function toSelectCore(): void {
     d.randomFactorPoor.push('虚空裂隙');
     d.randomFactorPoor.push('礼尚往来');
   } else {
-    // 通用 getJijieFactor 循环（第 258-263 行）
+    // 通用 getJijieFactor 循环（第 258-263 行）—— 真身 JijieContro.ts:260 单参，smallRate 在真身是
+    // 死变量（算了不传）；此处对齐真身只传 1 参，不复刻 M3 误传 0.9 导致 group<4 常见因子被打折的分布偏移。
     for (let i = 0; i < factorCount; i++) {
-      const f = ConfigData.getJijieFactor(d.modeIsVeryHard, smallRate);
+      const f = ConfigData.getJijieFactor(d.modeIsVeryHard);
       ConfigData.popFactor(f);
       d.randomFactorPoor.push(f);
     }
