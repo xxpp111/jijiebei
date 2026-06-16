@@ -104,9 +104,15 @@ export function HomeScreen({ style, mode, onStart }: HomeScreenProps) {
         <div className="foot">
           <span className="foot-org">CM × 集结杯 · 真实 JijieData 驱动</span>
           <span className="foot-links">
-            <span className="foot-link">
-              <b>下一屏</b>选择面板 · 静态布局（拖拽留 Phase 2）
-            </span>
+            <a className="foot-link" href="https://space.bilibili.com/347915855" target="_blank" rel="noreferrer" style={{ cursor: 'pointer', textDecoration: 'none' }}>
+              <b>B站主播</b>儒雅随和の土豆
+            </a>
+            <a className="foot-link" href="https://space.bilibili.com/277263402" target="_blank" rel="noreferrer" style={{ cursor: 'pointer', textDecoration: 'none' }}>
+              <b>CM 合作任务</b>B站主页
+            </a>
+            <a className="foot-link" href="https://mcn1taa2k785.feishu.cn/wiki/WF0ZwD2QciFDqGkmHSMcRrdvnyd" target="_blank" rel="noreferrer" style={{ cursor: 'pointer', textDecoration: 'none' }}>
+              <b>集结杯文档</b>飞书知识库
+            </a>
           </span>
         </div>
       </div>
