@@ -11,9 +11,11 @@ import {
   setSelectedFac,
   clearCmdSlot,
   clearFacSlot,
+  getGoldFor,
+  toggleGold,
   type SessionMode,
 } from '../logic/jjbSession';
-import { facFlatIdx, GOLD_FACTORS } from '@jjb/JJBData';
+import { facFlatIdx } from '@jjb/JJBData';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
 
 // 集结杯 × CM — 选择面板整屏（段2 Phase 2：拖拽手选 + 校验 + 手选进 battle）。
@@ -29,6 +31,27 @@ export interface SelectScreenProps {
   style: string;
   mode: string;
   onStart: () => void; // 校验通过 → 手选进 battle → 切屏
+}
+
+/** 点金角标按钮（每个因子右上角，toggle 金/非金；stopPropagation 不触发拖拽/清槽）。 */
+function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      className="gold-toggle"
+      data-gold-toggle={name}
+      title="点金 / 取消金"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      style={{
+        position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10,
+        border: '1px solid rgba(0,0,0,0.35)', cursor: 'pointer', fontSize: 11, lineHeight: '18px',
+        padding: 0, fontWeight: 700, zIndex: 3,
+        background: on ? '#e8b84b' : 'rgba(20,20,20,0.7)', color: on ? '#3a2400' : '#ddd',
+      }}
+    >
+      金
+    </button>
+  );
 }
 
 export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
@@ -221,9 +244,10 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                           ref={setTarget(`factor:${i}:${k}`)}
                           data-slot-fac={`${i}:${k}`}
                           onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
                         >
-                          <FactorFrame src={facUrl(v)} size={52} gold={GOLD_FACTORS.includes(v)} />
+                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
+                          <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
                         </span>
                       ) : (
                         <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
@@ -255,9 +279,10 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                     const el = (ev.currentTarget as HTMLElement);
                     onPoolPointerDown(ev, 'factor', f, el);
                   }}
-                  style={{ cursor: 'grab', touchAction: 'none' }}
+                  style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}
                 >
-                  <FactorFrame src={facUrl(f)} size={66} gold={GOLD_FACTORS.includes(f)} />
+                  <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} />
+                  <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
                 </span>
               ))}
             </div>

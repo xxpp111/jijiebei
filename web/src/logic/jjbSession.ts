@@ -10,7 +10,7 @@
 // 读：JJBData.sessionMatches()（真实桥，0 改）。写回：winLoseList[i]=RESULT_VAL（lose0/win1/bonus2）。
 import JijieData from '@logic/JijieData';
 import ConfigData from '@logic/data/JJConfigData';
-import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, type MatchVM } from '@jjb/JJBData';
+import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, GOLD_FACTORS, type MatchVM } from '@jjb/JJBData';
 
 // jjbLive re-export（段2 Phase 1 BattleScreen/e2e 读当前局是否开局用；非 9 模式逻辑，仅透出）
 export { jjbLive };
@@ -659,3 +659,21 @@ export function exposeSelectError(msg: string, count: number): void {
     w.__jjbDebug.select.errorCount = count;
   } catch { /* noop */ }
 }
+
+// ===== 段3 点金（select 屏运行时 toggle 因子金/非金；后端无此逻辑，纯 React 视觉态，不入计分） =====
+const goldRuntime = new Set<string>();
+
+/** toggle 某因子的运行时点金态（点金 / 取消金）。 */
+export function toggleGold(name: string): void {
+  if (!name) return;
+  if (goldRuntime.has(name)) goldRuntime.delete(name);
+  else goldRuntime.add(name);
+}
+
+/** 因子最终金态 = 后端 GOLD_FACTORS 名单 ∪ 运行时点金（拖进槽/池内渲染金框依据）。 */
+export function getGoldFor(name: string): boolean {
+  return !!name && (GOLD_FACTORS.includes(name) || goldRuntime.has(name));
+}
+
+/** 清运行时点金（开新局时调，避免跨局残留）。 */
+export function clearGoldRuntime(): void { goldRuntime.clear(); }
