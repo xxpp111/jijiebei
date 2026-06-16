@@ -5,7 +5,8 @@ import { BattleScreen } from './screens/BattleScreen';
 import { ObsScreen } from './screens/ObsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
-import { startSession, exposeStartSession, type SessionMode } from './logic/jjbSession';
+import { ResultScreen } from './screens/ResultScreen';
+import { startSession, exposeStartSession, getTotalCount, type SessionMode } from './logic/jjbSession';
 import JijieData from '@logic/JijieData';
 
 // 路由（query）：?screen=home|select|battle|obs|phase0|foundation；?style=metal|sc2|minimal & ?mode=dark|light 初始主题。
@@ -13,7 +14,7 @@ import JijieData from '@logic/JijieData';
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
-type Screen = 'home' | 'select' | 'battle' | 'obs' | 'phase0' | 'foundation';
+type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -70,6 +71,12 @@ export default function App() {
         onClick={() => setScreen('obs')}
         data-nav-obs
       >obs</button>
+      <button
+        className={'ctrl-btn' + (screen === 'result' ? ' on' : '')}
+        onClick={() => { if (getTotalCount() >= 3) setScreen('result'); }}
+        title="查看结算（需三场判定完）"
+        data-nav-result
+      >result</button>
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       {STYLES.map((s) => (
         <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => setStyle(s)} data-style-btn={s}>{s}</button>
@@ -118,6 +125,15 @@ export default function App() {
 
   if (screen === 'obs') {
     return <ObsScreen style={style} mode={mode} />;
+  }
+
+  if (screen === 'result') {
+    return (
+      <>
+        <ResultScreen style={style} mode={mode} />
+        {!bare && switcher}
+      </>
+    );
   }
 
   if (screen === 'phase0') {

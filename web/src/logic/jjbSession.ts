@@ -677,3 +677,20 @@ export function getGoldFor(name: string): boolean {
 
 /** 清运行时点金（开新局时调，避免跨局残留）。 */
 export function clearGoldRuntime(): void { goldRuntime.clear(); }
+
+// ===== 段3 结算/浮窗记分透出（镜像 JJBResult 的 winCount/winbCount/totalCount 语义） =====
+/** 带奖励场数（winLoseList===2）。 */
+export function getBonusCount(): number {
+  const d: any = JijieData;
+  return (d.winLoseList || []).filter((v: number) => v === 2).length;
+}
+/** 已判定场数（winLoseList 含 0/1/2）；结算门控 total>=3 用。 */
+export function getTotalCount(): number {
+  const d: any = JijieData;
+  return (d.winLoseList || []).filter((v: number) => v === 0 || v === 1 || v === 2).length;
+}
+/** winLoseList 快照（Overlay/结算屏读）。 */
+export function getWinLoseList(): number[] {
+  const d: any = JijieData;
+  return (d.winLoseList || []).slice();
+}
