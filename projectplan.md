@@ -1342,3 +1342,44 @@ e2e 内部 6 段断言逐模式跑全 PASS：①池=槽恒等式 ②9 格契约 
 - 01/03 截图的证据价值：撤回前真机截屏是 React 真实渲染的真机产物（不是 autoflow 自己渲染，是 React BattleScreen 组件真读 JijieData 真名后真渲染），但仅作为 done-when #4 toast UI + #6 BattleScreen 渲染的部分真机证据（数据写 + UI 渲染真机，物理路径未真机）
 - 撤回前 autoflow 路径：已撤回（classifier 判为绕过 stop hook 缺失的拖拽真机录证据）；已生成的 01/03 截图保留作为历史证据
 - 未 git commit（按 user 约定，新文件清单待 hub 拍）
+
+---
+
+## v4 R3+ 项目整理盘点（2026-06-17 workflow wzykwvg76，只读，未落地）
+
+> 5 agent 只读盘点 web/src(19文件/2271行) + 根目录散落物。代码层很干净（唯一安全可删=`_SelectMode`，无孤儿文件）；大头是根目录临时产物 + 模式/BP/随机自选结构性差距。下表待人确认后落地，未做任何删除/改动。
+
+### A. 模式 / BP / 随机 / 自选：现状 vs 新归类差距表（→ 喂第二步 Claude Design 设计项）
+
+当前 SessionMode(jjbSession.ts:59)：`std8|std10|std12|rescue|one-a|hard1|hard2|feiqiu|suiji`（9种）；首页暴露7种(HomeScreen.tsx:12-20)：std8/std10/std12/rescue/suiji/doubles(占位)/hard2；one-a、hard1 仅后端可调。
+
+| 维度 | 新归类目标 | 当前实现 | 位置 | 差距 |
+|---|---|---|---|---|
+| 模式 key/label | 8/10/12·拯救·极难·官突·非酋 | 9个 mode + one-a未暴露 | jjbSession.ts:59 | one-a/hard1 未暴露；官突仅占位 |
+| BP 默认开关 | 标准/拯救各自可配；极难默认不可 | 无 BP；仅点金视觉态(点金≠BP) | jjbSession.ts:290-291,663-679 | `_opts.banN` 未启用，需实现 |
+| 随机=叠加层 | 可叠加任意模式之上 | suiji 是独立 mode 不能叠加 | jjbSession.ts:85-86 | modeSuiji 与其他 flag 冲突，需改叠加 |
+| 自选=叠加层 | 可叠加选项 | 模式内特性，selfShow 门控部分模式 | jjbSession.ts:492-505 | 非独立叠加层 |
+| 双打/官突 | 独立双打赛制 | doubles 占位 soon=true | HomeScreen.tsx:18 | 待独立引擎 |
+| 极难 | 单一极难，BP 默认不可 | 拆 hard1/hard2，无 BP | jjbSession.ts:79-82 | hard1 未暴露，口径需对齐 |
+| 非酋 | 独立赛制 | feiqiu 已实现(3固定因子) | jjbSession.ts:83-84,266-270 | 完整 |
+
+补：modelFactorCount 映射 std8=2/std10=3/std12=4/rescue=3/one-a=3/hard1=2/hard2=2/feiqiu=1/suiji=0。selfShow 仅 std8/10/12+极难②显示。
+
+### B. 整理动作清单（按风险，标红线）
+
+| # | 动作 | 风险 | 触红线 |
+|---|---|---|---|
+| 1 | 删未用导出 `_SelectMode`(SelectScreen.tsx:401) | 极低 | 否 |
+| 2 | 删根临时产物：std10-after-drag.png / diagrams 9个时间戳目录 / .harness-pro-*(10) / .playwright-mcp(21png) | 极低 | 否（需逐类确认，不可逆） |
+| 3 | 补根 README.md 导航 | 极低 | 否 |
+| 4 | docs/ 与 knowledge-base/ 去重合并；poc-result.md 归档；kb-guide/kb-whiteboards 入飞书KB留指针 | 低 | 否 |
+| 5 | dragdrop shouldSuppressClickClear 单层化/改名；SelectScreen void tick 改写 | 低 | 否 |
+| 6 | 合并 startRandomSession/randomFillAndStart 9格填充重复+重命名 | 中 | 接近（对外API面，勿破坏签名） |
+| 7 | 提取 A/B组抽取 helper；BattleScreen 嵌套if抽工厂 | 中 | 否（toSelectCore复刻真身需谨慎） |
+| 8 | as any 收敛内部接口；clearCmd/FacSlot 改重载 | 中 | 否 |
+| 9 | toStartCore/toSelectCore 注释提取doc + refactor随机流程 | 高 | 触（复刻真身，单独立项） |
+| 10 | 随机/自选改叠加层 + BP实现 + 双打引擎 + label对齐新归类 | 高（新功能非清理） | 触（改modeFlags/真身契约面，第二步起单独立项） |
+
+### C. 红线接缝 API 面（重构勿破坏签名）
+
+jjbSession 对外：`startSession/getSelectState/setSelectedCmd/setSelectedFac/clearCmdSlot/clearFacSlot/validate/startFromSelection/randomFillAndStart/startRandomSession/getSessionMatches/setVerdict/getScore/toggleGold/getGoldFor/exposeSelectDebug/exposeBattleDebug/exposeObsbarDebug/jjbLive`。纯 React 视觉态：goldRuntime Set(664-679，刷新即失，不入计分)。

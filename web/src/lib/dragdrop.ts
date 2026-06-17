@@ -137,11 +137,6 @@ export function startDrag(opts: StartDragOpts, ev: PointerEvent): void {
 }
 
 /** 校验 click 是否在 lastDropAt 之后 350ms 窗口内（防 drop 触发后 click 清槽）。 */
-export function isWithinClickFillWindow(): boolean {
-  return Date.now() - lastDropAt < CLICK_FILL_WINDOW;
-}
-
-/** 在容器上挂全局 click 监听，把 click 转给最近 cmd/factor 槽（自动检测 kind）。 */
 export function shouldSuppressClickClear(): boolean {
-  return isWithinClickFillWindow();
+  return Date.now() - lastDropAt < CLICK_FILL_WINDOW;
 }

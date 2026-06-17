@@ -352,8 +352,26 @@ export function exposeStartSession(): void {
   w.__jjb.startRandomSession = startRandomSession;
   w.__jjb.exposeSelectDebug = exposeSelectDebug;
   w.__jjb.getSelectState = getSelectState;
+  w.__jjb.randomFillSelection = randomFillSelection;
   w.__jjb.randomFillAndStart = randomFillAndStart;
   w.__jjb.jjbLive = jjbLive;
+}
+
+function fillSelectionSlots(d: any): void {
+  d.selectedCommanderList = [null, null, null];
+  d.selectedFactorList = new Array(9).fill(null);
+  const cmdA = (d.randomCommanderPoorA || []).filter((c: string) => c && c !== '自选');
+  const cmdB = (d.randomCommanderPoorB || []).filter((c: string) => c && c !== '自选');
+  const allCmds = cmdA.concat(cmdB);
+  for (let i = 0; i < 3 && i < allCmds.length; i++) d.selectedCommanderList[i] = allCmds[i];
+  const factors = (d.randomFactorPoor || []).slice();
+  let fIdx = 0;
+  for (let slot = 0; slot < 3; slot++) {
+    const cap = manualSlots(slot);
+    for (let k = 0; k < cap && fIdx < factors.length; k++) {
+      d.selectedFactorList[facFlatIdx(slot, k)] = factors[fIdx++];
+    }
+  }
 }
 
 // ===== 旧版 Battle 屏接缝（startRandomSession）—— 段1 PoC 兼容 =====
@@ -376,20 +394,7 @@ export function startRandomSession(modelFactorCount = 2): void {
   d.modeIsRandom = true;
   if ((JijieData as any).status < 2) toSelectCore();
   // startRandom 9 格契约填充（JJBDesignBoot.startRandom）
-  d.selectedCommanderList = [null, null, null];
-  d.selectedFactorList = new Array(9).fill(null);
-  const cmdA = (d.randomCommanderPoorA || []).filter((c: string) => c && c !== '自选');
-  const cmdB = (d.randomCommanderPoorB || []).filter((c: string) => c && c !== '自选');
-  const allCmds = cmdA.concat(cmdB);
-  for (let i = 0; i < 3 && i < allCmds.length; i++) d.selectedCommanderList[i] = allCmds[i];
-  const factors = (d.randomFactorPoor || []).slice();
-  let fIdx = 0;
-  for (let slot = 0; slot < 3; slot++) {
-    const cap = manualSlots(slot);
-    for (let k = 0; k < cap && fIdx < factors.length; k++) {
-      d.selectedFactorList[facFlatIdx(slot, k)] = factors[fIdx++];
-    }
-  }
+  fillSelectionSlots(d);
   d.winLoseList = [];
   d.status = 3;
   exposeBattleDebug();
@@ -538,25 +543,17 @@ export function getSelectState(): SelectState {
 export function randomFillAndStart(): void {
   const d: any = JijieData;
   if (!jjbLive()) return;
-  d.selectedCommanderList = [null, null, null];
-  d.selectedFactorList = new Array(9).fill(null);
-  // 指挥官池合并去 '自选'（对齐 startRandomSession 9 格契约填充）
-  const cmdA = (d.randomCommanderPoorA || []).filter((c: string) => c && c !== '自选');
-  const cmdB = (d.randomCommanderPoorB || []).filter((c: string) => c && c !== '自选');
-  const allCmds = cmdA.concat(cmdB);
-  for (let i = 0; i < 3 && i < allCmds.length; i++) d.selectedCommanderList[i] = allCmds[i];
-  // 因子池按 manualSlots(i) 槽位填（与 JJBDesignBoot.startRandom 对齐）
-  const factors = (d.randomFactorPoor || []).slice();
-  let fIdx = 0;
-  for (let slot = 0; slot < 3; slot++) {
-    const cap = manualSlots(slot);
-    for (let k = 0; k < cap && fIdx < factors.length; k++) {
-      d.selectedFactorList[facFlatIdx(slot, k)] = factors[fIdx++];
-    }
-  }
+  fillSelectionSlots(d);
   d.winLoseList = [];
   d.status = 3;
   exposeBattleDebug();
+}
+
+export function randomFillSelection(): void {
+  const d: any = JijieData;
+  if (!jjbLive()) return;
+  fillSelectionSlots(d);
+  exposeSelectDebug(getSelectState().mode);
 }
 
 // ===== 段2 Phase 2：手选写回 + 校验三规则 + 手选进 battle =====
@@ -575,7 +572,7 @@ function isGroupB(name: string): boolean {
 }
 
 /** 写第 slot 场指挥官（idx=0 唯一；后续若接双打可扩 2）。jjbLive=false 时静默 noop（不破坏数据接缝）。 */
-export function setSelectedCmd(slot: number, name: string): void {
+export function setSelectedCmd(slot: number, name: string | null): void {
   const d: any = JijieData;
   if (!jjbLive()) return;
   if (!Array.isArray(d.selectedCommanderList)) d.selectedCommanderList = [null, null, null];
@@ -584,7 +581,7 @@ export function setSelectedCmd(slot: number, name: string): void {
 }
 
 /** 写第 slot 场第 k 槽因子（按 facFlatIdx(slot,k) 写扁平 9 格）。 */
-export function setSelectedFac(slot: number, k: number, name: string): void {
+export function setSelectedFac(slot: number, k: number, name: string | null): void {
   const d: any = JijieData;
   if (!jjbLive()) return;
   if (!Array.isArray(d.selectedFactorList)) d.selectedFactorList = new Array(9).fill(null);
@@ -593,10 +590,10 @@ export function setSelectedFac(slot: number, k: number, name: string): void {
 }
 
 /** 清第 slot 场指挥官（回填 null）。 */
-export function clearCmdSlot(slot: number): void { setSelectedCmd(slot, null as any); }
+export function clearCmdSlot(slot: number): void { setSelectedCmd(slot, null); }
 
 /** 清第 slot 场第 k 槽因子。 */
-export function clearFacSlot(slot: number, k: number): void { setSelectedFac(slot, k, null as any); }
+export function clearFacSlot(slot: number, k: number): void { setSelectedFac(slot, k, null); }
 
 /** 校验三规则（镜像真身 JJBSelect.validate）。
  *  ① 每场指挥官未选→err

@@ -1,6 +1,7 @@
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
-import { mapUrl, cmdUrl, facUrl, logoUrl, titleUrl } from '../lib/realAsset';
+import { BrandLockup } from '../components/BrandLockup';
+import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 import { getSessionMatches, getScore, getSelectState } from '../logic/jjbSession';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
@@ -12,7 +13,6 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
   const wins = getScore();
   const total = matches.length;
   const s = getSelectState();
-  const logo = logoUrl(style, mode);
   const playerName = s.playerName || '集结杯选手';
 
   return (
@@ -25,11 +25,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
       <div className="jjb-inner result">
         {/* TopBar（同对战页） */}
         <div className="topbar">
-          <div className="lockup lockup-sm">
-            <img className="lockup-mark" src={logo} alt="CM" />
-            <span className="lockup-div"></span>
-            <img className="lockup-title" src={titleUrl(style, mode)} alt="集结杯" style={{ height: 30, display: 'block' }} />
-          </div>
+          <BrandLockup styleName={style} modeName={mode} size="sm" />
           <div className="topbar-meta">
             <div className="meta-row">
               <span className="meta-k">当前选手</span>
@@ -37,7 +33,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
             </div>
             <div className="meta-row">
               <span className="meta-k">比赛模式</span>
-              <span className="meta-v">{modeLabel(s)}</span>
+              <span className="meta-v" data-meta-mode>{modeLabel(s)}</span>
             </div>
           </div>
         </div>
@@ -56,6 +52,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
         <div className="rcards" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {matches.map((m, i) => {
             const cls = 'rcard' + (m.result ? ' rcard-' + m.result : '');
+            const mapSrc = mapUrl(m.map);
             return (
               <div key={i} className={cls} data-rcard-idx={i}>
                 <div className="rcard-no">
@@ -63,7 +60,13 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
                 </div>
                 <div className="rcard-map">
                   <span className="mapthumb">
-                    <img src={mapUrl(m.map)} alt={m.map} />
+                    {mapSrc ? (
+                      <img src={mapSrc} alt={m.map} />
+                    ) : (
+                      <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
+                        {m.map}
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="rcard-mid">
@@ -90,7 +93,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
 
         {/* 页脚 */}
         <div className="foot">
-          <span className="foot-org">CM × 集结杯 · 主播「儒雅随和の土豆」</span>
+          <span className="foot-org">CM × 集结杯</span>
           <span className="foot-links">
             <a className="foot-link" href="https://mcn1taa2k785.feishu.cn/wiki/WF0ZwD2QciFDqGkmHSMcRrdvnyd" target="_blank" rel="noreferrer" style={{ cursor: 'pointer', textDecoration: 'none' }}>
               <b>集结杯文档</b>飞书知识库
@@ -103,15 +106,14 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
 }
 
 function modeLabel(s: ReturnType<typeof getSelectState>): string {
+  if (s.modelFactorCount === 4) return '极难模式';
   const fc = s.modelFactorCount === 0 ? '随机'
     : s.modelFactorCount === 2 ? '8 因子'
     : s.modelFactorCount === 3 ? '10 因子'
-    : s.modelFactorCount === 4 ? '12 因子'
     : `${s.modelFactorCount} 因子`;
   const ml = s.modeIsZhengjiu ? '拯救'
     : s.modeIsOnePick ? '单指'
-    : s.modeIsVeryHard2 ? '极难②'
-    : s.modeIsVeryHard ? '极难①'
+    : s.modeIsVeryHard2 || s.modeIsVeryHard ? '极难'
     : s.modeFeiqiu ? '非酋'
     : s.modeSuiji ? '随机'
     : '手选';

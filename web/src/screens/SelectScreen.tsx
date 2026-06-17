@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { DropCell } from '../components/DropCell';
-import { mapUrl, cmdUrl, facUrl, logoUrl, titleUrl } from '../lib/realAsset';
+import { BrandLockup } from '../components/BrandLockup';
+import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 import {
   getSelectState,
   startSession,
@@ -13,6 +14,7 @@ import {
   clearFacSlot,
   getGoldFor,
   toggleGold,
+  randomFillSelection,
   type SessionMode,
 } from '../logic/jjbSession';
 import { facFlatIdx } from '@jjb/JJBData';
@@ -26,6 +28,9 @@ import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/drag
 // 手动校验三规则镜像真身 JJBSelect.validate（JJBData.manualSlots + ConfigData.commadnerGroupList['B'] 查表）。
 
 const SLOT_TITLES = ['第 1 场', '第 2 场', 'BOSS 战'];
+// URL ?mode= 兜底白名单：仅真实 SessionMode 才直接开局；主题值(dark/light)等非法值回落 std8，
+// 避免 startSession('dark') 致 modelFactorCount 错乱→manualSlots=null（对齐 BattleScreen MODES_SET 守卫）。
+const VALID_MODES = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji']);
 
 export interface SelectScreenProps {
   style: string;
@@ -57,13 +62,14 @@ function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle
 export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
   // 兜底：?screen=select 直跳时若 jjbLive=false 在本屏内开一局 std8 后 setState 强制重渲。
   // URL ?mode=std8|std10|... 覆盖默认 std8（home→select 跳转时也用相同 URL 模式同源）。
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   useEffect(() => {
     const s = getSelectState();
     if (!s.jjbLive) {
-      const m = (typeof window !== 'undefined'
-        ? (new URLSearchParams(window.location.search).get('mode') as SessionMode | null)
-        : null) || 'std8';
+      const raw = (typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('mode')
+        : null);
+      const m: SessionMode = (raw && VALID_MODES.has(raw as SessionMode)) ? (raw as SessionMode) : 'std8';
       try { startSession(m); setTick((x) => x + 1); } catch (e) { console.error('[Select] 兜底开局失败:', e); }
     }
   }, []);
@@ -77,7 +83,6 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
 
   const s = getSelectState();
   const live = s.jjbLive;
-  void tick;
 
   // 因子池/指挥官池（真实完整池，不截断；对齐 Cocos 真身整池渲染；6 主题渲染由 design 排版约束）
   const factorRow = useMemo(() => s.randomFactorPoor.slice(), [s.randomFactorPoor]);
@@ -150,6 +155,11 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
     onStart();
   };
 
+  const handleRandomFill = () => {
+    randomFillSelection();
+    setTick((x) => x + 1);
+  };
+
   if (!live) {
     return (
       <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720, color: '#fff', padding: 40 }}>
@@ -173,11 +183,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
       <div className="jjb-inner sel">
         {/* topbar */}
         <div className="topbar">
-          <div className="lockup lockup-sm">
-            <img className="lockup-mark" src={logoUrl(style, mode)} alt="CM" />
-            <span className="lockup-div"></span>
-            <img className="lockup-title" src={titleUrl(style, mode)} alt="集结杯" style={{ height: 30, display: 'block' }} />
-          </div>
+          <BrandLockup styleName={style} modeName={mode} size="sm" />
           <div className="topbar-meta">
             <div className="meta-row">
               <span className="meta-k">当前选手</span>
@@ -194,6 +200,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
         <div className="slots">
           {s.manualSlots.map((slots, i) => {
             const mapName = s.mapList[i] || '—';
+            const mapSrc = mapUrl(mapName);
             const lock = s.lockFactorList[i];
             const selCmd = s.selectedCommanderList[i];
             const isBoss = i === 2;
@@ -209,7 +216,13 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                   {isBoss && <span className="slot-flag">双倍</span>}
                 </div>
                 <span className="mapthumb">
-                  <img src={mapUrl(mapName)} alt={mapName} />
+                  {mapSrc ? (
+                    <img src={mapSrc} alt={mapName} />
+                  ) : (
+                    <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
+                      {mapName}
+                    </span>
+                  )}
                 </span>
                 <div className="slot-targets">
                   <div className="t-cmds">
@@ -220,7 +233,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                         onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i); }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <CommanderCard src={cmdUrl(selCmd)} name={selCmd} w={56} h={67} fill />
+                        <CommanderCard src={cmdUrl(selCmd)} name={selCmd} w={56} h={67} fill check />
                       </span>
                     ) : (
                       <DropCell ref={setTarget(`cmd:${i}:0`)} w={56} h={67} hint="指挥官" />
@@ -244,7 +257,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                           onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
                           style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
                         >
-                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
+                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} check />
                           <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
                         </span>
                       ) : (
@@ -368,6 +381,14 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
               )}
               <button
                 className="startbtn"
+                data-random-fill-btn
+                style={{ margin: 0, padding: '14px 26px' }}
+                onClick={handleRandomFill}
+              >
+                随机填充
+              </button>
+              <button
+                className="startbtn"
                 data-start-btn
                 style={{ margin: 0 }}
                 onClick={handleStart}
@@ -383,19 +404,16 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
 }
 
 function modeMeta(s: ReturnType<typeof getSelectState>): string {
+  if (s.modelFactorCount === 4) return '极难模式';
   const factorLabel = s.modelFactorCount === 0 ? '随机'
     : s.modelFactorCount === 2 ? '8 因子'
     : s.modelFactorCount === 3 ? '10 因子'
-    : s.modelFactorCount === 4 ? '12 因子'
     : `${s.modelFactorCount} 因子`;
   const modeLabel = s.modeIsZhengjiu ? '拯救'
     : s.modeIsOnePick ? '单指'
-    : s.modeIsVeryHard2 ? '极难②'
-    : s.modeIsVeryHard ? '极难①'
+    : s.modeIsVeryHard2 || s.modeIsVeryHard ? '极难'
     : s.modeFeiqiu ? '非酋'
     : s.modeSuiji ? '随机'
     : '手选';
   return `${factorLabel} · ${modeLabel}`;
 }
-
-export type _SelectMode = SessionMode;

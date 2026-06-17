@@ -6,7 +6,7 @@ import { ObsScreen } from './screens/ObsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { ResultScreen } from './screens/ResultScreen';
-import { startSession, exposeStartSession, getTotalCount, type SessionMode } from './logic/jjbSession';
+import { startSession, exposeStartSession, getSelectState, getTotalCount, type SessionMode } from './logic/jjbSession';
 import JijieData from '@logic/JijieData';
 
 // 路由（query）：?screen=home|select|battle|obs|phase0|foundation；?style=metal|sc2|minimal & ?mode=dark|light 初始主题。
@@ -14,6 +14,22 @@ import JijieData from '@logic/JijieData';
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
+const SCREEN_LABELS: Record<string, string> = {
+  home: '主界面',
+  select: '选择',
+  battle: '对战',
+  obs: '直播条',
+  result: '结算',
+};
+const STYLE_LABELS: Record<(typeof STYLES)[number], string> = {
+  metal: '金属',
+  sc2: '星际',
+  minimal: '极简',
+};
+const MODE_LABELS: Record<(typeof MODES)[number], string> = {
+  dark: '深色',
+  light: '浅色',
+};
 type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
@@ -27,6 +43,7 @@ export default function App() {
   const [style, setStyle] = useState<(typeof STYLES)[number]>((q('style', 'sc2') as any));
   const [mode, setMode] = useState<(typeof MODES)[number]>((q('mode', 'dark') as any));
   const [screen, setScreen] = useState<Screen>(initialScreen);
+  const [rerenderTick, setRerenderTick] = useState(0);
 
   // select 屏兜底（?screen=select 直跳）：JijieData 还没开局就开一局 std8（按 stop_when 第 5 条）。
   useEffect(() => {
@@ -42,6 +59,12 @@ export default function App() {
     }
   }, [screen]);
 
+  const restartCurrentMode = () => {
+    const currentMode = getSelectState().mode;
+    startSession(currentMode);
+    setRerenderTick((x) => x + 1);
+  };
+
   const switcher = (
     <div
       className={`jjb style-${style} mode-${mode}`}
@@ -55,36 +78,39 @@ export default function App() {
         className={'ctrl-btn' + (screen === 'home' ? ' on' : '')}
         onClick={() => setScreen('home')}
         data-nav-home
-      >home</button>
+      >{SCREEN_LABELS.home}</button>
       <button
         className={'ctrl-btn' + (screen === 'select' ? ' on' : '')}
         onClick={() => setScreen('select')}
         data-nav-select
-      >select</button>
+      >{SCREEN_LABELS.select}</button>
       <button
         className={'ctrl-btn' + (screen === 'battle' ? ' on' : '')}
         onClick={() => setScreen('battle')}
         data-nav-battle
-      >battle</button>
+      >{SCREEN_LABELS.battle}</button>
       <button
         className={'ctrl-btn' + (screen === 'obs' ? ' on' : '')}
         onClick={() => setScreen('obs')}
         data-nav-obs
-      >obs</button>
+      >{SCREEN_LABELS.obs}</button>
       <button
         className={'ctrl-btn' + (screen === 'result' ? ' on' : '')}
         onClick={() => { if (getTotalCount() >= 3) setScreen('result'); }}
         title="查看结算（需三场判定完）"
         data-nav-result
-      >result</button>
+      >{SCREEN_LABELS.result}</button>
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       {STYLES.map((s) => (
-        <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => setStyle(s)} data-style-btn={s}>{s}</button>
+        <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => setStyle(s)} data-style-btn={s}>{STYLE_LABELS[s]}</button>
       ))}
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       {MODES.map((m) => (
-        <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => setMode(m)} data-mode-btn={m}>{m}</button>
+        <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => setMode(m)} data-mode-btn={m}>{MODE_LABELS[m]}</button>
       ))}
+      <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
+      <button className="ctrl-btn" type="button" onClick={restartCurrentMode} data-rerandom-btn>重新随机</button>
+      <button className="ctrl-btn" type="button" onClick={() => setScreen('home')} data-back-home-btn>回主界面</button>
     </div>
   );
 
@@ -92,6 +118,7 @@ export default function App() {
     return (
       <>
         <HomeScreen
+          key={`home-${rerenderTick}`}
           style={style}
           mode={mode}
           onStart={(_m: SessionMode, _name: string) => setScreen('select')}
@@ -105,6 +132,7 @@ export default function App() {
     return (
       <>
         <SelectScreen
+          key={`select-${rerenderTick}`}
           style={style}
           mode={mode}
           onStart={() => setScreen('battle')}
@@ -117,20 +145,20 @@ export default function App() {
   if (screen === 'battle') {
     return (
       <>
-        <BattleScreen style={style} mode={mode} />
+        <BattleScreen key={`battle-${rerenderTick}`} style={style} mode={mode} />
         {!bare && switcher}
       </>
     );
   }
 
   if (screen === 'obs') {
-    return <ObsScreen style={style} mode={mode} />;
+    return <ObsScreen key={`obs-${rerenderTick}`} style={style} mode={mode} />;
   }
 
   if (screen === 'result') {
     return (
       <>
-        <ResultScreen style={style} mode={mode} />
+        <ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} />
         {!bare && switcher}
       </>
     );

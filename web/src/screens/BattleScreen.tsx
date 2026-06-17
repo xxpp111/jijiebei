@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
 import { startRandomSession, startSession, getSessionMatches, setVerdict, getScore, getSelectState, exposeBattleDebug, randomFillAndStart, type SessionMode } from '../logic/jjbSession';
-import { logoUrl, titleUrl } from '../lib/realAsset';
+import { BrandLockup } from '../components/BrandLockup';
 
 const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji']);
 
@@ -54,7 +54,6 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
   const score = getScore();
   const s = getSelectState();
   const playerName = s.playerName || '集结杯选手';
-  const logo = logoUrl(style, mode);
   const rows: MatchRowData[] = matches.map((m, i) => ({
     idx: i,
     slot: m.slot,
@@ -80,11 +79,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
       </div>
       <div className="jjb-inner battle">
         <div className="topbar">
-          <div className="lockup lockup-sm">
-            <img className="lockup-mark" src={logo} alt="CM" />
-            <span className="lockup-div"></span>
-            <img className="lockup-title" src={titleUrl(style, mode)} alt="集结杯" style={{ height: 30, display: 'block' }} />
-          </div>
+          <BrandLockup styleName={style} modeName={mode} size="sm" />
           <div className="topbar-meta">
             <div className="meta-row">
               <span className="meta-k">当前选手</span>
@@ -111,10 +106,10 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
         </div>
 
         <div className="foot">
-          <span className="foot-org">CM × 集结杯 · React PoC（真实 JijieData · sessionMatches）</span>
+          <span className="foot-org">CM × 集结杯</span>
           <span className="foot-links">
             <span className="foot-link">
-              <b>数据源</b>真实 csv → ConfigData → JijieData
+              <b>直播判定</b>胜利 / 带奖励 / 失败
             </span>
           </span>
         </div>

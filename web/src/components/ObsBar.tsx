@@ -35,6 +35,7 @@ function ObsBadge({ status, verdict }: { status: string; verdict?: string }) {
 
 function ObsMatch({ row }: { row: ObsRow }) {
   const live = row.status === 'live';
+  const mapSrc = mapUrl(row.mapName);
   // 饱满放大（design 原 live 56×67/FX44、非 live 46×55/FX34 → 放大一档，地图/指挥官/因子更明确）
   const ccW = live ? 64 : 56;
   const ccH = live ? 76 : 66;
@@ -51,7 +52,13 @@ function ObsMatch({ row }: { row: ObsRow }) {
       <div className="obs-map">
         <span className="mapthumb">
           {/* 地图图本身已烧录大字标题（净网行动/升格之链/克哈裂痕…），不再叠加小字标签；名留 alt 供采集/调试 */}
-          <img src={mapUrl(row.mapName)} alt={row.mapName} />
+          {mapSrc ? (
+            <img src={mapSrc} alt={row.mapName} />
+          ) : (
+            <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
+              {row.mapName}
+            </span>
+          )}
         </span>
       </div>
       <div className="obs-line">
@@ -82,7 +89,7 @@ export function ObsBar({ style, mode, rows, wins, total }: { style: string; mode
       <div className="obsbar-inner">
         <div className="obs-score">
           <div className="obs-score-brand">
-            <img className="obs-score-mark" src={logo} alt="CM" />
+            {logo ? <img className="obs-score-mark" src={logo} alt="CM" /> : <span className="obs-score-mark">CM</span>}
             <span className="obs-score-div"></span>
             <span className="obs-score-cn">集结杯</span>
           </div>

@@ -24,6 +24,7 @@ export interface MatchRowData {
 
 export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (v: 'win' | 'bonus' | 'lose') => void }) {
   const { idx, slot, mapName, cmds, factors, lock, verdict, boss } = data;
+  const mapSrc = mapUrl(mapName);
   const cls = ['match', boss && 'match-boss', verdict && 'match-done'].filter(Boolean).join(' ');
   return (
     <div className={cls}>
@@ -33,7 +34,13 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
       <div className="match-map">
         <span className="mapthumb">
           {/* 地图图本身已烧录大字标题，不再叠加小字标签；名留 alt 供采集/调试 */}
-          <img src={mapUrl(mapName)} alt={mapName} />
+          {mapSrc ? (
+            <img src={mapSrc} alt={mapName} />
+          ) : (
+            <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
+              {mapName}
+            </span>
+          )}
         </span>
       </div>
       <div className="match-cmds">

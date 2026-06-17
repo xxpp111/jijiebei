@@ -25,7 +25,7 @@ export function FactorFrame({
     .filter(Boolean).join(' ');
   return (
     <div className={cls} style={{ '--fxz': size + 'px' } as React.CSSProperties}>
-      <img className="fx-art" src={src} alt="" />
+      {src && <img className="fx-art" src={src} alt="" />}
       <img className="fx-frame" src={gold ? BORDER_GOLD : BORDER_NORMAL} alt="" />
       <span className="fx-ring"></span>
       {check && <span className="fx-check">✓</span>}
