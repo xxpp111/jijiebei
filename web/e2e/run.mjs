@@ -400,6 +400,42 @@ try {
     // 隔离复核：双打全流程操作后，单打 difficultyTotal 仍 = 基线（JJBDoubles 零污染 JijieData 计分）
     if (difficultyTotal() !== diffBaseline) fail(`doubles 隔离: 双打全流程后单打 difficultyTotal ${difficultyTotal()} ≠ 基线 ${diffBaseline}`);
     console.log(`  [doubles] 全路径：场0手选(cmd2/fac3+官突lock=${muts[0]})✓ randomFill+validate✓ verdict[win,bonus,lose]→score=2✓ 难度分隔离(单打 difficultyTotal=${diffBaseline} 双打前后不变)✓`);
+
+    // ===== R5③ 双打会话级持久断言：doubles 经 startSession 切单打再切回 doubles，池仍满 =====
+    // ① startSession('std8') 非 doubles 分支应重置 JJBDoubles（doublesLive→false）
+    startSession('doubles');
+    if (!globalThis.window.__jjbDebug.doubles.live) fail('R5③ doubles: 启动后应 live=true');
+    const dblLiveBefore = globalThis.window.__jjbDebug.doubles;
+    const dblCmdPool = dblLiveBefore.commanderPool.length;
+    const dblFacPool = dblLiveBefore.factorPool.length;
+    // 切到单打 std8：doublesLive 应变 false（startSession 非 doubles 重置引擎）
+    startSession('std8');
+    if (globalThis.window.__jjbDebug.doubles && globalThis.window.__jjbDebug.doubles.live) fail('R5③ startSession(std8) 应重置 doubles（live→false）');
+    // 切回 doubles：池应重新满（cmdPool=6, facPool=9）
+    startSession('doubles');
+    const dblAfter = globalThis.window.__jjbDebug.doubles;
+    if (!dblAfter || !dblAfter.live) fail('R5③ 切回 doubles 后应 live=true');
+    if ((dblAfter.commanderPool || []).length !== dblCmdPool) fail(`R5③ 切回 doubles cmdPool=${(dblAfter.commanderPool||[]).length} ≠ ${dblCmdPool}`);
+    if ((dblAfter.factorPool || []).length !== dblFacPool) fail(`R5③ 切回 doubles facPool=${(dblAfter.factorPool||[]).length} ≠ ${dblFacPool}`);
+    // 随机填充仍可用（池满→槽满）
+    randomFillDoubles();
+    const dblFillState = getDoublesState();
+    const dblFillCmd = (dblFillState.selection.slots || []).reduce((n, s) => n + (s.cmds || []).filter(Boolean).length, 0);
+    const dblFillFac = (dblFillState.selection.slots || []).reduce((n, s) => n + (s.factors || []).filter(Boolean).length, 0);
+    if (dblFillCmd !== 6) fail(`R5③ doubles 经模式切换后随机填充 cmd=${dblFillCmd} ≠ 6`);
+    if (dblFillFac !== 9) fail(`R5③ doubles 经模式切换后随机填充 fac=${dblFillFac} ≠ 9`);
+    pass(`R5③ 双打持久: startSession(std8)重置doubles✓ 切回doubles池仍满(cmd6/fac9)✓ 随机填充仍可用(cmd6/fac9)✓`);
+
+    // ===== R5②-B 官突完整取值断言：doublesMatches()[i].factors 含完整风暴+虚空 + lock/mutators 一致 =====
+    startSession('doubles');
+    const rm = doublesMatches();
+    const allMuts = (globalThis.window.__jjbDebug.doubles.config.mutators || []);
+    rm.forEach((mm, i) => {
+      if (!(mm.mutators || []).every((mu) => allMuts.includes(mu))) fail(`R5②-B 场${i} mutators=${JSON.stringify(mm.mutators)} ≠ 完整官突 ${JSON.stringify(allMuts)}`);
+      if (mm.lock !== allMuts[0]) fail(`R5②-B 场${i} lock=${mm.lock} ≠ mutators[0]=${allMuts[0]}`);
+      if (!allMuts.every((mu) => mm.factors.includes(mu))) fail(`R5②-B 场${i} factors=${JSON.stringify(mm.factors)} 未含完整官突 ${JSON.stringify(allMuts)}`);
+    });
+    pass(`R5②-B 官突取值: 三场 factors 含完整[${allMuts.join(',')}] mutators数组一致 ✓`);
   } catch (e) {
     fail(`doubles: 接缝异常 ${e && e.message ? e.message : e}`);
   }

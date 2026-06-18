@@ -3,17 +3,19 @@ import { FactorFrame } from '../components/FactorFrame';
 import { BrandLockup } from '../components/BrandLockup';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 import { getSessionMatches, getScore, getSelectState, matchDifficulty } from '../logic/jjbSession';
+import { doublesLive, doublesMatches, doublesScore } from '../logic/jjbDoubles';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
 
 // ResultScreen — 结算屏（段3③）。承接后端 JJBResult.build：TopBar + 大比分 banner + 战绩卡列表 + 页脚。
 // 大比分 = getScore()（winCount，含带奖励不双计）；战绩卡 result 从 sessionMatches 反查。0 改 jijie2。
 export function ResultScreen({ style, mode }: { style: string; mode: string }) {
-  const matches = getSessionMatches();
-  const wins = getScore();
+  const dbl = doublesLive();
+  const matches = dbl ? doublesMatches() : getSessionMatches();
+  const wins = dbl ? doublesScore() : getScore();
   const total = matches.length;
   const s = getSelectState();
-  const playerName = s.playerName || '集结杯选手';
+  const playerName = dbl ? '双打战队' : (s.playerName || '集结杯选手');
 
   return (
     <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`result-${style}-${mode}`}>
@@ -53,7 +55,8 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
           {matches.map((m, i) => {
             const cls = 'rcard' + (m.result ? ' rcard-' + m.result : '');
             const mapSrc = mapUrl(m.map);
-            const difficulty = matchDifficulty(i as 0 | 1 | 2);
+            const difficulty = dbl ? 0 : matchDifficulty(i as 0 | 1 | 2);
+            const lockedFactors = dbl ? (m as any).mutators : undefined;
             return (
               <div key={i} className={cls} data-rcard-idx={i} data-match-difficulty={difficulty} {...{ [`data-match-difficulty-${i}`]: difficulty }}>
                 <div className="rcard-no">
@@ -84,7 +87,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
                   </div>
                   <div className="rcard-facs">
                     {m.factors.map((f, k) => (
-                      <FactorFrame key={k} src={facUrl(f)} size={46} tag={f === m.lock ? '锁定' : null} />
+                      <FactorFrame key={k} src={facUrl(f)} size={46} gold={lockedFactors ? lockedFactors.includes(f) : undefined} tag={lockedFactors ? (lockedFactors.includes(f) ? '锁定' : null) : (f === m.lock ? '锁定' : null)} />
                     ))}
                   </div>
                 </div>

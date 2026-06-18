@@ -6,6 +6,7 @@
 @import '../../../design/v4-r2/v4.css';
 @import '../../../design/v4-r2/obs.css';
 @import './obs-fuller.css';
+@import './jjb-select.css';
 
 html, body { margin: 0; background: #0a0b0e; }
 #react-root { display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 18px; }

@@ -317,7 +317,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
         </div>
 
         {/* pool 双栏：因子池 + 指挥官池（A/B + 自选） */}
-        <div className="pool">
+        <div className="pool" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <div className="pool-factors">
             <div className="block-head sm">
               <span className="block-kicker">FACTORS</span>
@@ -345,7 +345,8 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
             </div>
           </div>
 
-          <div className="pool-cmd">
+          <div className="pool-cmd" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             <div className="grp-row">
               <div className="grp">
                 <div className="block-head sm">
@@ -417,7 +418,8 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 </div>
               </div>
             )}
-            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16 }}>
+            </div>
+            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
               {toast && (
                 <div className="toastv" data-toast-err>
                   <span className="toastv-ico">!</span>
@@ -577,7 +579,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                   </div>
                   <div className="t-facs">
                     {muts.map((mu, k) => (
-                      <FactorFrame key={`mut${k}`} src={facUrl(mu)} size={52} tag="官突" />
+                      <FactorFrame key={`mut${k}`} src={facUrl(mu)} size={52} gold tag="官突" />
                     ))}
                     {Array.from({ length: cfg.extraFactors }).map((_, k) => {
                       const v = sel.factors[k];
@@ -596,7 +598,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
           })}
         </div>
 
-        <div className="pool">
+        <div className="pool" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <div className="pool-factors">
             <div className="block-head sm"><span className="block-kicker">FACTORS</span><span className="block-title">随机因子池</span></div>
             <div className="factor-row" style={{ gap: 14, flexWrap: 'wrap' }} data-doubles-pool-factors>
@@ -607,7 +609,8 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
               ))}
             </div>
           </div>
-          <div className="pool-cmd">
+          <div className="pool-cmd" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             <div className="grp">
               <div className="block-head sm"><span className="block-title">指挥官池（双打 {cfg.cmdPoolSize} 选）</span></div>
               <div className="avatar-row" style={{ gap: 13, flexWrap: 'wrap' }} data-doubles-pool-cmds>
@@ -618,7 +621,8 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                 ))}
               </div>
             </div>
-            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16 }}>
+            </div>
+            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
               {toast && (
                 <div className="toastv" data-toast-err>
                   <span className="toastv-ico">!</span>

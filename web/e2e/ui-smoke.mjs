@@ -183,7 +183,52 @@ async function main() {
     if (verdict0 !== 1) fail(`doubles battle verdict0=${verdict0} ≠ 1(win)`);
     pass(`doubles battle data-*: label/matches(3)/verdict→__jjbDebug.doubles.winLoseList[0]=1 一致`);
 
-    await page.setViewportSize({ width: 800, height: 400 });
+    // ===== R5③ 双打会话级持久真机断言：切主题后随机填充仍工作 =====
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=dark&sessionMode=doubles&cb=ui-smoke-r5-doubles-persist`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('[data-doubles-select]');
+    await page.click('[data-doubles-random-fill-btn]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-doubles-cmd]').length === 6);
+    // 切主题（style sc2→metal）：doubles 仍 live，随机填充仍可用
+    await page.click('[data-style-btn="metal"]');
+    await page.waitForFunction(() => {
+      const dbg = window.__jjbDebug && window.__jjbDebug.doubles;
+      return dbg && dbg.live === true;
+    });
+    // 再点随机填充：应仍能工作
+    await page.click('[data-doubles-random-fill-btn]');
+    await page.waitForFunction(() => {
+      const dbg = window.__jjbDebug.doubles;
+      const selCmd = dbg.selection.slots.reduce((n, s) => n + s.cmds.filter(Boolean).length, 0);
+      const selFac = dbg.selection.slots.reduce((n, s) => n + s.factors.filter(Boolean).length, 0);
+      return selCmd === 6 && selFac === 9;
+    });
+    const dblPersist = await page.evaluate(() => {
+      const dbg = window.__jjbDebug.doubles;
+      const selCmd = dbg.selection.slots.reduce((n, s) => n + s.cmds.filter(Boolean).length, 0);
+      const selFac = dbg.selection.slots.reduce((n, s) => n + s.factors.filter(Boolean).length, 0);
+      return { live: dbg.live, selCmd, selFac, urlSessionMode: new URLSearchParams(window.location.search).get('sessionMode') };
+    });
+    if (dblPersist.live !== true) fail(`R5③ 切主题后 doubles.live=${dblPersist.live} ≠ true`);
+    if (dblPersist.selCmd !== 6) fail(`R5③ 切主题后随机填充 cmd=${dblPersist.selCmd} ≠ 6`);
+    if (dblPersist.selFac !== 9) fail(`R5③ 切主题后随机填充 fac=${dblPersist.selFac} ≠ 9`);
+    if (dblPersist.urlSessionMode !== 'doubles') fail(`R5③ URL sessionMode=${dblPersist.urlSessionMode} ≠ doubles`);
+    pass(`R5③ 双打持久: 切主题(metal)后 doubles仍live=true ✓ 随机填充仍可用(cmd6/fac9) ✓ URL持久sessionMode=doubles ✓`);
+
+    // R5① 截断验证：底部按钮在 1280×720 视口内完整可见
+    await page.goto(`${baseUrl}/?screen=select&style=metal&mode=dark&sessionMode=std10&cb=ui-smoke-r5-truncate`, { waitUntil: 'networkidle' });
+    await page.click('[data-random-fill-btn]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac] .fx-check').length > 0);
+    const btnRect = await page.evaluate(() => {
+      const btn = document.querySelector('[data-start-btn]');
+      if (!btn) return null;
+      const r = btn.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+    });
+    if (!btnRect) fail('R5① [data-start-btn] 未找到');
+    if (btnRect.bottom > 720) fail(`R5① 比赛开始按钮 bottom=${btnRect.bottom} > 720 被裁`);
+    if (btnRect.top < 0) fail(`R5① 比赛开始按钮 top=${btnRect.top} < 0`);
+    pass(`R5① 截断: 比赛开始按钮 bottom=${Math.round(btnRect.bottom)} ≤ 720 完整可见 ✓`);
     await page.goto(`${baseUrl}/?screen=obs&style=sc2&mode=dark&cb=ui-smoke-obs`, { waitUntil: 'networkidle' });
     const obs = await page.evaluate(() => {
       const host = document.querySelector('.obs-host');

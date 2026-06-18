@@ -29,7 +29,7 @@ export function FactorFrame({
       <img className="fx-frame" src={gold ? BORDER_GOLD : BORDER_NORMAL} alt="" />
       <span className="fx-ring"></span>
       {check && <span className="fx-check">✓</span>}
-      {tag && <span className={'fx-tag' + (tag === '锁定' ? ' lock' : '')}>{tag}</span>}
+      {tag && <span className={'fx-tag' + (tag === '锁定' || tag === '官突' ? ' lock' : '')}>{tag}</span>}
     </div>
   );
 }

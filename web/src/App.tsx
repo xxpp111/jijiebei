@@ -72,6 +72,9 @@ export default function App() {
   const navigate = (next: Screen) => {
     setScreen(next);
     writeUrlParam('screen', next);
+    // 会话级模式持久：当前局模式（含 doubles）写入 URL，防刷新丢状态
+    const currentMode = doublesLive() ? 'doubles' : getSelectState().mode;
+    if (currentMode) writeUrlParam('sessionMode', currentMode);
   };
 
   const chooseStyle = (next: (typeof STYLES)[number]) => {

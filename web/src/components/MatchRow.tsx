@@ -18,13 +18,14 @@ export interface MatchRowData {
   cmds: string[];
   factors: string[];
   lock?: string;
+  lockedFactors?: string[]; // 双打官突完整 mutators 数组（比对用；单打走 lock 单值）
   verdict?: string; // "win" | "bonus" | "lose"
   boss?: boolean;
   difficulty: number;
 }
 
 export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (v: 'win' | 'bonus' | 'lose') => void }) {
-  const { idx, slot, mapName, cmds, factors, lock, verdict, boss, difficulty } = data;
+  const { idx, slot, mapName, cmds, factors, lock, lockedFactors, verdict, boss, difficulty } = data;
   const mapSrc = mapUrl(mapName);
   const cls = ['match', boss && 'match-boss', verdict && 'match-done'].filter(Boolean).join(' ');
   return (
@@ -57,7 +58,7 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
       </div>
       <div className="match-factors">
         {factors.map((f, i) => (
-          <FactorFrame key={i} src={facUrl(f)} size={64} tag={f === lock ? '锁定' : null} />
+          <FactorFrame key={i} src={facUrl(f)} size={64} tag={lockedFactors ? (lockedFactors.includes(f) ? '锁定' : null) : (f === lock ? '锁定' : null)} />
         ))}
       </div>
       <div className="verdict">

@@ -64,6 +64,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
     cmds: m.cmds,
     factors: m.factors,
     lock: m.lock,
+    lockedFactors: dbl ? (m as any).mutators : undefined,
     verdict: m.result,
     boss: i === matches.length - 1,
     difficulty: dbl ? 0 : matchDifficulty(i as 0 | 1 | 2), // 双打无因子难度分（引擎自管 per-match 胜负计分）；单打 difficultyTotal/matchDifficulty 不受影响

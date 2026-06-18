@@ -311,6 +311,7 @@ export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: 
   // 早分支启动后即返——绕开 restoreConfig/setModeFlags/toStart/toSelect/9格固化；调试镜像走 __jjbDebug.doubles。
   clearBpRuntime(); // 任何开局都重置 BP ban（含双打早分支，避免跨局残留）
   if (mode === 'doubles') { JJBDoubles.start(); return; }
+  JJBDoubles.reset(); // 非 doubles 模式开局时重置双打引擎（防跨局 doublesLive 残留，影响 navigate 模式判断）
   restoreConfig(); // 每局重置 ConfigData 母池，防枯竭
   setModeFlags(mode);
   toStartCore();

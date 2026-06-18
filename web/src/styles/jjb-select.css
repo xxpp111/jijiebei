@@ -1,0 +1,10 @@
+/* 集结杯 select/双打屏 web 侧布局覆盖（design/** 红线只读，不改）。
+   R5① 截断修复：自选指挥官全量网格撑高把「随机填充/比赛开始」按钮挤出 672px 可视区（.jjb 1280×720 overflow:hidden）。
+   修法：.jjb-inner.sel 强制 flex 列填满 720px → .pool flex:1 撑剩余高 → .pool-cmd 内部 overflow:auto 滚动 + 按钮行钉底。
+   截断改 web 侧覆盖，不碰 design/theme.css/styles.css/v4.css。 */
+.jjb > .jjb-inner.sel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
