@@ -11,6 +11,7 @@
 import JijieData from '@logic/JijieData';
 import ConfigData from '@logic/data/JJConfigData';
 import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, GOLD_FACTORS, type MatchVM } from '@jjb/JJBData';
+import JJBDoubles from '@jjb/JJBDoubles';
 
 // jjbLive re-export（段2 Phase 1 BattleScreen/e2e 读当前局是否开局用；非 9 模式逻辑，仅透出）
 export { jjbLive };
@@ -55,11 +56,14 @@ function restoreConfig(): void {
 
 const rand = (n: number) => Math.floor(Math.random() * n);
 
-// ===== 9 模式入口（段2 Phase 0 全模式开局） =====
-export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'suiji';
+// ===== 9 模式入口（段2 Phase 0 全模式开局）+ doubles 双打（段3④ 独立引擎接通） =====
+export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'suiji' | 'doubles';
 
-/** URL 赛事模式白名单（App.tsx 与 SelectScreen.tsx 共用，避免重复定义）。 */
-const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji'];
+/** URL 赛事模式白名单（App.tsx 与 SelectScreen.tsx 共用，避免重复定义）。
+ *  suiji 第五格入口已由 feiqiu 顶替下线：故移出 URL 白名单 → ?mode=suiji / ?sessionMode=suiji 回落 std8。
+ *  'suiji' 仍保留在 SessionMode 类型与 setModeFlags 内（startSession('suiji') 与 e2e 9 模式恒等式回归依赖），仅非 URL/首页可达。
+ *  'doubles' 双打入白名单：?mode=doubles / ?sessionMode=doubles 可达，startSession 早分支启动 JJBDoubles 独立引擎。 */
+const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'doubles'];
 
 /** 解析 URL 赛事模式：优先 ?sessionMode=（白名单），兼容旧 ?mode=std10；非法/主题值(dark/light)回落 std8。
  *  SSR（typeof window==='undefined'）守卫防 Node 端崩。App.tsx 与 SelectScreen.tsx 共用此函数（LOW2 去重）。 */
@@ -303,6 +307,9 @@ function toSelectCore(): void {
  *  末尾对非极难/非拯救再调 toSelectCore 一次，最后固化 9 格契约。
  *  opts 预留段2 BP 接口（banN/gold 暂未启用）。 */
 export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: string[] }): void {
+  // 双打=独立引擎：JJBDoubles 自管池/槽/洗牌/计分，不读写 JijieData 单打管线。
+  // 早分支启动后即返——绕开 restoreConfig/setModeFlags/toStart/toSelect/9格固化；调试镜像走 __jjbDebug.doubles。
+  if (mode === 'doubles') { JJBDoubles.start(); return; }
   restoreConfig(); // 每局重置 ConfigData 母池，防枯竭
   setModeFlags(mode);
   toStartCore();

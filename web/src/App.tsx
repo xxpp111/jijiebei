@@ -7,6 +7,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { startSession, exposeStartSession, getSelectState, getTotalCount, querySessionMode, type SessionMode } from './logic/jjbSession';
+import { doublesLive } from './logic/jjbDoubles';
 import JijieData from '@logic/JijieData';
 
 // 路由（query）：?screen=home|select|battle|obs|phase0|foundation；
@@ -85,6 +86,7 @@ export default function App() {
   useEffect(() => {
     if (screen === 'select') {
       try {
+        if (doublesLive()) return; // 双打局已开（JJBDoubles 自管，JijieData.mapList 恒空）：不被单打 startSession 兜底覆盖
         const d: any = JijieData;
         if (!d || !Array.isArray(d.mapList) || d.mapList.length < 3) {
           startSession(querySessionMode());

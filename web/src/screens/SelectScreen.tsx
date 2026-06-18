@@ -21,6 +21,11 @@ import {
 } from '../logic/jjbSession';
 import { facFlatIdx } from '@jjb/JJBData';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
+import {
+  doublesLive, doublesMatches, doublesModeLabel, getDoublesState,
+  setDoublesCmd, clearDoublesCmd, setDoublesFac, clearDoublesFac,
+  validateDoubles, randomFillDoubles,
+} from '../logic/jjbDoubles';
 
 // 集结杯 × CM — 选择面板整屏（段2 Phase 2：拖拽手选 + 校验 + 手选进 battle）。
 // 严格承接 design/v4-r2/components/select-screen.jsx 的 SelectScreenV4 DOM/className：
@@ -64,6 +69,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
   // URL ?sessionMode=std8|std10|... 覆盖默认 std8；旧 ?mode=std10 仍兼容。
   const [, setTick] = useState(0);
   useEffect(() => {
+    if (doublesLive()) return; // 双打局已开（JJBDoubles 自管，JijieData.jjbLive 恒 false）：不被单打 std8 兜底覆盖
     const s = getSelectState();
     if (!s.jjbLive) {
       const m = querySessionMode();
@@ -156,6 +162,11 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
     randomFillSelection();
     setTick((x) => x + 1);
   };
+
+  // 双打：JJBDoubles 自管局已开 → 渲双打选择面板（2 指挥官/场 + 官突锁定 + 3 随机因子槽），与单打 9 模式 UI 分流。
+  if (doublesLive()) {
+    return <DoublesSelect style={style} mode={mode} onStart={onStart} />;
+  }
 
   if (!live) {
     return (
@@ -425,4 +436,176 @@ function modeMeta(s: ReturnType<typeof getSelectState>): string {
     : s.modeSuiji ? '随机'
     : '手选';
   return `${factorLabel} · ${modeLabel}`;
+}
+
+// ===== 双打选择面板（JJBDoubles 自管引擎接通；复用单打 CSS 类 + 组件，数据走 jjbDoubles 适配层） =====
+// 与单打 9 模式 UI 分流：2 指挥官/场 + 官突锁定打底 + extraFactors 随机因子槽；拖拽复用 dragdrop（cmd/factor × slot/idx）。
+function isPickedDoubles(slots: Array<{ cmds: (string | null)[]; factors: (string | null)[] }>, kind: 'cmd' | 'fac', name: string): boolean {
+  return slots.some((s) => (kind === 'cmd' ? s.cmds : s.factors).some((x) => x === name));
+}
+
+function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
+  const [, setTick] = useState(0);
+  const [toast, setToast] = useState<{ msg: string; count: number } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const st = getDoublesState();
+  const matchVMs = doublesMatches();
+  const cfg = st.config;
+  const cmdPool = st.commanderPool;
+  const facPool = st.factorPool;
+  const slots = st.selection.slots || [];
+
+  // Drop target 注册（cmd:i:k / factor:i:k），复用 dragdrop 模块
+  const targetRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const setTarget = (k: string) => (el: HTMLSpanElement | null) => {
+    if (el && targetRefs.current[k] !== el) targetRefs.current[k] = el;
+    else if (!el && targetRefs.current[k]) delete targetRefs.current[k];
+  };
+  useEffect(() => {
+    const unregs: Array<() => void> = [];
+    for (const k in targetRefs.current) {
+      const el = targetRefs.current[k];
+      if (!el) continue;
+      const [kind, slotStr, idxStr] = k.split(':');
+      unregs.push(registerTarget({ kind: kind as 'cmd' | 'factor', slot: Number(slotStr), idx: Number(idxStr), el }));
+    }
+    return () => unregs.forEach((u) => u());
+  });
+
+  const onPoolPointerDown = (ev: React.PointerEvent, kind: 'cmd' | 'factor', name: string, el: HTMLElement) => {
+    ev.preventDefault();
+    startDrag({ kind, name, el, onDrop: (slot, idx) => {
+      if (kind === 'cmd') setDoublesCmd(slot, idx, name);
+      else setDoublesFac(slot, idx, name);
+      setTick((x) => x + 1);
+    } }, ev.nativeEvent);
+  };
+  const onClearCmd = (slot: number, idx: number) => { clearDoublesCmd(slot, idx); setTick((x) => x + 1); };
+  const onClearFac = (slot: number, idx: number) => { clearDoublesFac(slot, idx); setTick((x) => x + 1); };
+
+  const handleStart = () => {
+    const r = validateDoubles();
+    if (!r.ok) { setToast({ msg: r.firstError, count: r.errors.length }); return; }
+    onStart();
+  };
+  const handleRandomFill = () => { randomFillDoubles(); setTick((x) => x + 1); };
+
+  const muts = cfg.mutators || [];
+
+  return (
+    <div
+      className={`jjb style-${style} mode-${mode}`}
+      style={{ width: 1280, height: 720 }}
+      data-screen-label={`select-${style}-${mode}-doubles`}
+      data-doubles-select
+    >
+      <div className="jjb-bg"><div className="bg-grad"></div><div className="bg-tex"></div><div className="bg-vignette"></div></div>
+      <div className="jjb-inner sel">
+        <div className="topbar">
+          <BrandLockup styleName={style} modeName={mode} size="sm" />
+          <div className="topbar-meta">
+            <div className="meta-row"><span className="meta-k">参赛战队</span><span className="meta-v" data-meta-player>双打战队</span></div>
+            <div className="meta-row"><span className="meta-k">比赛模式</span><span className="meta-v" data-meta-mode data-doubles-mode>{doublesModeLabel()}</span></div>
+            <div className="meta-row"><span className="meta-k">官突因子</span><span className="meta-v" data-doubles-mutators style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{muts.join(' / ')}</span></div>
+          </div>
+        </div>
+
+        <div className="slots" data-doubles-slots={slots.length}>
+          {matchVMs.map((m, i) => {
+            const sel = slots[i] || { cmds: [], factors: [] };
+            const mapName = m.map || '—';
+            const mapSrc = mapUrl(mapName);
+            const isBoss = i === matchVMs.length - 1;
+            return (
+              <div key={i} className={'slot' + (i === 0 ? ' slot-active' : '')} data-slot-idx={i} data-doubles-slot={i} data-doubles-lock={muts.join(',')}>
+                <div className="slot-head">
+                  <span className="slot-no">{m.slot}</span>
+                  <span className="slot-map-name">{mapName}</span>
+                  <span className="slot-difficulty" style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>官突 {muts.join('·')}</span>
+                  {isBoss && <span className="slot-flag">BOSS</span>}
+                </div>
+                <span className="mapthumb">
+                  {mapSrc ? (
+                    <img src={mapSrc} alt={mapName} />
+                  ) : (
+                    <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>{mapName}</span>
+                  )}
+                </span>
+                <div className="slot-targets">
+                  <div className="t-cmds">
+                    {Array.from({ length: cfg.cmdsPerMatch }).map((_, k) => {
+                      const c = sel.cmds[k];
+                      return c ? (
+                        <span key={k} ref={setTarget(`cmd:${i}:${k}`)} data-doubles-cmd={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i, k); }} style={{ cursor: 'pointer' }}>
+                          <CommanderCard src={cmdUrl(c)} name={c} w={56} h={67} fill check />
+                        </span>
+                      ) : (
+                        <DropCell key={k} ref={setTarget(`cmd:${i}:${k}`)} w={56} h={67} hint="指挥官" />
+                      );
+                    })}
+                  </div>
+                  <div className="t-facs">
+                    {muts.map((mu, k) => (
+                      <FactorFrame key={`mut${k}`} src={facUrl(mu)} size={52} tag="官突" />
+                    ))}
+                    {Array.from({ length: cfg.extraFactors }).map((_, k) => {
+                      const v = sel.factors[k];
+                      return v ? (
+                        <span key={k} ref={setTarget(`factor:${i}:${k}`)} data-doubles-fac={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }} style={{ cursor: 'pointer' }}>
+                          <FactorFrame src={facUrl(v)} size={52} />
+                        </span>
+                      ) : (
+                        <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="pool">
+          <div className="pool-factors">
+            <div className="block-head sm"><span className="block-kicker">FACTORS</span><span className="block-title">随机因子池</span></div>
+            <div className="factor-row" style={{ gap: 14, flexWrap: 'wrap' }} data-doubles-pool-factors>
+              {facPool.map((f, i) => (
+                <span key={i} data-doubles-pool-fac={f} onPointerDown={(ev) => onPoolPointerDown(ev, 'factor', f, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none', display: 'inline-block' }}>
+                  <FactorFrame src={facUrl(f)} size={66} check={isPickedDoubles(slots, 'fac', f)} />
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="pool-cmd">
+            <div className="grp">
+              <div className="block-head sm"><span className="block-title">指挥官池（双打 {cfg.cmdPoolSize} 选）</span></div>
+              <div className="avatar-row" style={{ gap: 13, flexWrap: 'wrap' }} data-doubles-pool-cmds>
+                {cmdPool.map((c, i) => (
+                  <span key={i} data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none' }}>
+                    <CommanderCard src={cmdUrl(c)} name={c} />
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16 }}>
+              {toast && (
+                <div className="toastv" data-toast-err>
+                  <span className="toastv-ico">!</span>
+                  <span className="toastv-tx">{toast.msg}</span>
+                  {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
+                </div>
+              )}
+              <button className="startbtn" data-doubles-random-fill-btn style={{ margin: 0, padding: '14px 26px' }} onClick={handleRandomFill}>随机填充</button>
+              <button className="startbtn" data-doubles-start-btn style={{ margin: 0 }} onClick={handleStart}>比赛开始 <span className="startbtn-arrow">▶</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

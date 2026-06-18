@@ -122,6 +122,67 @@ async function main() {
     if (explicitSessionMode.label !== 'select-sc2-light-std10') fail(`explicit sessionMode label=${explicitSessionMode.label}`);
     if (!explicitSessionMode.appClass.includes('mode-light')) fail(`explicit sessionMode appClass=${explicitSessionMode.appClass}`);
 
+    // ===== 段3④ phase3：双打 select/battle 真机 data-* 透出（每个 data-* 显式 expect，与 __jjbDebug.doubles 一致）=====
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=dark&sessionMode=doubles&cb=ui-smoke-doubles-select`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('[data-doubles-select]');
+    const dblSelect = await page.evaluate(() => {
+      const dbg = window.__jjbDebug && window.__jjbDebug.doubles;
+      return {
+        label: document.querySelector('[data-screen-label]')?.getAttribute('data-screen-label'),
+        slots: Number(document.querySelector('[data-doubles-slots]')?.getAttribute('data-doubles-slots') ?? -1),
+        slotDivs: document.querySelectorAll('[data-doubles-slot]').length,
+        modeLabel: document.querySelector('[data-doubles-mode]')?.textContent?.trim() || '',
+        poolCmds: document.querySelectorAll('[data-doubles-pool-cmd]').length,
+        poolFacs: document.querySelectorAll('[data-doubles-pool-fac]').length,
+        lock0: document.querySelector('[data-doubles-slot="0"]')?.getAttribute('data-doubles-lock') || '',
+        dbgLive: dbg?.live, dbgSlots: dbg?.selection?.slots?.length,
+        dbgCmdPool: dbg?.commanderPool?.length, dbgFacPool: dbg?.factorPool?.length,
+        dbgMuts: (dbg?.config?.mutators || []).join(','),
+      };
+    });
+    if (dblSelect.label !== 'select-sc2-dark-doubles') fail(`doubles select label=${dblSelect.label}`);
+    if (dblSelect.dbgLive !== true) fail(`doubles __jjbDebug.doubles.live=${dblSelect.dbgLive}`);
+    if (dblSelect.slots !== 3 || dblSelect.slots !== dblSelect.dbgSlots) fail(`doubles data-doubles-slots=${dblSelect.slots} ≠ __jjbDebug ${dblSelect.dbgSlots}`);
+    if (dblSelect.slotDivs !== 3) fail(`doubles slot divs=${dblSelect.slotDivs} ≠ 3`);
+    if (dblSelect.poolCmds !== dblSelect.dbgCmdPool || dblSelect.poolCmds !== 6) fail(`doubles data-doubles-pool-cmd=${dblSelect.poolCmds} ≠ __jjbDebug ${dblSelect.dbgCmdPool}`);
+    if (dblSelect.poolFacs !== dblSelect.dbgFacPool || dblSelect.poolFacs !== 9) fail(`doubles data-doubles-pool-fac=${dblSelect.poolFacs} ≠ __jjbDebug ${dblSelect.dbgFacPool}`);
+    if (!dblSelect.lock0 || dblSelect.lock0 !== dblSelect.dbgMuts) fail(`doubles data-doubles-lock(slot0)=${dblSelect.lock0} ≠ mutators ${dblSelect.dbgMuts}`);
+    if (!dblSelect.modeLabel.includes('双打')) fail(`doubles data-doubles-mode=${dblSelect.modeLabel}`);
+    pass(`doubles select data-*: label/slots(3)/poolCmd(6)/poolFac(9)/lock(${dblSelect.lock0}) ↔ __jjbDebug.doubles 一致`);
+
+    await page.click('[data-doubles-random-fill-btn]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-doubles-cmd]').length === 6);
+    const dblFilled = await page.evaluate(() => {
+      const dbg = window.__jjbDebug.doubles;
+      const selCmd = dbg.selection.slots.reduce((n, s) => n + s.cmds.filter(Boolean).length, 0);
+      const selFac = dbg.selection.slots.reduce((n, s) => n + s.factors.filter(Boolean).length, 0);
+      return {
+        domCmd: document.querySelectorAll('[data-doubles-cmd]').length,
+        domFac: document.querySelectorAll('[data-doubles-fac]').length,
+        selCmd, selFac,
+      };
+    });
+    if (dblFilled.domCmd !== 6 || dblFilled.domCmd !== dblFilled.selCmd) fail(`doubles 填充 data-doubles-cmd dom=${dblFilled.domCmd} ≠ selection ${dblFilled.selCmd}`);
+    if (dblFilled.domFac !== 9 || dblFilled.domFac !== dblFilled.selFac) fail(`doubles 填充 data-doubles-fac dom=${dblFilled.domFac} ≠ selection ${dblFilled.selFac}`);
+    pass(`doubles randomFill: dom cmd(6)/fac(9) ↔ __jjbDebug.doubles selection 一致`);
+
+    await page.click('[data-doubles-start-btn]');
+    await page.waitForFunction(() => new URLSearchParams(window.location.search).get('screen') === 'battle');
+    await page.waitForSelector('[data-doubles-battle]');
+    const dblBattle = await page.evaluate(() => ({
+      label: document.querySelector('[data-screen-label]')?.getAttribute('data-screen-label'),
+      battleMatches: Number(document.querySelector('[data-doubles-battle]')?.getAttribute('data-doubles-battle') ?? -1),
+      matchRows: document.querySelectorAll('.matches .match').length,
+    }));
+    if (dblBattle.label !== 'battle-sc2-dark-doubles') fail(`doubles battle label=${dblBattle.label}`);
+    if (dblBattle.battleMatches !== 3 || dblBattle.matchRows !== 3) fail(`doubles battle data-doubles-battle=${dblBattle.battleMatches} rows=${dblBattle.matchRows}`);
+    await page.click('.matches .match:nth-child(1) .v-btn:has-text("胜利")');
+    await page.waitForFunction(() => window.__jjbDebug.doubles.winLoseList[0] === 1);
+    const verdict0 = await page.evaluate(() => window.__jjbDebug.doubles.winLoseList[0]);
+    if (verdict0 !== 1) fail(`doubles battle verdict0=${verdict0} ≠ 1(win)`);
+    pass(`doubles battle data-*: label/matches(3)/verdict→__jjbDebug.doubles.winLoseList[0]=1 一致`);
+
     await page.setViewportSize({ width: 800, height: 400 });
     await page.goto(`${baseUrl}/?screen=obs&style=sc2&mode=dark&cb=ui-smoke-obs`, { waitUntil: 'networkidle' });
     const obs = await page.evaluate(() => {

@@ -92,6 +92,11 @@ try {
     setSelectedCmd, setSelectedFac, startFromSelection, getSessionMatches, exposeBattleDebug,
     factorScore, difficultyTotal, toggleGold, getGoldFor,
   } = mod;
+  const dmod = await server.ssrLoadModule('/src/logic/jjbDoubles.ts');
+  const {
+    getDoublesState, doublesMatches, setDoublesCmd, setDoublesFac,
+    setDoublesVerdict, doublesScore, validateDoubles, randomFillDoubles,
+  } = dmod;
 
   let scoreFallbackChecked = false;
   // 9 模式循环
@@ -334,6 +339,69 @@ try {
       console.log(`${mode.padEnd(6)}  ----  -------------------  ---  --------  ---  ----  ---------  ------  ------  FAIL`);
     }
   }
+
+  // ===== 段3④ phase2：双打 JJBDoubles 启动接缝断言（镜像 9 模式 __jjbDebug.select，断言 __jjbDebug.doubles）=====
+  // startSession('doubles') 早分支启动独立引擎：live=true + 引擎配置形状（matches/池/槽/winLose），不碰 JijieData 单打管线。
+  try {
+    globalThis.window = globalThis.window || globalThis;
+    globalThis.window.__jjbDebug = undefined;
+    startSession('doubles');
+    const dbl = globalThis.window.__jjbDebug && globalThis.window.__jjbDebug.doubles;
+    if (!dbl) {
+      fail('doubles: __jjbDebug.doubles 未透出（startSession 早分支未启动 JJBDoubles）');
+    } else {
+      if (dbl.live !== true) fail(`doubles: live=${dbl.live} ≠ true`);
+      if (!dbl.config || dbl.config.matches !== 3) fail(`doubles: config.matches=${dbl.config && dbl.config.matches} ≠ 3`);
+      if ((dbl.commanderPool || []).length !== 6) fail(`doubles: commanderPool 长 ${(dbl.commanderPool || []).length} ≠ 6 (cmdPoolSize)`);
+      if ((dbl.factorPool || []).length !== 9) fail(`doubles: factorPool 长 ${(dbl.factorPool || []).length} ≠ 9 (factorPoolSize)`);
+      const dslots = (dbl.selection && dbl.selection.slots) || [];
+      if (dslots.length !== 3) fail(`doubles: selection.slots 长 ${dslots.length} ≠ 3 (matches)`);
+      dslots.forEach((s, i) => {
+        if ((s.cmds || []).length !== 2) fail(`doubles: 场${i} cmds 槽 ${(s.cmds || []).length} ≠ 2 (cmdsPerMatch)`);
+        if ((s.factors || []).length !== 3) fail(`doubles: 场${i} factors 槽 ${(s.factors || []).length} ≠ 3 (extraFactors)`);
+      });
+      if ((dbl.winLoseList || []).length !== 3) fail(`doubles: winLoseList 长 ${(dbl.winLoseList || []).length} ≠ 3`);
+      console.log(`\n  [doubles] 启动接缝：live=${dbl.live} matches=${dbl.config.matches} cmdPool=${dbl.commanderPool.length} facPool=${dbl.factorPool.length} slots=${dslots.length}×(cmd2/fac3) winLose=${dbl.winLoseList.length} ✓`);
+    }
+
+    // ===== 段3④ phase3：双打 select→battle 全路径 + 难度分隔离裁定（镜像单打手选→battle 渲染断言）=====
+    // 难度分裁定：difficultyTotal/matchDifficulty 是单打 JijieData 不变量；双打 JJBDoubles 自管不碰 JijieData。
+    // 故显式断言（禁静默）：先开单打局记 difficultyTotal 基线 → 跑双打全流程 → 基线不变（双打零污染单打计分）。
+    startSession('std10');
+    const diffBaseline = difficultyTotal();
+    startSession('doubles'); // 早分支启动，不动 JijieData
+    if (difficultyTotal() !== diffBaseline) fail(`doubles 隔离: 启动双打后单打 difficultyTotal ${difficultyTotal()} ≠ 基线 ${diffBaseline}`);
+
+    const st0 = getDoublesState();
+    const cmdPool = st0.commanderPool, facPool = st0.factorPool;
+    const muts = st0.config.mutators || [];
+    // 手选第 0 场：2 指挥官 + 3 随机因子（适配层 setters → 引擎 selection）
+    setDoublesCmd(0, 0, cmdPool[0]); setDoublesCmd(0, 1, cmdPool[1]);
+    setDoublesFac(0, 0, facPool[0]); setDoublesFac(0, 1, facPool[1]); setDoublesFac(0, 2, facPool[2]);
+    const m0 = doublesMatches()[0];
+    if (m0.cmds.length !== 2 || m0.cmds[0] !== cmdPool[0] || m0.cmds[1] !== cmdPool[1]) fail(`doubles: 场0 cmds=${JSON.stringify(m0.cmds)} ≠ 手选 [${cmdPool[0]},${cmdPool[1]}]`);
+    const expFac0 = muts.concat([facPool[0], facPool[1], facPool[2]]);
+    if (JSON.stringify(m0.factors) !== JSON.stringify(expFac0)) fail(`doubles: 场0 factors=${JSON.stringify(m0.factors)} ≠ 官突${JSON.stringify(muts)}+手选3`);
+    if (m0.lock !== muts[0]) fail(`doubles: 场0 lock=${m0.lock} ≠ 官突 mutators[0]=${muts[0]}`);
+    if (m0.doubles !== true) fail(`doubles: 场0 doubles 标记=${m0.doubles} ≠ true`);
+
+    // 随机填充其余场 + 校验全满
+    randomFillDoubles();
+    const vr = validateDoubles();
+    if (!vr.ok) fail(`doubles: randomFill 后 validate 应通过 err=${JSON.stringify(vr.errors)}`);
+    // verdict 三场 [win,bonus,lose] → setDoublesVerdict 映射 [1,2,0]，score=win+bonus=2
+    setDoublesVerdict(0, 'win'); setDoublesVerdict(1, 'bonus'); setDoublesVerdict(2, 'lose');
+    const stEnd = getDoublesState();
+    if (stEnd.winLoseList[0] !== 1 || stEnd.winLoseList[1] !== 2 || stEnd.winLoseList[2] !== 0) fail(`doubles: winLoseList=${JSON.stringify(stEnd.winLoseList)} ≠ [1,2,0]`);
+    if (doublesScore() !== 2) fail(`doubles: score(win+bonus)=${doublesScore()} ≠ 2`);
+    const mEnd = doublesMatches();
+    if (mEnd[0].result !== 'win' || mEnd[1].result !== 'bonus' || mEnd[2].result !== 'lose') fail(`doubles: matches.result=${JSON.stringify(mEnd.map((x) => x.result))} ≠ [win,bonus,lose]`);
+    // 隔离复核：双打全流程操作后，单打 difficultyTotal 仍 = 基线（JJBDoubles 零污染 JijieData 计分）
+    if (difficultyTotal() !== diffBaseline) fail(`doubles 隔离: 双打全流程后单打 difficultyTotal ${difficultyTotal()} ≠ 基线 ${diffBaseline}`);
+    console.log(`  [doubles] 全路径：场0手选(cmd2/fac3+官突lock=${muts[0]})✓ randomFill+validate✓ verdict[win,bonus,lose]→score=2✓ 难度分隔离(单打 difficultyTotal=${diffBaseline} 双打前后不变)✓`);
+  } catch (e) {
+    fail(`doubles: 接缝异常 ${e && e.message ? e.message : e}`);
+  }
 } finally {
   await server.close();
 }
@@ -342,4 +410,4 @@ if (failed) {
   console.error('\n[react-e2e] ❌ 至少 1 mode 失败');
   process.exit(1);
 }
-console.log('\n[react-e2e] ✅ 9 模式池=槽恒等式 + 9格契约 + 状态全 PASS');
+console.log('\n[react-e2e] ✅ 9 模式池=槽恒等式 + 9格契约 + 状态全 + 双打全路径(启动/手选/verdict/难度分隔离) PASS');

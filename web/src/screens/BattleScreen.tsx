@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
 import { startRandomSession, startSession, getSessionMatches, setVerdict, getScore, getSelectState, exposeBattleDebug, randomFillAndStart, matchDifficulty, type SessionMode } from '../logic/jjbSession';
+import { doublesLive, doublesMatches, doublesScore, setDoublesVerdict } from '../logic/jjbDoubles';
 import { BrandLockup } from '../components/BrandLockup';
 
-const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji']);
+const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'doubles']);
 
 // React 版 Battle 屏（段1 PoC + 段2 Phase 1 真实局接缝）：优先读 jjbLive() 当前 select 局（不重开 startRandomSession），
 // 仅在 jjbLive=false 时兜底开一局 std8（PoC 直访 ?screen=battle 不需先走 home 选模式）。
@@ -14,6 +15,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
 
   useEffect(() => {
     try {
+      if (doublesLive()) { setReady(true); return; } // 双打局已由 select 配置；battle 直读 doublesMatches，无单打兜底/随机填充
       const s = getSelectState();
       if (s.jjbLive) {
         // 真实 select 局已开局（home→startSession→select→点开始→randomFillAndStart 后 jjbLive 仍 true，status=3）
@@ -35,7 +37,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
           : null) as SessionMode | null;
         if (urlMode && MODES_SET.has(urlMode)) {
           startSession(urlMode);
-          randomFillAndStart();
+          if (urlMode !== 'doubles') randomFillAndStart(); // doubles 自管引擎，不走单打随机填充（双打 battle 完整渲染见段3 phase3）
         } else {
           startRandomSession(2); // 8 因子随机一局
         }
@@ -50,10 +52,11 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
 
   if (!ready) return <div style={{ color: '#fff', padding: 40 }}>开局中…</div>;
 
-  const matches = getSessionMatches();
-  const score = getScore();
+  const dbl = doublesLive();
+  const matches = dbl ? doublesMatches() : getSessionMatches();
+  const score = dbl ? doublesScore() : getScore();
   const s = getSelectState();
-  const playerName = s.playerName || '集结杯选手';
+  const playerName = dbl ? '双打战队' : (s.playerName || '集结杯选手');
   const rows: MatchRowData[] = matches.map((m, i) => ({
     idx: i,
     slot: m.slot,
@@ -62,16 +65,17 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
     factors: m.factors,
     lock: m.lock,
     verdict: m.result,
-    boss: i === 2,
-    difficulty: matchDifficulty(i as 0 | 1 | 2),
+    boss: i === matches.length - 1,
+    difficulty: dbl ? 0 : matchDifficulty(i as 0 | 1 | 2), // 双打无因子难度分（引擎自管 per-match 胜负计分）；单打 difficultyTotal/matchDifficulty 不受影响
   }));
 
   return (
     <div
       className={`jjb style-${style} mode-${mode}`}
       style={{ width: 1280, height: 720 }}
-      data-screen-label={`battle-${style}-${mode}-${s.mode}`}
+      data-screen-label={`battle-${style}-${mode}-${dbl ? 'doubles' : s.mode}`}
       data-tick={tick}
+      {...(dbl ? { 'data-doubles-battle': matches.length } : {})}
     >
       <div className="jjb-bg">
         <div className="bg-grad"></div>
@@ -99,7 +103,8 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
               key={r.idx}
               data={r}
               onVerdict={(v) => {
-                setVerdict(r.idx, v);
+                if (dbl) setDoublesVerdict(r.idx, v);
+                else setVerdict(r.idx, v);
                 setTick((x) => x + 1);
               }}
             />

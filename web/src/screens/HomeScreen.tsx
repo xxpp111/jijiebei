@@ -5,16 +5,17 @@ import JijieData from '@logic/JijieData';
 
 // 集结杯 × CM — 首页（公开模式入口 + 选手名）。承接 design/v4-r2/home 段（className 全部沿用 theme.css/home css）。
 // 流程：输入选手名 → 点模式按钮 → startSession(mode) → 覆盖 JijieData.playerName → onStart 回调让 App 跳 select。
-// 模式集合以当前直播入口为准：8/10/极难模式 + 拯救 + 随机 + 双打占位。
-// 文档无单指/极难①/非酋（飞球）——旧 TS InitPanel 的 9 handler 含它们，但赛制已收敛为 7 种。
-// 双打=独立引擎（段3④待实现），先占位 soon。
+// 模式集合以当前直播入口为准：8/10/极难模式 + 拯救 + 非酋（飞球）+ 双打（官突）。
+// 第五格已由「随机(suiji)」改为「非酋·飞球(feiqiu)」；suiji 退出首页/URL 入口，
+//   引擎(modeSuiji 标志链)保留供 e2e 9 模式恒等式回归。随机能力仍走 Select「随机填充」叠加层。
+// 双打=独立引擎 JJBDoubles 接通（startSession('doubles') 早分支启动）；第六格入口已解 soon。
 const MODES: { no: string; key: SessionMode | 'doubles'; name: string; tag: string; soon?: boolean }[] = [
   { no: '01', key: 'std8', name: '8 因子', tag: '标准赛' },
   { no: '02', key: 'std10', name: '10 因子', tag: '进阶' },
   { no: '03', key: 'std12', name: '极难模式', tag: '极难' },
   { no: '04', key: 'rescue', name: '拯救模式', tag: '固定7人' },
-  { no: '05', key: 'suiji', name: '随机', tag: '纯随机' },
-  { no: '06', key: 'doubles', name: '双打', tag: '官突', soon: true },
+  { no: '05', key: 'feiqiu', name: '非酋', tag: '飞球' },
+  { no: '06', key: 'doubles', name: '双打', tag: '官突' },
 ];
 
 export interface HomeScreenProps {
@@ -27,7 +28,7 @@ export function HomeScreen({ style, mode, onStart }: HomeScreenProps) {
   const [playerName, setPlayerName] = useState('集结杯选手');
 
   const start = (m: SessionMode | 'doubles', soon?: boolean) => {
-    if (soon || m === 'doubles') return; // 双打待实现（段3④）
+    if (soon) return; // soon 占位项不启动（当前无 soon 项；doubles 已接通）
     const name = (playerName || '').trim() || '集结杯选手';
     // 0 改 startSession 内部：startSession 末尾 exposeSelectDebug 把 mode 写到 __jjbDebug.select.mode，
     // 这里 startSession 后再覆盖 JijieData.playerName（不破坏 9 模式 status/map/lock/pool 任何契约）。
