@@ -13,16 +13,20 @@
 
 ## 运行
 
-Cocos Creator 2.4.13 web 工程。
+React + Vite 工程（源码在 `web/`）。
 
 ```bash
-# 构建
-'/Applications/Cocos/Creator/2.4.13/CocosCreator.app/Contents/MacOS/CocosCreator' --path . --build 'platform=web-mobile;debug=true'
-# 本地预览
-python3 -m http.server 7777 --directory build/web-mobile
+cd web
+npm install              # 首次安装依赖
+npm run dev              # 本地开发服务器（Vite）
+npm run build            # 构建到 web/dist
+npm run preview          # 预览构建产物（端口 7788）
+node e2e/run.mjs         # 逻辑回归：9 模式池=槽恒等式 + 双打全路径
+npm run e2e:ui           # UI 冒烟（构建 + ui-smoke）
 ```
 
-预览 URL：`localhost:7777/?design=<home|select|battle|result|overlay|obsbar|dock>&style=<metal|sc2|minimal>&mode=<dark|light>`
+URL 走 query 参数切换屏幕/模式/主题（`?screen=`/`?mode=`/`?style=`/`?theme=`）。
+直播采集与横条形态见 `jjb-run-broadcast` skill；部署到开发机（DevBox docker nginx 8080）见 `jjb-deploy` skill。
 
 ## 架构方向
 
