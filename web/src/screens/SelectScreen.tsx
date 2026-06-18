@@ -14,6 +14,8 @@ import {
   clearFacSlot,
   getGoldFor,
   toggleGold,
+  toggleBanFactor,
+  getBanFor,
   randomFillSelection,
   difficultyTotal,
   matchDifficulty,
@@ -60,6 +62,29 @@ function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle
       }}
     >
       金
+    </button>
+  );
+}
+
+/** BP ban 角标按钮（因子池每个因子左上角，toggle ban；占位形态，待 Claude Design 设计稿美化）。
+ *  红色 lose 语义，与点金 GoldBadge（右上·金）左右分置不重叠；stopPropagation 不触发拖拽。 */
+function BpBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      className="bp-ban-toggle"
+      data-bp-ban-toggle={name}
+      data-bp-banned={on ? '1' : '0'}
+      title="BP 禁用 / 取消禁用"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      style={{
+        position: 'absolute', top: -6, left: -6, width: 20, height: 20, borderRadius: 10,
+        border: '1px solid rgba(0,0,0,0.35)', cursor: 'pointer', fontSize: 11, lineHeight: '18px',
+        padding: 0, fontWeight: 700, zIndex: 3,
+        background: on ? 'var(--lose, #d9534f)' : 'rgba(20,20,20,0.7)', color: on ? '#fff' : '#ddd',
+      }}
+    >
+      {on ? '⊘' : '禁'}
     </button>
   );
 }
@@ -310,10 +335,11 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                     const el = (ev.currentTarget as HTMLElement);
                     onPoolPointerDown(ev, 'factor', f, el);
                   }}
-                  style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}
+                  style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block', opacity: getBanFor(f) ? 0.45 : 1 }}
                 >
                   <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
+                  <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); setTick((x) => x + 1); }} />
                 </span>
               ))}
             </div>

@@ -91,6 +91,7 @@ try {
     startSession, exposeSelectDebug, getSelectState, randomFillAndStart, jjbLive, validate,
     setSelectedCmd, setSelectedFac, startFromSelection, getSessionMatches, exposeBattleDebug,
     factorScore, difficultyTotal, toggleGold, getGoldFor,
+    toggleBanFactor, getBanFor, getBpState, randomFillSelection,
   } = mod;
   const dmod = await server.ssrLoadModule('/src/logic/jjbDoubles.ts');
   const {
@@ -401,6 +402,42 @@ try {
     console.log(`  [doubles] 全路径：场0手选(cmd2/fac3+官突lock=${muts[0]})✓ randomFill+validate✓ verdict[win,bonus,lose]→score=2✓ 难度分隔离(单打 difficultyTotal=${diffBaseline} 双打前后不变)✓`);
   } catch (e) {
     fail(`doubles: 接缝异常 ${e && e.message ? e.message : e}`);
+  }
+
+  // ===== BP ban 断言（单刷因子 BP，双打真引擎硬前置；ban 作为 validate 旁路 + setSelectedFac 防御）=====
+  try {
+    startSession('std10'); // 10 因子，有手选因子池
+    if (getBpState().banned.length !== 0) fail('BP: 新局应无 banned（startSession 重置）');
+    toggleBanFactor('核弹打击');
+    if (!getBanFor('核弹打击')) fail('BP: toggleBanFactor 后 getBanFor 应 true');
+    if (getBpState().banned.length !== 1) fail('BP: banned 应有 1 个');
+    // 单选替换（BP_BAN_LIMIT=1）：再 ban 别的，旧 ban 恢复
+    toggleBanFactor('暴风雪');
+    if (getBanFor('核弹打击')) fail('BP: 单选替换，旧 ban(核弹打击) 应恢复');
+    if (!getBanFor('暴风雪')) fail('BP: 新 ban(暴风雪) 应生效');
+    // setSelectedFac 防御：banned 因子不可落槽（slot0 k0 = selectedFactorList[0]）
+    setSelectedFac(0, 0, '暴风雪');
+    if (getSelectState().selectedFactorList[0] === '暴风雪') fail('BP: banned 因子不应落槽（setSelectedFac 防御）');
+    // 非 banned 因子正常落槽
+    setSelectedFac(0, 0, '核弹打击');
+    if (getSelectState().selectedFactorList[0] !== '核弹打击') fail('BP: 非 banned 因子应能落槽');
+    // validate 旁路：已落槽因子被 ban 后 validate 应报「BP 禁用」
+    toggleBanFactor('核弹打击'); // 单选替换暴风雪，ban 已落槽的核弹打击
+    if (!validate().errors.some((e) => e.includes('BP 禁用'))) fail('BP: 已落槽因子被 ban 后 validate 应报「BP 禁用」');
+    // 护栏：随机填充放弃 BP ban（防 ban+随机 死角，不破坏池=槽恒等式；完整 ban×随机集成留完整 BP 轮）
+    startSession('std10');
+    toggleBanFactor('核弹打击');
+    if (getBpState().banned.length !== 1) fail('BP护栏前置: ban 应生效');
+    randomFillSelection();
+    if (getBpState().banned.length !== 0) fail('BP护栏: randomFillSelection 应清 ban（随机=弃ban）');
+    if (!validate().ok) fail('BP护栏: 随机填充后应能开局（无 banned 卡槽）err=' + JSON.stringify(validate().errors));
+    // 新局重置
+    startSession('std8');
+    if (getBpState().banned.length !== 0) fail('BP: startSession 应 clearBpRuntime');
+    pass('BP ban: 状态机/单选替换/落槽防御/validate旁路/随机护栏/新局重置 全过');
+    console.log('  [BP] ban 状态机 ✓ 单选替换 ✓ setSelectedFac 防御 ✓ validate 旁路 ✓ 随机填充护栏 ✓ 新局重置 ✓');
+  } catch (e) {
+    fail(`BP: 断言异常 ${e && e.message ? e.message : e}`);
   }
 } finally {
   await server.close();

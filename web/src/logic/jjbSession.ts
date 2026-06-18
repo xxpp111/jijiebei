@@ -309,6 +309,7 @@ function toSelectCore(): void {
 export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: string[] }): void {
   // 双打=独立引擎：JJBDoubles 自管池/槽/洗牌/计分，不读写 JijieData 单打管线。
   // 早分支启动后即返——绕开 restoreConfig/setModeFlags/toStart/toSelect/9格固化；调试镜像走 __jjbDebug.doubles。
+  clearBpRuntime(); // 任何开局都重置 BP ban（含双打早分支，避免跨局残留）
   if (mode === 'doubles') { JJBDoubles.start(); return; }
   restoreConfig(); // 每局重置 ConfigData 母池，防枯竭
   setModeFlags(mode);
@@ -564,6 +565,7 @@ export function getSelectState(): SelectState {
 export function randomFillAndStart(): void {
   const d: any = JijieData;
   if (!jjbLive()) return;
+  clearBpRuntime(); // 随机填充=放弃 BP 手选 ban（防 ban+随机 死角；完整 ban×随机集成需「多揉因子」保池=槽，留完整 BP 轮）
   fillSelectionSlots(d);
   d.winLoseList = [];
   d.status = 3;
@@ -573,6 +575,7 @@ export function randomFillAndStart(): void {
 export function randomFillSelection(): void {
   const d: any = JijieData;
   if (!jjbLive()) return;
+  clearBpRuntime(); // 随机填充=放弃 BP 手选 ban（同 randomFillAndStart；完整 ban×随机集成留完整 BP 轮）
   fillSelectionSlots(d);
   exposeSelectDebug(getSelectState().mode);
 }
@@ -607,6 +610,7 @@ export function setSelectedFac(slot: number, k: number, name: string | null): vo
   if (!jjbLive()) return;
   if (!Array.isArray(d.selectedFactorList)) d.selectedFactorList = new Array(9).fill(null);
   if (slot < 0 || slot > 2 || k < 0 || k > 2) return;
+  if (name && getBanFor(name)) return; // BP: 被 ban 的因子不可落槽（手选拖入直接挡）
   d.selectedFactorList[facFlatIdx(slot, k)] = name;
 }
 
@@ -638,6 +642,7 @@ export function validate(): ValidationResult {
     for (let k = 0; k < cap; k++) {
       const v = selFac[facFlatIdx(i, k)];
       if (!v) errs.push('第' + (i + 1) + '场因子' + (k + 1) + '未选择');
+      else if (getBanFor(v)) errs.push('第' + (i + 1) + '场因子' + (k + 1) + '已被 BP 禁用'); // BP ban 旁路规则
     }
   }
   if (!d.modeIsOnePick && d.modelFactorCount > 2) {
@@ -695,6 +700,30 @@ export function getGoldFor(name: string): boolean {
 
 /** 清运行时点金（开新局时调，避免跨局残留）。 */
 export function clearGoldRuntime(): void { goldRuntime.clear(); }
+
+// ===== 因子 BP（ban：select 屏运行时标记因子禁用；当前赛制 ban 1，单选语义；不改 9 格槽/池结构，validate 旁路叠加） =====
+// 双打真引擎硬前置：guantu/feiqiu 双打的「ban 拿钱类因子」复用同一 BP 状态机。镜像点金 goldRuntime 模式。
+const bpBanRuntime = new Set<string>();
+const BP_BAN_LIMIT = 1; // 二选一之「ban 1 因子」；未来可配（startSession opts.banN）
+
+/** toggle 某因子 ban 态（单选：达上限再 ban 别的会替换旧 ban）。 */
+export function toggleBanFactor(name: string): void {
+  if (!name) return;
+  if (bpBanRuntime.has(name)) { bpBanRuntime.delete(name); return; }
+  if (bpBanRuntime.size >= BP_BAN_LIMIT) bpBanRuntime.clear(); // 单选替换
+  bpBanRuntime.add(name);
+}
+
+/** 该因子是否被 BP ban。 */
+export function getBanFor(name: string): boolean { return !!name && bpBanRuntime.has(name); }
+
+/** BP 当前态快照（给 UI / __jjbDebug / e2e）。 */
+export function getBpState(): { banned: string[]; banLimit: number } {
+  return { banned: [...bpBanRuntime], banLimit: BP_BAN_LIMIT };
+}
+
+/** 清运行时 BP（开新局时调，避免跨局残留）。 */
+export function clearBpRuntime(): void { bpBanRuntime.clear(); }
 
 // ===== 段3④：难度总分（锁定因子 + 手选因子求和；点金因子分值×2） =====
 // 分值真相：因子配置.txt 第3列（表头「名字,类型,分值」），经 ConfigData.factorList_back 读取
