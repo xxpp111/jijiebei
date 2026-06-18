@@ -20,3 +20,12 @@
 /* 因子行与指挥官底对齐、间距匀 */
 .obsbar .obs-line { gap: 12px; }
 .obsbar .obs-facs { gap: 7px; }
+
+/* 难度总分（段3④：obs-score 区加一行） */
+.obsbar .obs-difficulty { margin-top: 4px; line-height: 1.1; display: flex; align-items: baseline; gap: 4px; }
+.obsbar .obs-difficulty-val { font-size: 18px; font-weight: 700; color: #e8b84b; }
+.obsbar .obs-difficulty-lbl { font-size: 10px; opacity: 0.8; }
+
+/* 出格响应式兜底：!bare 主播操作态，外层允许横向滚动（ObsBar 固定 1280 不缩放、不裁切，
+   窄视口可横滚看全）；bare 纯采集态（[data-bare]）不命中 → 固定 1280×232 不动，OBS 采集不受影响。 */
+.obs-host:not([data-bare]) { overflow-x: auto; max-width: 100vw; }

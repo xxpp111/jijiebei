@@ -77,3 +77,10 @@
 - 极难 = std12（mfc==4），modeIsVeryHard①② 下线。
 - **双打挑战（官突plus + 非酋）= 本轮设计先行、工程下轮**；非酋从单刷实现迁双打骨架。
 - 全模式 BP 自选分支均支持（含 selfShow=false 模式），Claude Design 第 6 设计项「每模式 BP 开关配置面」+ 第 1 项「BP 面板」需含无自选区模式的自选路径。
+
+## 七、新增需求（2026-06-18）：每场难度分 + 难度总分
+
+用户反馈：难度总分（`difficultyTotal`，GLM 已做、**保留**）之外，还要**每一场（3 场）各自的难度分**；**不要「难度组」**（按因子组/type 分类的难度视图，去掉，只要数值化的「总分 + 每场分」）。
+
+- **逻辑（GLM spoke 实现）**：新增 `matchDifficulty(slot:0|1|2)` = 该场锁定因子（`lockFactorList[slot]`）+ 该场手选因子（`selectedFactorList[facFlatIdx(slot,k)]`，k 遍历 `manualSlots(slot)`）的 `factorScore` 求和（点金 ×2）。`difficultyTotal` = Σ `matchDifficulty`（等价）。透出 `data-match-difficulty-{slot}`。复用现有 factorScore 白名单（已复核），不改 jijie2。
+- **设计项 C7 · 每场难度分显示（Claude Design 出 UI）**：在 select 每场 slot-head、battle MatchRow、result rcard 显示该场难度分（数值），与「难度总分」（topbar/meta 行）层级区分。各 3 主题三屏 + 数值态（0 / 低 / 高）。**不做**「难度组」分类视图。

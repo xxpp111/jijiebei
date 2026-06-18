@@ -77,7 +77,7 @@ function ObsMatch({ row }: { row: ObsRow }) {
   );
 }
 
-export function ObsBar({ style, mode, rows, wins, total }: { style: string; mode: string; rows: ObsRow[]; wins: number; total: number }) {
+export function ObsBar({ style, mode, rows, wins, total, difficulty }: { style: string; mode: string; rows: ObsRow[]; wins: number; total: number; difficulty: number }) {
   const logo = logoUrl(style, mode);
   const pips = rows.map((r) =>
     r.status === 'live' ? 'live' : r.status === 'wait' ? 'wait' : r.verdict === 'win' || r.verdict === 'bonus' ? 'win' : r.verdict === 'lose' ? 'lose' : 'wait',
@@ -99,6 +99,10 @@ export function ObsBar({ style, mode, rows, wins, total }: { style: string; mode
               <span className="obs-score-of">/<b>{total}</b></span>
             </div>
             <span className="obs-score-lbl">当前局分 · 已胜场</span>
+            <div className="obs-difficulty" data-difficulty-total>
+              <span className="obs-difficulty-val">{difficulty}</span>
+              <span className="obs-difficulty-lbl">难度总分</span>
+            </div>
           </div>
           <div className="obs-pips">
             {pips.map((p, i) => (

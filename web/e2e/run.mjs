@@ -2,8 +2,8 @@
 // 阶段 1：build 完整性 + bundle 接缝标记（含 startSession/9 mode 名/中文 mode 标签）。
 // 阶段 2：Vite SSR 加载 jjbSession.ts，注入 window shim，调 startSession 9 次，
 //         读 window.__jjbDebug.select 断言：池=槽恒等式 / 9 格契约 / status=2 / map=3。
-// 设计：零额外依赖（vite 已装；esbuild 走 vite 内部）；不上 Playwright（段1 PoC 的真浏览器回归已
-// 由 .playwright-mcp + jjb-verify 完成，phase 0 走纯逻辑断言足够，本门 CI 友好即可）。
+// 设计：零额外依赖（vite 已装；esbuild 走 vite 内部）。React DOM smoke 由 e2e/ui-smoke.mjs 覆盖；
+// Cocos 全量回归仍以 jjb-verify 的四套 Playwright 为准，本门保持 CI 友好的纯逻辑断言。
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
@@ -87,8 +87,13 @@ const server = await createServer({
 try {
   // 加载 jjbSession（顶部 import 链会拉 JijieData + JJConfigData + JJBData + GameData + PlayerData，无 cc 依赖）
   const mod = await server.ssrLoadModule('/src/logic/jjbSession.ts');
-  const { startSession, exposeSelectDebug, getSelectState, randomFillAndStart, jjbLive, validate, setSelectedCmd, setSelectedFac, startFromSelection, getSessionMatches, exposeBattleDebug } = mod;
+  const {
+    startSession, exposeSelectDebug, getSelectState, randomFillAndStart, jjbLive, validate,
+    setSelectedCmd, setSelectedFac, startFromSelection, getSessionMatches, exposeBattleDebug,
+    factorScore, difficultyTotal, toggleGold, getGoldFor,
+  } = mod;
 
+  let scoreFallbackChecked = false;
   // 9 模式循环
   for (const mode of MODES) {
     try {
@@ -103,6 +108,23 @@ try {
       if (!sel) { fail(`${mode}: __jjbDebug.select 未透出`); continue; }
 
       const { randomFactorPoorLen, manualSlots, sumSlots, identityPass, selectedFactorListLen, selectedCommanderList, status, mapCount, lockCount, modeIsRandom, modelFactorCount } = sel;
+
+      if (!scoreFallbackChecked) {
+        if (factorScore('虚空重生者') !== 5) fail(`factorScore('虚空重生者') 应走白名单 fallback=5`);
+        if (factorScore('混乱工作室') !== 7) fail(`factorScore('混乱工作室') 应走非酋白名单 fallback=7`);
+        if (factorScore('礼尚往来') !== 7) fail(`factorScore('礼尚往来') 应走非酋白名单 fallback=7`);
+        const warnMessages = [];
+        const originalWarn = console.warn;
+        console.warn = (...args) => { warnMessages.push(args.join(' ')); };
+        try {
+          const unknownScore = factorScore('__不存在的因子__');
+          if (unknownScore !== 0) fail(`未知因子分值应为 0，实际=${unknownScore}`);
+        } finally {
+          console.warn = originalWarn;
+        }
+        if (!warnMessages.some((m) => m.includes('未找到合法因子分值'))) fail('未知因子应触发 difficultyTotal warning');
+        scoreFallbackChecked = true;
+      }
 
       // 断言 1：池=槽恒等式
       if (!identityPass) fail(`${mode}: 池=槽恒等式失败 pool=${randomFactorPoorLen} sum=${sumSlots}`);
@@ -154,6 +176,24 @@ try {
       const sumSlotsNum = manualSlots[0] + manualSlots[1] + manualSlots[2];
       const facFilledCnt = selFac2.filter((f) => f != null && f !== '').length;
       if (sumSlotsNum > 0 && facFilledCnt !== sumSlotsNum) fail(`${mode}: randomFillAndStart 后 selectedFactorList 填 ${facFilledCnt} ≠ ΣmanualSlots ${sumSlotsNum}`);
+
+      // 段3④：难度总分 = 锁定因子 + 手选因子；点金单因子贡献翻倍。
+      const afterFillState = getSelectState();
+      const scoreFactors = (afterFillState.lockFactorList || [])
+        .concat((afterFillState.selectedFactorList || []).filter(Boolean));
+      const scoreExpected = scoreFactors.reduce((sum, f) => sum + factorScore(f) * (getGoldFor(f) ? 2 : 1), 0);
+      const scoreActual = difficultyTotal();
+      if (scoreActual !== scoreExpected) fail(`${mode}: difficultyTotal=${scoreActual} ≠ 手工求和 ${scoreExpected}`);
+      const goldTarget = scoreFactors.find((f) => !getGoldFor(f));
+      if (goldTarget) {
+        const beforeGold = difficultyTotal();
+        const base = factorScore(goldTarget);
+        const occurrenceCount = scoreFactors.filter((f) => f === goldTarget).length;
+        toggleGold(goldTarget);
+        const afterGold = difficultyTotal();
+        if (afterGold !== beforeGold + base * occurrenceCount) fail(`${mode}: 点金 ${goldTarget} 后 difficultyTotal ${afterGold} ≠ ${beforeGold}+${base}×${occurrenceCount}`);
+        toggleGold(goldTarget);
+      }
 
       // ===== 段2 Phase 2：校验三规则断言（validate 镜像真身 JJBSelect.validate） =====
       // 准备：从 jjbSession 重新开局以拿到 fresh 9 格 + 池

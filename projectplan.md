@@ -1383,3 +1383,585 @@ e2e 内部 6 段断言逐模式跑全 PASS：①池=槽恒等式 ②9 格契约 
 ### C. 红线接缝 API 面（重构勿破坏签名）
 
 jjbSession 对外：`startSession/getSelectState/setSelectedCmd/setSelectedFac/clearCmdSlot/clearFacSlot/validate/startFromSelection/randomFillAndStart/startRandomSession/getSessionMatches/setVerdict/getScore/toggleGold/getGoldFor/exposeSelectDebug/exposeBattleDebug/exposeObsbarDebug/jjbLive`。纯 React 视觉态：goldRuntime Set(664-679，刷新即失，不入计分)。
+
+---
+
+## v4 spoke round · jjb-react-poc-fix1 — React PoC 三项修复 (2026-06-17)
+
+**目标**：yb 过目 PoC 三点反馈 → ①打勾✓位置 ②直播条出格+无返回 ③难度总分实时。scope=web/src/，该 spoke 当时红线区零改；当前最终工作树已叠加头像资源修复（`assets/resources/images/commander/{蒙斯克,斯台特曼}.png(.meta)`），收口时需把资源修复单独列项，不能继续整体声称 web/src-only。
+
+### 改动 (6 文件，全 web/src/，红线 git diff 空)
+1. **打勾位置** — `SelectScreen.tsx`：删拼装区已选因子硬 `check`(:260)；候选池 FactorFrame 加 `check={s.selectedFactorList.includes(f)}`(:295)。实测 slotCheck=0（拼装无✓）/poolCheck=5（候选被选中才✓）。
+2. **难度总分实时** — `jjbSession.ts` 新增 `factorScore(name)`（因子配置.txt 第3列经 `ConfigData.factorList_back` 不被消耗那份；虚空重生者缺列→fallback=5，证据为 `docs/因子点数配置.csv` 与 `docs/项目全貌.md`）+ `difficultyTotal()`（锁定 `lockFactorList` + 手选 `selectedFactorList` 非空求和，点金 `getGoldFor` ×2）。`SelectScreen` topbar + `ObsBar` obs-score 区各显示「难度总分·NN」。实测口径自洽（dbg2 局 21；点金复仇战士 5→10，sum 21→26）。
+3. **直播条** — `ObsScreen.tsx` !bare 加返回按钮（props `onBack` → `App.tsx:155` 传 `setScreen('select')`）；`obs-fuller.css` 加 `.obs-host:not([data-bare]){overflow-x:auto;max-width:100vw}` 兜底，仅 !bare 生效（bare `[data-bare]='1'` 固定 1280×232 采集不受影响）。实测：!bare 返回按钮可点回 select；800×400 窄视口 bodyScroll 793<800 不出格；bare overflow=visible / maxwidth=none / 1280 固定。
+
+### 验证
+- build 绿（vite 448ms）；hp-verify phase3 **Overall=PASSED blocked=false**（3 checks 全绿：cocos-build 15536ms / react-build 741ms / react-e2e 147ms）
+- proof JSON：`/tmp/jjb-v4-impl/playwright-summary-phase3.json` (ts 2026-06-17T14:29:43Z)
+- spoke 当时红线 git diff 空（assets/Script/Scene/resources/design 零改）✅；当前最终工作树已叠加 commander 头像资源变更，见后续 Codex audit 资源口径修正。
+- 7 张截图存 repo 根（fix1-*.png）
+
+### Caveat（如实，未伪造）
+- **四套 /tmp/jjb-test Playwright 脚本易失丢失**（repo 无副本）→ 以 verify.checks（3项）+ Playwright 实地验证（done-when 三项）替代，未声称四套全绿。
+- **harness review/gate 未跑**：config reviewer_config_drift（qwen3.7-max / mh-minimax-m3 不在 eval-models.json），review dispatch 外部模型可用性未确认 → 交 hub 收口决定。
+- **未 commit**，停工作树交 hub。
+
+---
+
+## Codex hub audit · Harness Pro 全方位审查计划（2026-06-17）
+
+**触发**：yb 要求 Codex 对当前 Claude Code + GLM-5.2 开发过程做 Harness Pro 全方位审查/复查，对交付物质量提出质疑，并在调研清楚后规划项目清理整理。
+
+**审查边界**：
+- 先只读审查：不删文件、不改规则、不写外部系统、不替 spoke 补造 review/gate。
+- 当前真相锚点优先级：`projectplan.md` → `HARNESS-PRO-ADAPTER.md` → 当前 git diff/runtime/proof → 可复跑命令。
+- `spoke verify PASSED` 只作为线索；hub 必须复核源码 diff、红线、截图/DOM 证据、可用测试和 harness artifact。
+
+**待办**：
+- [x] 盘点当前工作树：交付改动、证据截图、临时垃圾、runtime、未追踪 skill 目录分层。
+- [x] 追查本地 Claude Code / Codex session 线索：只抽取与计划、验证、清理相关的最小摘要，不复制完整 transcript。
+- [x] 审查 `web/src` 三项修复：打勾位置、难度总分实时、直播条返回/溢出；检查是否有逻辑盲点或测试缺口。
+- [x] 审查 commander 头像替换：确认源文件尺寸、格式、是否影响 Cocos/web 资源引用和红线口径。
+- [x] 复跑可用验证：优先 React build/e2e/hp-verify；若四套 `/tmp/jjb-test` 仍丢失，明确标 blocked 而非宣称全绿。
+- [x] 给出清理整理方案：safe delete / archive / keep / needs-confirmation 四类，先列 diff 再执行。
+
+**stop rule**：
+- 发现红线目录意外改动、verify 与源码不一致、harness artifact 缺失却被宣称 PASS、或清理目标无法判定来源 → 停下报告，不继续扩大 scope。
+
+### Codex hub audit · 复查结果（2026-06-17）
+
+**结论级别**：确定性 build/e2e + UI 抽查通过；严格 Harness Pro gate **未完成**。本轮不能宣称“全绿可提交”，只能宣称“当前改动可运行、核心修复点可实测，但 gate / review / 清理仍需收口”。
+
+**复跑证据**：
+- `npm run build`（`web/`）通过：292 modules，bundle 233.80 kB / gzip 80.36 kB。
+- `node web/e2e/run.mjs` 通过：9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+- `node hp-verify.mjs 3` 通过，并重写 `.harness-pro-react/verify-report-3.json`：cocos-build 30945ms、react-build 1418ms、react-e2e 324ms，overall=PASSED。
+- Playwright MCP UI 抽查：
+  - select 初始：slot 因子 check=0 / pool check=0 / 难度总分显示 `· 9`。
+  - 点击随机填充后：slot 因子 check=0 / pool check=5 / 难度总分显示 `· 25`。
+  - obs 主播态：存在返回按钮与判定控制条；返回按钮可回到 `select-sc2-dark-std8`。
+  - 800×400 `!bare`：页面未横向撑出 viewport（documentScrollWidth 792 < 800），`.obs-host` 自身横向滚动（scrollWidth 1057 > clientWidth 800）。
+  - `bare=1`：返回按钮=false、控制条=false、`data-bare=1`、横条保持 1280×232。
+- Playwright MCP 释放后复查（同日二次）：
+  - 有效入口 `?screen=select&style=sc2&mode=dark` 下 console 新增 0；`data-screen-label=select-sc2-dark-std8`。
+  - 随机填充后 `.fx-check` 总数 5，全部挂在候选池 `[data-pool-fac]`；拼装区 `[data-slot-fac] .fx-check` 为 0。
+  - `?screen=obs&style=sc2&mode=dark` 下返回按钮 selector 为 `data-back-select`，判定控制区 selector 为 `data-obs-control`；分步点击后 DOM 回到 `select-sc2-dark-std8`。注意：当时 SPA 内部状态切屏后地址栏仍保留 `screen=obs`；后续 00:17 已修复并加 UI smoke。
+  - 800×400 `!bare` 复查：`documentElement.scrollWidth=792 < 800`，`.obs-host{overflow-x:auto;max-width:800px}`，内部横向滚动 `1057 > 800`。
+  - 800×400 `bare=1` 复查：返回=false、控制=false、`data-bare=1`、`overflow-x=visible`、`max-width=none`、横条 `1280×232`。
+
+**必须质疑的问题**：
+1. **review/gate stale**：`.harness-pro-react` session 于 2026-06-16 completed；今天 2026-06-17 的三项修复只复跑并覆盖了 `verify-report-3.json` / evidence bundle，没有重新 `review` / `record-gate`。所以旧 gate 不能覆盖今日 diff。
+2. **gate policy 与 adapter 不一致**：repo adapter 默认 strict，但 `.harness-pro-react/mission.md` 与 gate-matrix 使用 majority；Phase 2 `PASS_WITH_WARNINGS` 仍 completed。流程层面不能称为 strict gate。
+3. **doctor 仍 warn**：`reviewer_config_drift`，`qwen3.7-max` 与 `mh-minimax-m3` 不在 `config/eval-models.json`。本机 `DUBHE_API_KEY` 当前 unset，无法 live-probe `/v1/models` 来确认这两个别名是否仍存在；仓内有 `config/harness-pro-reviewers-exec-glm.json` 变体，全部 model_key 均存在于当前 `eval-models.json`，但这会改变用户指定 reviewer 组合，不能无声替换。
+4. **audit 不是完整 PASS**：`npx harness-pro audit --runtime-dir .harness-pro-react --json` 为 `partial_compliance`；phase/reviewer/stop/security PASS，但 `Post Mutation Match: NO`、`Post npm test: skipped`。
+5. **四套 `/tmp/jjb-test` 仍丢失**：repo 内没有副本，本轮只验证 hp-verify + Playwright 抽查，不能替代 jjb-verify 手册里的 48/42/36/20 四套回归。
+6. **console 纪律仍需防误判**：有效入口复查 console 新增 0；但新 origin 首次访问曾记录 `favicon.ico` 404，且误用 `?mode=std8` 会触发 `[realAsset] 缺图: brand jjb-title-sc2-std8` warning。不是三项功能回归失败，但严格测试应修 favicon，并把赛事模式参数从视觉 `mode` 中拆出，避免测试 URL 误用。
+7. **红线口径已变化**：当前 diff 包含 `assets/resources/images/commander/{蒙斯克,斯台特曼}.png(.meta)`。这不是 web/src-only；如果本轮 scope 仍声称“红线区零改”，必须改口径或拆成独立资源修复。
+8. **`factorScore()` fallback 过宽（已修）**：审查时发现未知因子名与“虚空重生者缺第三列”都会返回 7，存在 typo / 配置缺失被静默计为高分的风险。已改为仅白名单已知缺表因子 fallback；其中 `虚空重生者` 按当前 SoT 修正为 5 分，非酋硬编码限定因子 `混乱工作室` / `礼尚往来` 暂保留 7 分但标为需拍板项，其余 unknown/bad-row 返回 0 并 `console.warn`。
+9. **URL 参数语义混用**：`mode` 同时表示明暗主题（dark/light）和赛事模式（std8/std10/...）；当前可用入口依赖 `?style=sc2&mode=dark` + SelectScreen 内部把非法赛事 mode 回落 std8。调试可用，但长期建议改赛事模式参数为 `sessionMode`，否则 `?mode=std8` 会污染视觉主题并触发资源 warning。
+10. **SPA 切屏不回写 URL（后续已修）**：obs 返回按钮实际能切回 select，但地址栏仍停在 `?screen=obs...`。这不会阻断当前操作态，但会影响刷新/复制链接/自动化脚本复现；后续 00:17 已补 URL 回写与 UI smoke 断言。
+
+**清理整理分层（未执行删除）**：
+- **keep / 可入库**：`README.md`、`projectplan.md`、`react-migration-plan.md`、`react-phase2-plan.md`、`react-migration-poc-result.md`、`knowledge-base/`、`mode-rules-truth-table.md`。
+- **证据类，建议迁移归档后再入库/或删**：根目录 `fix1-*.png`、`review-*.png`、`jjb-react-home.png`、`std10-after-drag.png`；建议移动到 `diagrams/audit-2026-06-17/` 或 `docs/evidence/react-fix1/`，同时在 projectplan 保留索引。
+- **高概率垃圾/敏感，不建议入库**：`claude-login.png`（登录截图，删除或至少加入 ignore）。
+- **工具产物，保持 ignore**：`.harness-pro*`、`.playwright-mcp/`，当前 `.gitignore` 已覆盖。
+- **repo-local skill**：`.agents/skills/jjb-*` 当前未 ignore；若这是项目能力资产，应一次性入库；若只是本机 skill shadow，应加 `/.agents/` ignore，避免每次污染 status。
+- **design diagrams**：`diagrams/2026-*` 多批 SVG/PNG/JSON 需要按“最终版/过程稿”二分；不要直接全删，先保留最终 wiki/whiteboard 对应版本，过程稿归档或忽略。
+
+**会话 / 计划线索定位结果**：
+- `Codex-history` / `/opt/homebrew/bin/Codex-history` 当前不可用，`--show-dir` 无输出；本仓 `.claude` / `.codex` / `.Codex` 只有 settings/hooks/skills，没有完整 Claude Code / Codex transcript。
+- 可作为当前真相的 repo 内计划文件：`projectplan.md`、`react-migration-plan.md`、`react-migration-poc-result.md`、`react-migration-phase1-audit.md`、`react-phase2-plan.md`、`react-phase2-phase0-review-baseline.md`、`knowledge-base/claude-design-brief-r3.md`。
+- `.harness-pro-react` runtime 证明 React PoC 原始 session 是 `harness-2026-06-16T06-16-34`，Gate Policy=`majority`，Status=`completed`；今日 diff 只是复跑 verify，不等于重新 review/gate。
+- 历史 host reviewer failures 显示除了 model drift，曾大量失败在缺 `config/host-reviewer-allowlist.json`。已本地补最小 allowlist（仅 `localhost:8686` / `127.0.0.1:8686`，官方 endpoint 仍禁用），但 `config/` 被 `.gitignore` 忽略，此修复不会入库，换机仍需补。
+- `.agents/skills/jjb-run-broadcast` 与 `.agents/skills/jjb-verify` 和 `.claude/skills` 版本完全一致；`.agents/skills/jjb-dev-loop` / `jjb-knowledge-base` 是把 Claude 表述替换为 Codex 表述的变体。是否入库需 yb 拍板，不能归类为纯垃圾。
+
+**会话线索更正（2026-06-17 夜续查）**：
+- `Codex-history` 仍不可用（`command not found`），但用户级 Claude Code transcript **存在**：`/Users/bytedance/.claude/projects/-Users-bytedance----jijiebei/*.jsonl`。仓内 `.claude/` 只有 settings/skills，不代表用户级 session 不存在。
+- 最近相关主 session 摘要：
+  - `823fb134-1dc2-4e14-b295-186710b854c1`（title=`jjb-react-poc-fix1`）：三项修复原始 spoke。记录了打勾、返回选择、obs 窄视口、bare 固定采集、难度总分、`/tmp/jjb-test` 缺失、`reviewer_config_drift`、Dubhe Authorization header 调试。
+  - `2fe22fb8-e499-43c8-9d9d-433e95f702b9`（title=`主控 - glm5.2`）：头像替换原始 session。记录蒙斯克/斯台特曼裸名图从 38×51 / 42×45 占位替换为 80×96，并同步 `.meta`，且确认不触碰 `assets/Script` / `Scene` / `jjdata` / `design` 红线。
+  - `3c639e6e-171c-4393-b350-c73ffec80bda`（title=`主控`）：长期 hub 线。包含 `r3-bp-component-specs.md`、项目清理、难度分质疑、Design 提交路径等上下文。
+- 项目级 Claude memory 可作为辅助索引：`memory/jjb-project-orientation.md` 明确 `projectplan.md` 是完整进度真相锚；`memory/jjb-knowledge-base.md` 记录知识库/wiki、画板 token 与权限迁移；`memory/jjb-race-rules.md` 记录 7 种赛制口径。但最终结论仍以当前仓库文件、runtime artifact、可复跑命令为准。
+- 清理口径更新：`.agents/skills/jjb-*` 不宜简单 ignore。`git ls-files` 显示 `.agents/skills/harness-pro-repo-adapter/SKILL.md` 已跟踪，而 `.claude/skills/jjb-dev-loop|jjb-run-broadcast|jjb-verify` 也已跟踪；`.agents/skills/jjb-*` 是 Codex 可用的项目技能镜像/改写版，其中 `jjb-knowledge-base` 目前在 `.claude/skills` 也未跟踪。建议作为待拍板项目资产，而不是垃圾文件。
+
+**Codex session 线索定位（2026-06-17 夜续查）**：
+- `Codex-history` CLI 不可用；改用 `.codex` / `.codex-official` JSONL 只读检索。用户级 Codex JSONL 数量较多，强关键词命中里有当前审查 session、历史执行 session，也有 cwd 在本仓但任务归属其它项目的误命中。
+- 高相关 Codex sessions：
+  - `/Users/bytedance/.codex/sessions/2026/06/08/rollout-2026-06-08T17-03-44-019ea679-3dc0-75a1-9fa8-5d269bb8ae31.jsonl`：生成 `assets/resources/images/brand/jjb-title-{metal,sc2,minimal}.png` 标题艺术字，并初始化 `.harness-pro-jjb-title-art-png/`；属于早期品牌素材线索。
+  - `/Users/bytedance/.codex/sessions/2026/06/10/rollout-2026-06-10T12-09-20-019eafb8-6e59-7473-88df-fc33a7ad5f99.jsonl`：`jjb-frontend-redesign` 分支，记录新旧玩法对比与双打/官突 skeleton，最终有本地提交 `4b655e4` / `065ebd1`；用于追溯双打占位与规则差距。
+  - `/Users/bytedance/.codex/sessions/2026/06/12/rollout-2026-06-12T01-08-30-019eb7a8-2409-7630-9492-d984b32a7ec6.jsonl`：OBS 底部横条 R2 相关，明确当时本地未安装 Playwright，靠 MCP 全局包跑 `/tmp/jjb-test/obsbar.js`；支持“历史能跑，但当前 repo 无可复跑副本”的判断。
+  - `/Users/bytedance/.codex/sessions/2026/06/12/rollout-2026-06-12T14-06-08-019eba70-149d-7550-a867-02eb38c3cfd3.jsonl`：Phase F 因子边框矢量化 / bare 修复，最终 HEAD 记录为 `c98e689`，工作树干净；用于追溯 Cocos OBS/bare 视觉基线。
+  - `/Users/bytedance/.codex/sessions/2026/06/13/rollout-2026-06-13T01-18-52-019ebcd7-fcc7-7741-ad11-fac055f08a32.jsonl`：Phase G XP 对齐审计与演示态修正，覆盖 `assets/Script/jjbDesign/*` 与 `projectplan.md`，并引用 `.harness-pro-85aed822-xp` gate/audit；用于追溯 XP/DEMO 语义和 Cocos 验证背景。
+  - `/Users/bytedance/.codex-official/sessions/2026/06/17/rollout-2026-06-17T22-46-13-019ed60c-0827-7501-ad79-8d59f8c02d77.jsonl`：当前 Codex Desktop 审查主 session；本节所有复查、清理和验证续查均归档在这里。
+- 低相关 / 误命中：
+  - `/Users/bytedance/.codex-official/sessions/2026/06/17/rollout-2026-06-17T23-02-06-019ed61a-92c0-7743-a488-aa11e4bfd0bc.jsonl`：cwd 在 `jijiebei`，但任务实际是定位 Lark Search / ModelHub 文档 Claude session，不属于集结杯代码审查。
+  - 2026-06-17 若干 cwd=`jijiebei` 的 Codex session 实际属于 harness-pro / Flux statusline / ModelHub 文档等其它项目上下文，只作为误命中排除，不纳入集结杯交付事实。
+- 审查结论：Codex 侧 durable 线索与 Claude/projectplan 口径基本一致。历史 `/tmp/jjb-test` 全绿主要来自 6/12-6/13 周期，但最终源码没有完整持久化到 repo；当前只能承认“历史结果存在、当前套件不可复跑”，不能把 transcript 片段拼成新的 PASS。
+
+**低风险清理已落地（2026-06-17 Codex hub）**：
+- `.gitignore` 新增根目录临时截图/登录截图规则：`/claude-login.png`、`/fix1-*.png`、`/review-*.png`、`/jjb-react-home.png`、`/std10-after-drag.png`。
+- `.gitignore` 新增 `diagrams/2026-*` 中间件规则：忽略 `diagram.png` / `diagram.json` / `preview.png`，保留 `diagram.svg` 作为可入库源。
+- 已删除根目录临时截图：`claude-login.png`、`fix1-*.png`、`review-*.png`、`jjb-react-home.png`、`std10-after-drag.png`。这些文件的关键证据已在本节和 Playwright MCP 记录里文字化；不删除 `diagrams/phase*` 证据图。
+- 已删除忽略目录 `.playwright-mcp/`：516 个本地 MCP 截图/console/handoff 临时文件，约 35MB。仓内未引用具体路径，且 React DOM smoke 已 repo 化到 `web/e2e/ui-smoke.mjs`；Cocos 全量回归仍以 jjb-verify 四套脚本为准。
+- 新增 `docs/jjb-test-recovery-audit-2026-06-17.md`：审计 `/tmp/jjb-test` 四套回归的可恢复度。结论：历史全绿证据存在（48/42/36/20），当前只能完整恢复 `helpers.js`；`obsbar.js` 只能恢复到历史阶段版本/片段，不能证明等同最终 42/42 版；`phaseG.js` / `all.js` / `v4-existing.js` 只有历史结果和片段，不能拼成“恢复版四套”冒充全量回归。
+- 新增 `docs/repo-cleanup-inventory-2026-06-17.md`：把本轮已清理、当前不应删除、仍需 yb 拍板的资产集中成清理盘点，避免后续 agent 把证据图、画板源或项目 skill 当作普通垃圾清空。
+- 新增 `diagrams/README.md`：为 `diagrams/` 建资产索引，区分 `2026-*` 画板 SVG 源、React Phase 证据图、知识库板图，并明确已被 `projectplan.md` 引用的证据图移动/删除前必须同步更新引用。
+- `web/index.html` + `web/public/favicon.svg`：补 favicon，避免新浏览器上下文首次访问 `/favicon.ico` 404 影响 console discipline。复查：`curl -I /favicon.svg` 200，dist HTML 已带 `<link rel="icon">`，Playwright 有效入口 console 新增 0。
+- `web/src/logic/jjbSession.ts`：收窄 `factorScore()` fallback，仅已知缺表因子走白名单；`虚空重生者` 按 `docs/因子点数配置.csv` / `docs/项目全貌.md` 修正为 5 分，`混乱工作室` / `礼尚往来` 仍是限定因子分值待拍板项；未知/坏配置返回 0 并 warning。复查：React build/e2e 通过，Playwright 随机填充后 console 新增 0。
+- `web/e2e/run.mjs`：补 repo 内可重复断言，覆盖 `factorScore` 白名单/未知因子 warning、`difficultyTotal` 手工求和、点金按因子名出现次数翻倍。它仍不是浏览器 DOM 回归，不能替代 `/tmp/jjb-test` 四套和 Playwright MCP 实拍，但能防止难度分口径再次漂移。
+- 未继续删除待拍板资产；`diagrams/phase1-*`、`diagrams/phase2-*`、`arch/collab/overview/rules-board.png` 与 `.agents/skills/jjb-*` 仍保留在 `git status` 中等待拍板。
+
+**低风险清理后复验**：
+- `npm run build`（`web/`）通过：292 modules，bundle 233.80 kB / gzip 80.36 kB。
+- `node web/e2e/run.mjs` 通过：9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS；新增难度分/点金断言也通过。
+- `node hp-verify.mjs 3`（最新 diff）通过，并重写 `.harness-pro-react/verify-report-3.json` / `evidence-bundle-pre-review-3.json`：cocos-build 9696ms、react-build 971ms、react-e2e 202ms，overall=PASSED。
+- `git diff --check` 无输出。
+- `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 severity=`warn`，唯一 issue 仍是 `reviewer_config_drift`（`qwen3.7-max`、`mh-minimax-m3` 缺 model key）。这是 gate 前置问题，未解决。
+
+**复查补强（MCP 释放后，2026-06-17 夜）**：
+- `web/e2e/ui-smoke.mjs` 已入库为真实浏览器 smoke：自动挑空闲端口 + Vite preview `--strictPort` + repo-local Playwright + 本机 Chrome，覆盖 select 初始/随机打勾位置、难度总分格式、obs !bare 返回/控制/横向滚动/1280×232、bare 控制隐藏/固定 1280×232。
+- `web/package.json` 新增 `e2e:ui`，`web/package-lock.json` 新增 `playwright` devDependency。使用 Chrome channel，不需要下载 Playwright 浏览器；修过一次 ESM `URL.pathname` 中文路径编码问题，现已改为 `fileURLToPath()`。
+- 本机 `config/harness-pro-reviewers.json` 已把 `react-ui-smoke` 加入 verify.checks 且 required=true；但 `config/` 被 `.gitignore` 忽略，所以这是本机 Harness verify 增强，不是仓库可移植 reviewer 配置变更。
+- 复验结果（已清掉旧 7788 preview 后重跑；`lsof -nP -iTCP:7788 -sTCP:LISTEN` 无监听）：
+  - `npm run build`（`web/`）通过：292 modules，bundle 233.96 kB / gzip 80.47 kB。
+  - `npm run e2e:ui`（`web/`）通过：`PASS: React UI smoke passed`。
+  - `node web/e2e/run.mjs` 通过：9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+  - `node hp-verify.mjs 3` 通过并重写 evidence：cocos-build 6935ms、react-build 805ms、react-ui-smoke 5233ms、react-e2e 191ms，overall=PASSED。
+- 更新后的质疑口径：check 位置、返回按钮、obs overflow 已有 repo 内浏览器 smoke 覆盖；但 `/tmp/jjb-test` 四套 48/42/36/20 断言仍未恢复，review/gate 仍受 reviewer_config_drift 与 `DUBHE_API_KEY` 缺失阻断。
+
+**MCP 释放后续验（2026-06-17 夜，Codex）**：
+- `git diff --check` 无输出；`lsof -nP -iTCP:7788 -sTCP:LISTEN` 无监听，确认没有旧 preview 污染。
+- `npm run e2e:ui`（`web/`）通过：`PASS: React UI smoke passed`。
+- `node web/e2e/run.mjs` 通过：9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+- `node hp-verify.mjs 3` 通过并刷新 `.harness-pro-react/verify-report-3.json` / evidence bundle：cocos-build 15000ms、react-build 729ms、react-ui-smoke 5079ms、react-e2e 174ms，overall=PASSED。
+- `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 exit 1 / severity=`warn`：唯一 issue 仍是 `reviewer_config_drift`，`qwen3.7-max` 与 `mh-minimax-m3` 未声明在 `config/eval-models.json`。
+- `npx harness-pro audit --runtime-dir .harness-pro-react --json` 仍为 `partial_compliance`：Phase/Reviewer/Stop/Security PASS，但 `Post Mutation Match=NO`、`Post npm test=skipped`，且历史 host reviewer real-use 为 0/15（当时 allowlist_config_missing，已不是本次新跑 review）。
+- `DUBHE_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` 均 unset；本地 Dubhe `/health` 可达（`status=ok`），但无授权不能 live-probe `/v1/models`。因此本轮仍不能硬跑或伪造 Harness Pro review/gate。
+
+**代码审查续查（2026-06-17 夜，Codex）**：
+- 修正一处真风险：`factorScore('虚空重生者')` 原先 fallback=7，与 `docs/因子点数配置.csv`、`docs/项目全貌.md`、`docs/build_guantu_config.py` 的 SoT 冲突；已改为 fallback=5，并同步 `web/e2e/run.mjs` 断言。`assets/resources/jjdata/因子配置.txt:30` 仍只有两列 `虚空重生者,5`，长期正确修法仍是数据校准 T2：补成 3 列且拍板中间“类型/组”列。
+- 仍需质疑：`混乱工作室` / `礼尚往来` 是非酋路径硬编码限定因子，当前 React 难度总分暂以 7 分白名单计入，但 `docs/因子点数配置.csv` 与 `docs/build_guantu_config.py` 把它们标为“限定/不可用”而非官方点数。此口径未被当前验证证明，应列为产品/规则拍板项，不应在后续文档里写成已定真相。
+- 修正 `/tmp/jjb-test` 恢复审计：结构化扫描用户级 Claude JSONL 的 `toolUseResult.file` / `filePath+content` / Bash heredoc 后，当前只能完整恢复 `helpers.js`（3517 chars / 76 行）。`obsbar.js` 最大可见完整片段为 9222 chars / 136 行，来自历史阶段版本，不能证明等同最终 42/42 脚本；`phaseG.js` / `all.js` / `v4-existing.js` 仍无完整源码。`docs/jjb-test-recovery-audit-2026-06-17.md` 已更新。
+- 分值纠偏后复验：
+  - `git diff --check` 无输出；`lsof -nP -iTCP:7788 -sTCP:LISTEN` 无监听。
+  - `node web/e2e/run.mjs` 通过：9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+  - `npm run e2e:ui`（`web/`）通过：`PASS: React UI smoke passed`。
+  - `node hp-verify.mjs 3` 通过并刷新 evidence：cocos-build 7006ms、react-build 730ms、react-ui-smoke 5225ms、react-e2e 163ms，overall=PASSED。
+  - `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 exit 1 / severity=`warn`，同一 `reviewer_config_drift` 未解决。
+
+**真实 review/gate 复核（2026-06-17 夜续查）**：
+- 本地 Dubhe 服务 `http://127.0.0.1:8686/health` 可达，返回 `status=ok`；但 `/v1/models` 无 Authorization 会返回 `missing Authorization header`。
+- 当前 shell 中 `DUBHE_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` 均未设置。按 Harness Pro 约束，不能在 reviewer 前置不满足时硬跑 review，也不能用 stub-mode 伪造 production code 复审。
+- `config/harness-pro-reviewers.json` 当前 5 reviewer 中 2 个 model_key 不在 `eval-models.json`：`qwen3.7-max`、`mh-minimax-m3`，doctor 仍 warn。
+- `config/harness-pro-reviewers-exec-glm.json` 中 5 个 reviewer model_key 全在 `eval-models.json`（gpt-5.5、qwen3.6-plus、deepseek-v4-pro、kimi-k2.6、gemini-3.1-p），但它会改变用户指定 reviewer 组合，不能静默替换主 reviewer config；且该变体 verify.checks 目前只含 `cocos-build`，未包含本轮新增 `react-ui-smoke`。
+- 可执行路径：
+  1. 保留用户原 5 reviewer：需要临时注入 `DUBHE_API_KEY`，live-probe `/v1/models`，确认 `qwen3.7-max` 与 minimax 的公开 alias，然后修本机 `config/harness-pro-reviewers.json` + 重新 doctor/review/gate。
+  2. 接受替代 5 reviewer：明确记录 reviewer 组合变化，把 `react-build` / `react-ui-smoke` / `react-e2e` 合并进替代 config 后再跑 review/gate。
+  3. 两者都未满足前，只能继续停在 deterministic verify PASS，不能宣称 Harness Pro review/gate 完成。
+
+**建议下一步顺序**：
+1. 修流程：对今日 diff 重新开 amendment review/gate，显式 `--runtime-dir .harness-pro-react`。若坚持用户指定 5 reviewer，先提供 `DUBHE_API_KEY` 并 live-probe `qwen3.7-max` / `mh-minimax-m3`；若接受当前可声明模型组合，则可用 `--reviewer-config config/harness-pro-reviewers-exec-glm.json` 跑一条替代复审，但需在记录里标明 reviewer 组合变化。
+2. 修验证纪律：按 `docs/jjb-test-recovery-audit-2026-06-17.md` 恢复或重建 `/tmp/jjb-test` 四套脚本；当前 `web/e2e` 已覆盖难度分口径和 React 浏览器 smoke，但还不是 jjb-verify 手册里的 Cocos 四套全量回归。
+3. 已修小问题：URL `mode`/`sessionMode` 参数拆分已落地；SPA 切屏回写 `screen` URL 已补齐并有 UI smoke 覆盖。后续只需在更大路由改造时继续补浏览器前进/后退语义。
+4. 清理剩余拍板：`.agents/skills/jjb-*` 入库还是 ignore；`diagrams/phase*` 证据截图是否入库；`diagrams/2026-*/*.svg` 哪些是最终源；`arch/collab/overview/rules-board.png` 是否入库。
+
+**Codex 续验（2026-06-17 23:58 CST）**：
+- `git diff --check` 无输出；`lsof -nP -iTCP:7788 -sTCP:LISTEN` 无输出，确认本轮未留下 7788 preview。
+- `node web/e2e/run.mjs` 通过：bundle 16 markers + 9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+- `npm run e2e:ui`（`web/`）通过：`PASS: React UI smoke passed`。
+- `node hp-verify.mjs 3` 通过并刷新 `.harness-pro-react/verify-report-3.json` / evidence：cocos-build 17366ms、react-build 748ms、react-ui-smoke 4927ms、react-e2e 262ms，overall=PASSED。
+- `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 exit 1 / severity=`warn`：唯一 issue 仍是 `reviewer_config_drift`（`qwen3.7-max`、`mh-minimax-m3` 未声明）。
+- `npx harness-pro audit --runtime-dir .harness-pro-react --json` 仍 exit 1 / `partial_compliance`：Phase/Reviewer/Stop/Security PASS，但 `Post Mutation Match=NO`、`Post npm test=skipped`，且历史 host reviewer real-use 仍是 0/15。结论未变：当前只能报 deterministic verify PASS，不能报 Harness review/gate 全绿。
+
+**Codex 清理边界续查（2026-06-18 00:00 CST）**：
+- 当前工作树与 6/17 夜一致，7788 无监听；Dubhe `/health` 可达，但 `DUBHE_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` 仍 unset。
+- reviewer 只读复核：主配置 5 reviewer 中 `qwen3.7-max` / `mh-minimax-m3` 仍不在 `config/eval-models.json`；替代配置 `harness-pro-reviewers-exec-glm.json` 的模型 key 均存在，但会改变评审团，不能静默替换。
+- 清理扫描补充：
+  - `.harness-pro-*` runtime 合计不到 3MB，容量不是问题，短期保留作为审计证据。
+  - `web/dist/` 约 9MB，可重建但会影响 `npm run e2e:ui` 的前置条件。
+  - `web/node_modules/` 约 84MB，是本地依赖缓存，不作为项目垃圾处理。
+  - `template-banner.png` 被 `template.json` 引用，不删。
+  - `jjb-guide-home.png` 当前只命中 `.gitignore`，未发现正文引用；`kb-guide/` 和 `kb-whiteboards/` 是已 ignore 的知识库导出物。已补入 `docs/repo-cleanup-inventory-2026-06-17.md`，列为需确认后清理候选。
+
+**Codex 小修续查（2026-06-18 00:05 CST）**：
+- 修复一处前文已标记的 console discipline 风险：`web/src/App.tsx` 现在只接受 `style=metal|sc2|minimal` 与主题 `mode=dark|light`，非法值分别回落 `sc2` / `dark`。因此测试或用户误用 `?screen=select&style=sc2&mode=std8` 时，App 外层不会再渲染 `mode-std8`，也不会请求不存在的 `jjb-title-sc2-std8`。
+- `SelectScreen` 仍保留原行为：它直接读取 URL 原始 `mode=std8|std10|...` 作为赛事模式兜底，所以这次不是完整参数重构。长期仍建议新增 `sessionMode` 参数，把视觉主题与赛事模式彻底拆开。
+- `web/e2e/ui-smoke.mjs` 新增回归断言：访问 `?screen=select&style=sc2&mode=std8` 时，`data-screen-label` 应为 `select-sc2-dark-std8`，App class 应含 `mode-dark`，且 console warning/error 仍为 0。
+- 复验：
+  - `git diff --check` 无输出。
+  - `node web/e2e/run.mjs` 通过：bundle 16 markers + 9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+  - 首次 `npm run e2e:ui` 在未重新 build 时失败，证明它确实读 `web/dist` 旧 bundle；随后执行 `npm run build` 成功。
+  - 重新 build 后 `npm run e2e:ui` 通过：`PASS: React UI smoke passed`。
+  - `node hp-verify.mjs 3` 通过并刷新 evidence：cocos-build 10069ms、react-build 1203ms、react-ui-smoke 6601ms、react-e2e 226ms，overall=PASSED。
+  - `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 exit 1 / severity=`warn`，同一 `reviewer_config_drift`；`audit` 仍 `partial_compliance`。结论仍不能升级为 Harness review/gate 全绿。
+
+**Codex smoke 稳定性补强（2026-06-18 00:08 CST）**：
+- 修复一处验证流程风险：`npm run e2e:ui` 原先直接读 `web/dist`，若源码刚改但未 build，会测旧 bundle。刚才第一次 smoke 失败就是这个原因（旧 dist 仍产生 `mode-std8` 和缺图 warning）。
+- `web/package.json` 的 `e2e:ui` 已改成 `npm run build --silent && node e2e/ui-smoke.mjs`，保证直接运行 smoke 时先刷新 dist。`hp-verify` 中会多一次 React build，但避免了 stale bundle 误判，代价可接受。
+- 复验：
+  - `git diff --check` 无输出。
+  - `node web/e2e/run.mjs` 通过：bundle 16 markers + 9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+  - `npm run e2e:ui` 通过，输出包含 build 和 `PASS: React UI smoke passed`。
+  - `node hp-verify.mjs 3` 通过并刷新 evidence：cocos-build 8458ms、react-build 1272ms、react-ui-smoke 8089ms、react-e2e 264ms，overall=PASSED。
+  - `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 exit 1 / severity=`warn`，唯一 issue 仍是 `reviewer_config_drift`；`audit` 仍 `partial_compliance`。
+
+**Codex URL 参数拆分补强（2026-06-18 00:12 CST）**：
+- 正式接入 `?sessionMode=std8|std10|std12|rescue|one-a|hard1|hard2|feiqiu|suiji` 作为 React 直达选择页的赛事模式参数；`?mode=dark|light` 只负责视觉主题。
+- `web/src/App.tsx` 的 select 兜底现在也按 `sessionMode` 开局，避免父层先开 `std8` 后子层无法覆盖。旧 URL `?mode=std10` 仍作为兼容 fallback；主题值 `mode=light` 不会被误传给 `startSession()`。
+- `web/src/screens/SelectScreen.tsx` 同步读取 `sessionMode` 优先、旧 `mode` 兼容，非法值回落 `std8`。
+- `web/e2e/ui-smoke.mjs` 新增覆盖：`?screen=select&style=sc2&mode=light&sessionMode=std10` 必须得到 `select-sc2-light-std10`，同时保留旧 `?mode=std8` 兼容断言。
+- 复验：
+  - `git diff --check` 无输出。
+  - `node web/e2e/run.mjs` 通过：bundle 16 markers + 9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+  - `npm run e2e:ui` 通过，输出包含 build 和 `PASS: React UI smoke passed`。
+  - `node hp-verify.mjs 3` 通过并刷新 evidence：cocos-build 29909ms、react-build 1203ms、react-ui-smoke 8179ms、react-e2e 244ms，overall=PASSED。
+  - `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 exit 1 / severity=`warn`，唯一 issue 仍是 `reviewer_config_drift`；`audit` 仍 `partial_compliance`。
+
+**Codex URL 同步与文档口径纠偏（2026-06-18 00:17 CST）**：
+- `web/src/App.tsx` 新增 `screen/style/mode` URL 回写：顶部导航、Home→Select、Select→Battle、OBS 返回选择、主题/风格切换都会 `history.replaceState` 更新当前 query。OBS 返回后刷新/复制链接不再回到旧 `screen=obs`。无效 `screen` 现在回落 `home`。
+- `web/e2e/ui-smoke.mjs` 新增断言：点击 OBS 返回按钮后 DOM 必须回到 `select-sc2-dark-std8`，且 `window.location.search` 必须包含 `screen=select`。
+- 修正文档漂移：双打调研段落曾把“虚空重生者 fallback=7”写回开放项；已改为当前 SoT=5，并明确若双打要例外按 7 计，必须重新产品拍板并同步数据/测试。
+- 复验：
+  - `git diff --check` 无输出。
+  - `node web/e2e/run.mjs` 通过：bundle 16 markers + 9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS。
+  - `npm run e2e:ui` 通过，输出包含 build 和 `PASS: React UI smoke passed`。
+  - `node hp-verify.mjs 3` 通过并刷新 evidence：cocos-build 9459ms、react-build 957ms、react-ui-smoke 7897ms、react-e2e 208ms，overall=PASSED。
+  - `lsof -nP -iTCP:7788 -sTCP:LISTEN` 无输出。
+  - `npx harness-pro doctor --runtime-dir .harness-pro-react --json` 仍 exit 1 / severity=`warn`，唯一 issue 仍是 `reviewer_config_drift`；`audit` 仍 `partial_compliance`。结论仍不能升级为 Harness review/gate 全绿。
+
+---
+
+## 双打模式(官突+额外因子)调研定稿 — 2026-06-18
+
+**触发**:yb 提出开启双打模式调研,口述赛制后经 hub Workflow 4-agent 核实(设计文档/引擎代码/历史讨论/XP老版参照)+ 4 轮交互澄清。同时 Codex 在跑独立检查回顾 goal(见上文 6/17-6/18 Codex 记录)。
+
+### 赛制定稿(综合 yb 4 轮拍板)
+
+| 维度 | 定稿值 | 关键修正 |
+|---|---|---|
+| 场数 | 3 场 | — |
+| 官突分档 | **A/B 两档**:前两场 A档(易)、第三场 B档(难) | ❌推翻"ABC三档" |
+| 官突来源 | `docs/官突ABC配置_官突池.csv`(153条官方突变) | 仓内已有,无需爬wiki |
+| 每场官突 | 抽 1 个突变 = 自带 1 地图 + 自带因子集(1~4个,**锁定不可改**) | ❌推翻`mutators:[2个因子]`抽象 |
+| 额外因子总数 | **10 个** | yb 口述 3+3+4 |
+| 额外因子分配 | **公共池自由分配**(同单刷),不预分到场 | ❌推翻"3/3/4预分" |
+| 额外因子来源 | 官方 52 标准因子,排除双打 ban(拿钱说话+恶意bug) | 细则 |
+| BP | 可 pick / ban;**pick 或 ban 了就不能自选**(三者互斥) | yb 新定义 |
+| 点金 | 支持(同单刷,点金=该因子分值×2) | — |
+| 指挥官 | 自行分配,每场 2 个 | — |
+
+### 调研关键发现(4-agent 结论汇总)
+
+1. **Cocos 引擎层(`JJBDoubles.ts`)已实现旧版骨架并接通6屏**,但用的是**占位参数**(`mutators:[风暴英雄,虚空裂隙]` 2因子 / `extraFactors:3` / `factorPoolSize:9` / `matches`曾被设1测试),**不是定稿赛制**。且 `mutators` 抽象错误(把因子当突变,实际1突变含1~4因子)。
+2. **web React 侧双打 = 纯占位**:`HomeScreen.tsx` 标 `soon:true` 点击 no-op,`jjbSession` 9模式不含 doubles,`cc-shim` 未桥接 JJBDoubles。
+3. **官突表完整存在**:`docs/官突ABC配置_官突池.csv`(153官方)+ `docs/官突ABC配置_挑战池.csv`(100自制)。结构:序号/突变名/地图/因子(点数)/点数和/初筛档/备注。
+4. **技术栈既定方向=切全 React**(`react-migration-plan.md` 路线B):TS引擎层当库 import,React 替代 Cocos cc.Graphics,cutover 删 Cocos。**双打直接在 web/src 实现,Cocos 双打线不再投入。**
+5. **BP 前置依赖缺口**:web React 因子 ban/pick **尚未实现**(单刷目前只有指挥官 ban 读 `ban指挥官.txt`)。Cocos `JJBDesignBoot.ts:461` 有 BP 面板(Ban1因子/自选1指挥官互斥)但 web 未接。双打 BP 复用单刷 BP → 单刷因子 BP 需先在 web 落地。
+6. **三套口径打架**(已收敛到定稿):细则草稿"每把1官突"vs DOUBLES_CONFIG"2因子"vs memory"5因子"——yb 拍板以官突表真实结构(1突变=1~4因子集)为准。
+7. XP 老双打(`HuiguiData.initShuangdaData`)= 2场×13因子四档分层×30指挥官rank分层,**与新设计差异大,不复刻**;`JJBDoubles.ts` 注释"3场×2指挥官与XP原型一致"经核实 XP 代码无此结构,属设计者事后叙述,非事实。
+
+### 待办(双打实现路径,顺序)
+
+1. **[前置] web 单刷因子 BP 落地** — pick/ban/自选三态互斥(参照 Cocos `JJBDesignBoot.ts:461`)。双打 BP 依赖它。
+2. **官突表解析进 web** — 读 `官突ABC配置_官突池.csv`,解析为 `{name,map,factors[],score,档}` 结构,按 A/B 档抽签。
+3. **双打引擎 web 化** — 重写 `JJBDoubles`(或 web 新建),实现:3场/AB两档抽官突/锁定官突因子集/10额外因子公共池/BP/点金/指挥官分配。摒弃旧 `mutators:2因子` 抽象。
+4. **SelectScreen 双打分支** — 官突锁定区(渲染1~4因子+官突名+地图)/ 额外因子公共池(10格)/ BP 面板 / 难度分(官突因子+额外因子,点金×2)。
+5. **BattleScreen/ResultScreen/ObsBar 双打分支** — 复用 `doublesLive()` 三态模式。
+6. **难度分接入双打** — spoke 已实现单刷 `factorScore/difficultyTotal`(`jjbSession.ts:678-718`),双打需覆盖官突锁定因子(也计入)+ 额外因子。
+
+### 开放项(待 yb 后续拍)
+
+- 官突抽签是固定顺序(A场→B场)还是档位定顺序随机(细则曾列"待拍")。
+- 挑战池(100自制,含"未识别:帕姆/AlaTao"等自制因子、点数有出入如风暴英雄官突表5 vs 挑战池10)是否纳入双打池,还是只用官方153条。
+- 虚空重生者分值：当前数据 SoT 为 5（`docs/因子点数配置.csv`、`docs/项目全貌.md`、`docs/build_guantu_config.py` 已一致；React `factorScore` fallback 已改 5）。若双打额外因子池要例外按 7 计，必须重新产品拍板并同步数据/测试，不能沿用旧口径。
+
+---
+
+## 主 Hub 收口记录 · jjb-live-dock（2026-06-18 CST）
+
+**触发**：yb 要求对 jjb-live-dock 工作树做主 Hub 收口——复核 diff、复跑 deterministic proof、如实报告 doctor/audit（不把 verify PASS 包装成 gate 全绿）、清理低风险项、列待拍板清单。六硬约束：不跳 phase 顺序 / review-gate-audit 只许 CLI 产生禁手写代跑 / frozen 与 runtime 只读 / 禁伪造 PASS / 证据只引 pre-review 事实 / 不确定失败超预算→停下汇报。
+
+### 一句话结论（非全绿）
+
+- **deterministic verify PASS**：本 session 真实复跑 hp-verify 3，4 checks 全绿。
+- **Harness review/gate BLOCKED**：reviewer_config_drift（2/5 reviewer 的 model_key 不在 eval-models.json）且本机 DUBHE_API_KEY UNSET，无法 live-probe 修复 → 按 stop_when 停止，不跑 review/gate，不降级 stub。
+- **audit = partial_compliance**：Phase/Reviewer/Stop Compliance PASS，但 Post Mutation Match=NO、Post npm test=skipped，历史 host reviewer real-use 0/15（allowlist_config_missing）。
+- **/tmp/jjb-test 四套 48/42/36/20 未恢复 / 不可复跑 / 需重建**——只能证明历史存在，不能宣称当前全绿。
+
+### 本 session 真实验证命令与输出摘要
+
+> 以下输出均为本 session 本次复跑产生，非引用旧 timestamp 报告；旧 verify-report-3.json（ts 2026-06-17T16:16:57Z）已被本次重写。
+
+| 命令 | 结果 |
+|---|---|
+| `git status --short --branch --untracked-files=all` | jjb-live-dock；16 文件 modified（+582/-47）+ untracked（favicon.svg / ui-smoke.mjs / 4×.agents/skills / 10×SVG / 11×diagrams 证据图 / 2×docs / README） |
+| `git diff --check` | 无输出（无 whitespace error） |
+| `node web/e2e/run.mjs` | PASS：bundle 16 markers + 9 模式池=槽恒等式 + 9 格契约 + 状态全 PASS |
+| `cd web && npm run e2e:ui` | PASS：build 437ms + `PASS: React UI smoke passed` |
+| `node hp-verify.mjs 3` | Overall=PASSED blocked=false；cocos-build 17197ms / react-build 811ms / react-ui-smoke 7265ms / react-e2e 200ms |
+| `npx harness-pro doctor --runtime-dir .harness-pro-react --json` | exit 1 / severity=warn；唯一 issue reviewer_config_drift（qwen3.7-max、mh-minimax-m3 不在 eval-models.json） |
+| `npx harness-pro audit --runtime-dir .harness-pro-react --json` | exit 1 / partial_compliance；Phase/Reviewer/Stop PASS，Post Mutation Match=NO、Post npm test=skipped，host real-use 0/15（allowlist_config_missing:15） |
+| `sips -g pixelWidth -g pixelHeight .../蒙斯克.png .../斯台特曼.png` | 两者均 80×96 |
+| `lsof -nP -iTCP:7788 -sTCP:LISTEN` | 无输出（无遗留 Vite preview） |
+| `node -e '检查 API key'` | DUBHE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY 均 UNSET |
+
+### 当前 diff 分组（三组，口径已修正：非整体 web/src-only）
+
+**A. web 逻辑修复（React PoC 三项 + URL/参数拆分 + 验证基建）**
+- 打勾位置：`SelectScreen.tsx` 删拼装区硬 check、候选池 FactorFrame 加 `check={selectedFactorList.includes(f)}`。
+- 难度总分实时：`jjbSession.ts` 新增 `factorScore()`（白名单 fallback，虚空重生者=5）+ `difficultyTotal()`（锁定+手选求和，点金×2）。
+- 直播条：`ObsScreen.tsx` !bare 加返回按钮；`obs-fuller.css` 加 `.obs-host:not([data-bare]){overflow-x:auto;max-width:100vw}`。
+- URL 参数拆分：`App.tsx` 接入 `sessionMode`，`mode` 只管主题；切屏回写 URL（replaceState）；非法 style/mode 回落。
+- favicon：`index.html` + `public/favicon.svg`。
+- 验证基建：`e2e/ui-smoke.mjs`（真浏览器 smoke）、`e2e/run.mjs` 补难度分/点金断言、`package.json` +e2e:ui（build→smoke）+ playwright devDep。
+
+**B. commander 资源修复（非 web/src，单独列项）**
+- `assets/resources/images/commander/蒙斯克.png` + `.meta`、`斯台特曼.png` + `.meta`：实测 80×96，从占位裸名图替换为真实头像。`assets/Script` / `Scene` / `jjdata` / `design` 红线区零改（diff --stat 无这些路径）。
+
+**C. docs / diagrams / cleanup 变更**
+- `.gitignore`：+临时截图/画板中间件 ignore 规则。
+- `projectplan.md`：+本轮 v4 spoke / Codex audit / 双打调研 / 收口记录。
+- `docs/jjb-test-recovery-audit-2026-06-17.md`、`docs/repo-cleanup-inventory-2026-06-17.md`、`diagrams/README.md`：新增审计与资产索引。
+- untracked 待拍板资产：`.agents/skills/jjb-*`（4）、`diagrams/2026-*/*.svg`（10）、`diagrams/phase*` 证据图（11）、`diagrams/*-board.png`（4）。
+
+### 仍阻断项（review/gate 不能升级全绿的原因）
+
+1. **reviewer_config_drift**：reviewers.json 的 `qwen3.7-max`、`mh-minimax-m3` 不在 eval-models.json（最接近项 `qwen3.6-max-preview`、`minimax-m3`）。doctor warn。reviewers.json `_note` 自称"All 5 alias live-probed"，但 eval-models.json 实测缺这 2 个——漂移属实。
+2. **DUBHE_API_KEY UNSET**：无法 live-probe `/v1/models` 确认这 2 个 alias 真实形态，也无法真实 dispatch reviewer。
+3. **audit partial_compliance**：Post Mutation Match=NO、Post npm test=skipped（runtime 历史事实，非本轮 diff 引入）。
+4. **host real-use 0/15**：历史 reviewer run 全部 allowlist_config_missing fallback 到 direct-dubhe（本机已补最小 allowlist，但 config 被 gitignore，不入库，换机仍需补）。
+5. **/tmp/jjb-test 四套不可复跑**：repo 无副本，当前防线只有 hp-verify + React UI smoke，不等于 jjb-verify 手册的 Cocos 48/42/36/20 全量回归。
+6. **session 时间口径**：`.harness-pro-react` session `harness-2026-06-16T06-16-34` 已 completed；本 session 只复跑 verify（重写 verify-report-3 / evidence bundle），没有重新 review/record-gate。旧 gate 不覆盖今日 diff。
+
+### 清理（只做低风险，未做任何物理删除）
+
+Codex 6/17 已删根目录临时截图（fix1-*.png / claude-login.png 等）并补 .gitignore。当前工作树已无可安全删除的临时垃圾。所有 untracked 待拍板资产**保留不删**，列入下方拍板清单。本地 ignored 候选（jjb-guide-home.png / kb-guide/ / kb-whiteboards/）不影响 git，仅回收空间，删前需确认无飞书/wiki 引用。
+
+### 需要 yb 拍板项
+
+1. **reviewer panel**：①保留原 5 reviewer → 需提供 DUBHE_API_KEY + live-probe `qwen3.7-max`/`mh-minimax-m3` 真实 alias 并修本机 config（不入库）后重跑 doctor/review/gate；②接受替代 5 reviewer（model_key 全在 eval-models.json，如 gpt-5.5 / qwen3.6-plus / deepseek-v4-pro / kimi-k2.6 / gemini-3.1-pro）→ 需显式记录 reviewer 组合变化。两者都需先解决 DUBHE_API_KEY。
+2. **.agents/skills/jjb-***（4 文件）：作为 Codex 项目技能入库，还是只保留 .claude/skills？
+3. **diagrams/phase***（11 证据图）：入库还是迁 `docs/evidence/react-phase*/` 并更新引用？`phase2-end2end/01、03` 是撤回前真机证据，短期不可删。
+4. **diagrams/2026-*/*.svg**（10）：哪些是最终画板源？
+5. **diagrams/*-board.png**（4）：是否作为知识库预览图入库？
+6. **混乱工作室 / 礼尚往来 分值**：非酋限定因子，当前 React 难度分暂按 7 白名单，但 CSV/build 脚本标"限定/不可用"——需产品拍板。
+7. **虚空重生者 双打口径**：当前数据 SoT=5（已修），若双打例外按 7 计须重新拍板并同步数据/测试。
+8. **本地 ignored 清理候选**：`jjb-guide-home.png`、`kb-guide/`（2.8MB）、`kb-whiteboards/`（2.5MB）—删前确认无飞书/wiki 引用。
+
+### 收口结论
+
+当前形态 = **deterministic verify PASS + Harness review/gate BLOCKED + audit partial**。改动可运行、核心修复可实测、红线区（Script/Scene/jjdata/design）零改、commander 资源已正确替换为 80×96、无遗留 Vite preview。但**不能宣称 Harness gate 全绿**——reviewer 配置漂移 + 无 API key + audit 两项 NO/skipped + 四套 Cocos 回归未恢复，四项中任一未闭合前都不可升级。下一步取决于 yb 对 reviewer panel 与拍板清单的决策。**未 commit、未 push、未改飞书/外部系统。**
+
+---
+
+## React 综合规划 v1（2026-06-18，workflow wf_a3192437）：OBS 分辨率契约 + 返回逻辑 + 双打排期 + 收尾清单
+
+**触发**：yb 06-18 提三件事 ①双打仍未开发 ②OBS 返回逻辑要两级（先 battle，battle 没因子才 select）③OBS 分辨率/采集窗口契合度需深研；并要求"开 workflow 全面规划 + 全量切 React 收尾"。workflow 4 路 read-only agent 完成（obs-resolution-contract / obs-return-logic / doubles-react-plan / react-cutover-checklist），本节是合并产出 + 拍板项。
+
+### yb 确认的主播 OBS 工作流（契约基准）
+- **选因子阶段**：主播把浏览器捕获的整个 React 页面放屏幕最中间，给观众展示因子选择过程（= 全屏页面上 OBS，不只横条）。
+- **比赛阶段**：点开始 → 切 OBS 模式 → 画面下方有"留白"，主播在 OBS 采集窗口把留白拉到下面/裁掉，只露上面 = 横条。
+- **返回逻辑**：OBS 点返回 → 先回 battle；若 battle 没分配因子 → 才回 select。
+
+### ① OBS 分辨率契约（本轮重点，深研完成）
+
+**现状真相（带锚点）**：
+- 全屏四屏均固定 1280×720：HomeScreen.tsx:42 / SelectScreen.tsx:181 / BattleScreen.tsx:72 / ResultScreen.tsx:19。
+- **ObsScreen 是唯一无固定尺寸的屏**：根 `.obs-host`（ObsScreen.tsx:58-62）只有 flex/padding，高由内容撑开（232 横条 + 48 padding + 按钮 + 控制条 ≈ 400+），非 720 → 切屏采集高度跳变，这是主播"裁留白"操作对不齐的**物理根因**。
+- ObsBar 固定 1280×232（ObsBar.tsx:86）；obs-fuller.css:29-31 已处理 !bare 横滚 / bare 固定。
+- index.css:10 无全局 transform/overflow/scale → 固定画布在 OBS browser source 里不自动缩放，全靠 OBS 源自身 width/height。
+- SelectScreen.tsx:385/394/402 底部按钮 bottom≈760 > 720 → 被裁 40px（实测）。
+- **SKILL.md 文档断层**：SKILL.md:27 "designResolution 切 1280×232"、:35-37 "bartop 33% 缩放 427px" 都是 Cocos designResolution / 直播姬窗口捕获老模型，React 版无此机制 → 照配会困惑，必须本轮更新。
+
+**OBS browser source 能力（稳定事实）**：固定 width×height（默认 800×600 可自定义）/ FPS 1-60 / 透明背景 / 多源叠加各自独立 URL+分辨率 / 拖边角缩放（等比不变形、自由会变形）/ "shutdown when not visible" / 自定义 CSS 注入。变形=源宽高比≠内容比；黑边=源比≠内容比（透明/黑边看背景）；裁切=内容超源画布。
+
+**契约方向（我们改 + 主播配）**：
+1. 【我们改】ObsScreen `.obs-host` 从无固定尺寸改成 `width:1280 height:720`（ObsScreen.tsx:58-62），横条 232 贴顶，下方 488 可控留白 → 切屏采集高度恒 720，单源工作流成立。
+2. 【我们改】全屏页加等比缩放 wrapper（letterbox/contain：`transform: scale(min(vw/1280, vh/720))` 居中），任意窗口不溢出/不变形/不裁切 → 主播预览端所见即所得，防误裁。
+3. 【我们改】修 SelectScreen startbtn 截断（760>720），缩间距或上移，使底部按钮完整落 720 内。
+4. 【主播配】OBS browser source = 1280×720（1:1），FPS 30/60；1920×1080 画布则等比 1.5× 放大居中。
+5. 【主播配·单源工作流，贴合 yb 原话】选因子阶段源采 select 全屏（720）；比赛阶段同一源切到 obs 屏，横条 232 在顶，主播把源可见高度裁到只露顶部 232。
+6. 【无法控制→文档】主播 OBS 画布/输出分辨率/显示器/OBS 版本/GPU 写进 SKILL.md「主播 OBS 端」，注明是主播环境变量。
+7. 【我们改·附带】更新 SKILL.md：React 版采集机制 = 纯 DOM + browser source 裁切（无 designResolution），Cocos 版描述移到「历史」小节。
+
+**拍板项**：
+- **设计分辨率**：1280×720（省全屏重排；1920×1080 画布 1.5× 放大略糊）vs 1920×1080（更锐，全屏页重排工作量大）→ **默认推荐 1280×720**，除非 yb 对清晰度敏感。
+- 采集模型：yb 原话已倾向单源裁留白，按 A 走；若要更干净可备选双源场景切换（全屏源 + 横条源，零裁切但要配两源+记场景切换）。
+- 主播从"直播姬窗口捕获整个 Chrome"切到"OBS browser source"是流程变更，需 yb 确认接受（browser source 更干净：透明背景、不采浏览器 chrome）。
+
+### ② OBS 返回逻辑（已定稿，一行改，可直接做）
+
+**现状**：App.tsx:202 `onBack={() => navigate('select')}` 直回 select。
+**改法**：App.tsx:202 一处内联判定（ObsScreen.tsx 不动，保持纯展示）：
+```ts
+const s = getSelectState();
+const fac = s.selectedFactorList || [];
+const cmd = s.selectedCommanderList || [];
+const allNullFac = fac.length === 0 || fac.every(f => f == null);
+const allNullCmd = cmd.length === 0 || cmd.every(c => c == null);
+const battleEmpty = !s.jjbLive || (allNullFac && allNullCmd);
+navigate(battleEmpty ? 'select' : 'battle');
+```
+**口径**：A（allNullFac && allNullCmd，镜像 BattleScreen:22-23 兜底，正常流自洽，**推荐**）vs B（some null 即回 select，半手选态会错配，不推荐）。
+**注意**：ObsScreen.tsx:19 兜底 `if(!jjbLive()) startRandomSession(2)` 会把直跳 `?screen=obs` 强开成 status=3 局 → OBS 返回恒回 battle，"直跳 obs 无因子"场景实际不存在。若 yb 期望区分"未真正点开始的 obs"需另改兜底（独立行为变更，不在本任务范围）。
+**Done-when**：① home→select→开始→obs→返回 → `?screen=battle`，9 格已填；② select 手选未开始（status=2 全 null）经 URL 直跳 obs 再返回 → select。
+
+**[2026-06-18 落地]** 已改 App.tsx:202（返回两级判定：battle 优先，battle 无因子才 select，镜像 BattleScreen:22-23 口径）+ ObsScreen 文案"返回选择"→"返回"；tsc 通过；场景 A 验证✓（status=3 有因子→点返回→URL obs→battle 实测）；场景 B（未点开始→select）因 ObsScreen:19 既有兜底 `if(!jjbLive()) startRandomSession(2)` 强制开 status=3 而未触发——非②bug，要支持需独立改该兜底，待 yb 定。
+
+### ③ 双打（最大工作量，5 步，硬前置缺口）
+
+**现状**：web 侧纯占位（HomeScreen.tsx:17,30 soon；jjbSession.ts:59 SessionMode 不含 doubles；cc-shim 未真桥接 JJBDoubles）。赛制已定稿（3场/AB档抽官突/10公共池/BP三态互斥/点金/指挥官分配）。
+**硬前置**：web 单刷因子 BP 未实现（jjbSession.ts:290-291 `_opts.{banN,gold}` 预留未启用）→ 双打 BP 依赖它，必须先做。
+
+**5 步**：
+- **Phase 0【前置·单刷因子 BP 最小实现】**：jjbSession.ts 加 `bpRuntime` + `toggleBp`/`getBpState`（pick/ban 互斥，二者后不可自选），SelectScreen 因子卡加 BpBadge，validate 增"ban 态禁止落槽"。不改现有 9 格槽/池结构，ban 作为 validate 旁路规则叠加。
+- **Phase 1【官突表 CSV 解析进 web】**：拷 docs/官突ABC配置_官突池.csv（153 条）到 assets/resources/jjdata/，新建 `guantuTable.ts`，正则拆"因子(点数)"列，用"点数和"列交叉校验，按 tier 过滤（双打只用 A 档 56 + B 档 59 = 115 条）。
+- **Phase 2【双打引擎 web 化】**：新建 `web/src/logic/jjbDoubles.ts`（不复用 Cocos JJBDoubles——其赛制全错 + 定稿"Cocos 不再投入"；但镜像其 API 形状 start/reset/live/setCommander/setFactor/setVerdict/winCount/matches/debugSnapshot + `__jjbDebug.doubles` 契约以兼容回归）。start() 按 AB 档抽 3 官突（场 1/2 抽 A、场 3 抽 B），锁定 map+factors 集，额外 10 公共池。
+- **Phase 3【SelectScreen 双打分支】**：`doublesLive()` 走 DoublesSelect：3 官突锁定卡 + 10 公共池（可拖 + BpBadge）+ 每场 2 指挥官槽 + 难度分（复用 difficultyTotal）。
+- **Phase 4【Battle/Result/ObsBar 双打分支】**：三屏各判 `doublesLive()` → Doubles 子树。
+- **Phase 5【验证收口】**：web/e2e 加双打断言 + Playwright 实拍 + `__jjbDebug.doubles` 回归。
+
+**拍板项（均可给默认）**：
+- 抽签顺序：固定（场 1/2 抽 A、场 3 抽 B）vs 档位内随机 → **默认档位内随机不重复**。
+- 挑战池（100 自制，含未识别因子）是否纳入 → **默认只用官方 153 条**。
+- 虚空重生者口径 → **默认沿用 5（数据 SoT），不例外**。
+- CSV 入 web 方式：拷贝到 jjdata/（复用现有 glob）vs docs/ alias → **默认拷贝**。
+- 单刷 BP 范围：只做双打所需因子 pick/ban vs 顺带 web 化指挥官 BP → **默认只做因子最小集**。
+- 额外因子 UI：3 场各有槽 vs 10 格直接选不分区 → **待 SelectScreen 双打设计稿**（设计轮前置）。
+
+### ④ 全量切 React 收尾清单
+
+**已 done**：5 屏路由串通（home/select/battle/obs/result）、9 模式 startSession、拖拽手选+校验三规则、点金+难度总分、OBS 横条真实化+判定条、Result 屏、真实图切换（maps15/commander93/factor82）。
+**缺**：BP 弹层（阻塞 Claude Design r3 bp.jsx 入库）、双打模式、Dock/Overlay 屏（评估是否退役）、Cocos 构建退役（build/web-mobile、project.json、cocos2d-js）、4 套 Playwright 回归迁移到 React、foundation/phase0 屏清理。
+**口径冲突（需统一）**：HomeScreen 露 6 模式（HomeScreen.tsx:11-18）vs 逻辑 9 模式（jjbSession.ts:59）vs 赛制 7 模式（memory jjb-race-rules）→ 三口径要统一。
+**阻断项**：harness gate BLOCKED（reviewer_config_drift + DUBHE_API_KEY UNSET，见上节收口记录）。
+**不可逆大动作**：Cocos 退役删除需等全模式真机 + OBS 16:9 回归绿，保留可回滚直到过验。
+
+### 推进顺序建议（yb 已定"先把 OBS 这个事搞定"）
+
+1. 【本轮可落地·小】②OBS 返回逻辑一行改（已定稿，直接做）。
+2. 【本轮可落地·小-中】①OBS 分辨率契约：ObsScreen 固定 720 + 全屏 wrapper 等比缩放 + 修 SelectScreen 截断 + 更新 SKILL.md。
+3. 【拍板后·大 round】③双打：5 步走独立 round（设计轮 bp.jsx + doubles select 入库 → spoke 派发）。
+4. 【收尾·中】④收尾清单：模式口径统一 + 4 套回归迁移 + Cocos 退役（过验后）。
+
+### 关键拍板项汇总（待 yb）
+
+1. **OBS 设计分辨率**：1280×720（推荐）vs 1920×1080？
+2. **双打纳入"全量切 React 完成"范围吗**：还是双打走独立 v4 R3 round（推荐，工作量大+产品开放项多）？
+3. **HomeScreen 模式终态**：露几个模式（7 赛制 / 9 逻辑 / 6 当前）？
+4. ⑥混乱工作室/礼尚往来分值、⑦虚空重生者双打口径（见上节拍板清单，双打相关）。
+
+---
+
+## 双打/飞球赛制深度调研真相（2026-06-18，workflow wf_9b40c707 · compact 丢信息重建）
+
+**触发**：yb 说"compact 把关键信息忘了，重新开 workflow 调研"。6 路 read-only agent 考古（TS 代码/因子配置/官突双打设计/XP 残骸/飞书原文/文档历史），每条事实带 file:line 或飞书 URL 证据。**核心目的：重建飞球/非酋/双打的完整真相，纠正 hub 残缺记忆。**
+
+### 真相 1：飞球 = 非酋(feiqiu) 的谐音梗，代码里从不写"飞球"
+- "飞球"=拼音 `feiqiu`（非酋）谐音，与 yb 说的"非洲酋长的飞球"吻合。TS/docs/csv 全树 grep "飞球"仅 2 处注释（HomeScreen.tsx:9、knowledge-base/bp-impl-spec.md:51），都当非酋别名。
+- SessionMode key=`feiqiu`，UI 文案统一"非酋模式"（InitPanel.ts:161、JJBData.ts:35）。
+
+### 真相 2：飞球机制核心 = 混乱工作室（官方限定突变），✅ 印证 yb"飞球跟混乱工作室一样"
+- 混乱工作室是非酋**每场锁定的官方限定突变**（`JijieContro.ts:96-97 lockFactor="混乱工作室"`，3 场全锁同一个；React 1:1 复刻 jjbSession.ts:132）。
+- 它在两个因子配置.txt **都不存在**（grep 命中 0），只在 `docs/因子点数配置.csv:62` 标"限定，否(不可自定义)，官方不进自定义/残酷+"，及 `docs/build_guantu_config.py:21` LIMITED 集合。
+- 所以"飞球跟混乱工作室一样"= 同一限定因子机制，**不是随机类因子**。
+- 礼尚往来同理（非酋固定因子池之一，jjdata 表缺行，fallback=7 分待拍板）。
+
+### 真相 3：非酋当前实现是**单刷**（每场 1 指挥官 1 手选因子），不是双打
+- `modelFactorCount=1`（JJBData.ts:99），每场手选槽 1/1/1，共 3 场。
+- 锁定因子=混乱工作室×3，随机因子池=硬编码[风暴英雄/虚空裂隙/礼尚往来]（jjbSession.ts:266-270），不读配置文件。
+- 每场总因子=1锁定+1手选=2。
+- 非酋单刷保留"A 组去雷诺/B 组去斯台特曼"过滤（JijieContro.ts:150-153/162-165）——这是"非酋自嘲"体验核心。
+
+### 真相 4：非酋 = 双打残骸（4 重代码铁证，projectplan:331 论断属实）
+- `spCommander2`（第二指挥官槽）残骸**长在 `if(modeFeiqiu)` 分支里**（LMatchItem.ts:87-89）。
+- 非酋独有"一键随机"按钮（SelectPanel.ts:143）+ 6 人池(A4+B2) 分配到 3 场×2 槽（SelectPanel.ts:341-349）。
+- **XP 早期双打原型完整可重建：3场 × 每场2指挥官 × 6人池(A4+B2) × 锁定因子(混乱工作室)**。这正是两种双打骨架的代码源头。
+- ⚠️ 注：JJBDoubles.ts:6 注释"3场×2指挥官与XP原型一致"经 doc-history 核实，XP 代码**无此结构**，属设计者事后叙述非事实（projectplan:1662）——但 spCommander2 残骸本身是真的。
+
+### 真相 5（最重要）：飞书官方文档里双打有两种规则，且骨架和 yb 定稿**直接冲突**
+- 飞书官方 7 模式（非 9）= 8/10/12因子/拯救/随机/双打/极难②。**飞书文档完全没有"飞球/非酋"字眼**（5 篇全扫 len=0），"非酋=双打"只是三方对齐文档(TAtp)的纠错说明。
+- **三方对齐文档(TAtp 第1节)明确写双打两种规则**（2026-06-06 草稿）：
+  > "双打（与单刷分开，两种规则）：规则一（官突+n）：官突难度由低到高分 A/B/C 三类，三把各放一类；选手按水平加 n 个随机因子（n≥1）；ban「拿钱」类因子。规则二（纯随）：直接随 12+n 个因子（n 由选手定），玩家自己去分。"
+- 但 2026-06-15 主文档简化成单一占位骨架："5因子=2官突+3随机/16人扁平洗牌取6/不分AB档/官突底因子锁定/独立骨架"，且 **Q10 明确标注"骨架是否为终稿仍未拍板"**。
+- yb 6-18 定稿（3场/AB档/10公共池/BP/点金）与飞书骨架**互斥冲突**（飞书说 16 扁平洗牌不分档、5 因子；yb 说 AB 档、10 公共池）。说明 yb 已把双打往前推，飞书仍停在未终稿占位。
+
+### 真相 6：两个因子配置文件的真相（纠正 hub 旧误解）
+- `data/因子配置.txt`（52条）= 双打类型/单刷类型**定性分类**（环境/一般/简单/困难），**无分值**。
+- `jjdata/因子配置.txt`（42条）= **带点数分值的权威表**（factorScore 读它第3列）。
+- 两者**不是**"双打专用 vs 单刷专用"关系。data/ 的双打/单刷列是 BP/分档定性标签。
+- 5 个单刷ban因子（极性不定/拿钱说话/杀戮机器人/小捞油水/致命勾引）单刷列为空 = `build_guantu_config.py:107` danshua_ban 集合。
+
+### 真相 7：官突双打权威设计 = docs/规则一-官突加n-细则v1.md，JJBDoubles.ts 是定稿前占位（全错）
+- 细则：3场 A/B/C 递增、每场抽1官突（A档56/B档60/C档33）、额外因子走"点数预算 T≈n×4±ε 贪心抽样"+种子可复现。
+- **JJBDoubles.ts 现状与定稿全冲突**：mutators 语义错（全局2因子 vs 每场抽1官突）、maps 硬编码（应从官突取）、extraFactors 固定3（应为玩家申报n）、FACTOR_SOURCE 硬编码24（应从CSV动态生成）、无点数预算算法、用 Math.random 无可复现。
+- web 零接驳：HomeScreen soon 占位、App 无 doubles 路由、jjbSession 不 import JJBDoubles。
+- 官突池 CSV 153 条实测：因子个数 2个=58条/3个=94条/1个=0（awk误报源自英文逗号）/无4因子官突。混乱工作室=序号43"灾难之轮 Wheel of Misfortune"唯一因子，标(限定)属4条不可用之一。
+
+### 飞球双打的定义缺口（必须 yb 定）
+**关键问题**：飞球双打在**所有文档零定义**（飞书/projectplan/design 全无）。doc-history 结论："yb 本轮口述的飞球双打=新需求，历史文档零定义，必须当从零定义的新赛制处理，不能假装从旧稿复刻。"
+
+doc-history 给的最合理推测（待 yb 确认）：**飞球双打 = 用非酋因子池（混乱工作室锁定 + 风暴/虚空/礼尚往来固定因子）替代官突抽签的"双打变体"，复用官突双打引擎骨架**。即 R3 矩阵"双打挑战=官突plus(官方突变)+非酋(固定因子)"两类 —— 正好对应"两种双打"。
+
+yb 口述"飞球双打机制跟官突双打差不多：抽1个官方突变+候选池基础因子+额外因子(前两局各3/最后一局4)"与这个推测**结构对得上**，但有个矛盾点要 yb 澄清：飞球到底**抽不抽官方突变**？
+- 若"飞球=非酋因子池替代官突"：不该抽官方突变（用混乱工作室等固定因子）。
+- 若"飞球双打也抽1个官方突变"：那它和官突双打的区别只剩"基础因子池范围"。
+
+### 非酋归属摇摆 3 次未稳定（飞球立项会第 4 次触发，建议这次一并拍死）
+1. R3 brief：归"双打挑战"类（"非酋确实是双打2v2玩法，归类正确"）。
+2. R3 开放问题 O2：列为未决（候选 A挪单刷/B重写双打/C隐藏，推荐A或C）。
+3. 6-17 memory：收敛 7 模式时非酋被移出；6-18 projectplan:1364 又归回单刷独立。
+
+### 待 yb 拍板（双打相关，从 6 路调研汇聚）
+1. **双打赛制以哪份为准**：(a)飞书占位骨架 5因子/16扁平洗牌；(b)yb 6-18 定稿 3场/AB档/10公共池；(c)三方对齐规则一(官突ABC+n)。三套互斥。
+2. **飞球双打到底是不是独立模式**：还是官突双打的变体（用非酋因子池替代官突抽签）？doc-history 推荐收敛成同一引擎的两个预设。
+3. **飞球双打抽不抽官方突变**（见上矛盾点）。
+4. **两种双打的区别具体在哪**：因子池来源？官突数量(1 vs 3)？额外因子分配？
+5. 飞球额外因子 n 值：固定[3,3,4]还是选手按水平填？飞书 Q10 说"范围1~5"未定。
+6. 双打指挥官分不分 A/B 档：飞书 5 篇一致说"16扁平洗牌不分档、不受降权"，yb 定稿说"AB档"——若 AB 档需双打专属分档名单。
+7. 混乱工作室/礼尚往来分值（暂7 fallback vs CSV标限定/不可用）——飞球若复用非酋因子池必卡此。
+8. 非酋(feiqiu)归属第 4 次：单刷独立 vs 双打2v2？本次一并拍死。
+9. 飞球 UI 文案用"飞球"还是"非酋"？
+
+### 📌 2026-06-18 关键澄清（读飞书 TAtp 原文 + yb 新定义后）
+
+**飞书"两种规则"≠"两种双打"**（hub 之前误读，已纠正）：TAtp 第1节原文"双打（与单刷分开，两种规则）"指**同一双打的两种出题方式**——①规则一(官突+n)：官突A/B/C三档三把各一类+选手加n随机因子+ban拿钱；②规则二(纯随)：直接随12+n因子玩家自分配。**这两种都不是"飞球双打"**，飞球双打是 yb 的新增第三种。
+
+**yb 6-18 新定义（飞球双打）**："非酋之轮是一个混乱工作室，加上一个固定因子，然后来双打。" → 飞球双打 = 用非酋固定限定因子（混乱工作室+1固定因子）替代"抽官方突变"机制，套同一双打骨架。**不是飞书任一种规则，是新增变体。**
+
+**两种双打的本质区别（doc-history 推测一致，待 yb 确认细节）= 基础因子来源**：
+- **官突双打**（=飞书规则一升级版）：抽 A/B/C 官方突变，每场1官突带1-4锁定因子（动态抽）。
+- **飞球双打**（=yb 新增）：1个混乱工作室(非酋之轮) + 1个固定因子（静态，不抽官突）。
+- **共享骨架**：3场/每场2指挥官/额外因子公共池/BP(pick/ban/自选互斥)/点金×2/带奖励胜=2档。
+
+**TAtp 第4节架构建议**（适用 web）："维持单一工程，不拆。收敛 gameType → ModeConfig，新规则=加一份配置+一个抽取函数。" → 两种双打应在同一 jjbDoubles.ts 引擎里用 ModeConfig 参数化（mode:'guantu'|'feiqiu'），不拆两个 class。
+
+**TAtp 第3节工作量**：双打规则一(官突+n)=**需新建/高**；规则二(纯随)=小改/中；双打 ban 拿钱=小改。落地顺序建议：收敛 ModeConfig → 规则二(省事) → 规则一(最重)。飞球双打未在 TAtp，工作量同官突双打量级。
+
+**仍待 yb 确认的 2 个细节**：①飞球"1个固定因子"具体是哪个（风暴英雄/虚空裂隙/礼尚往来 三选一？还是别的）？②飞球的额外因子池（前两局3/末局4 共10）从哪来——官方52标准因子池，还是非酋固定因子？
+
+### ✅ 飞球双打定稿（2026-06-18 yb 拍板）
+
+**"1个固定因子"= 在(礼尚往来/风暴英雄/虚空裂隙)中随机抽1个**（三种组合之一，开局抽定）：
+- 混乱工作室（恒定锁定）+ 礼尚往来，或
+- 混乱工作室 + 风暴英雄，或
+- 混乱工作室 + 虚空裂隙
+→ 混乱工作室恒锁 + 非酋现有3因子池随机取1。逻辑平移自非酋（原3场各用1个 → 现每局随机抽1组合）。
+
+**额外因子池 = 同官突双打**：官方52标准因子 − 双打ban(拿钱说话+恶意bug)，前两局各3/末局4 共10公共池自由分配。
+
+**两种双打完整对照（定稿）**：
+
+| 维度 | 官突双打 | 飞球双打 |
+|---|---|---|
+| 基础因子（锁定，不可改） | 抽 A/B/C 官方突变，每场1官突带1-4因子集（动态抽签） | 混乱工作室 + {礼尚往来/风暴英雄/虚空裂隙}随机1（静态三选一，不抽官突） |
+| 额外因子 | 官方52标准池 − ban，公共池10（前两局各3/末局4）自由分配 | 同官突 |
+| 场数 | 3 | 3 |
+| 每场指挥官 | 2（cmdsPerMatch=2） | 2 |
+| BP | pick/ban/自选三态互斥（依赖单刷BP前置） | 同官突 |
+| 点金 | ×2 视觉 | ×2 视觉 |
+| 胜负档 | 带奖励胜=2（双打专属） | 同官突 |
+| ModeConfig.mode | 'guantu' | 'feiqiu' |
+
+**引擎架构**（TAtp 第4节）：单一 jjbDoubles.ts，ModeConfig 参数化（mode:'guantu'|'feiqiu'），不拆两个 class。差异只在 `基础因子抽取策略` 一个函数（guantu→官突池抽；feiqiu→固定池随机1组合）。

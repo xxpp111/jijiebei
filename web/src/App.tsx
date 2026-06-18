@@ -6,14 +6,16 @@ import { ObsScreen } from './screens/ObsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { ResultScreen } from './screens/ResultScreen';
-import { startSession, exposeStartSession, getSelectState, getTotalCount, type SessionMode } from './logic/jjbSession';
+import { startSession, exposeStartSession, getSelectState, getTotalCount, querySessionMode, type SessionMode } from './logic/jjbSession';
 import JijieData from '@logic/JijieData';
 
-// 路由（query）：?screen=home|select|battle|obs|phase0|foundation；?style=metal|sc2|minimal & ?mode=dark|light 初始主题。
+// 路由（query）：?screen=home|select|battle|obs|phase0|foundation；
+// ?style=metal|sc2|minimal & ?mode=dark|light 控视觉主题；?sessionMode=std8|std10|... 控赛事模式。
 // 段2 Phase 1：home/select/battle 三屏路由串通；Phase 0 屏保留向后兼容；foundation 屏保留组件地基。
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
+const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'phase0', 'foundation'] as const;
 const SCREEN_LABELS: Record<string, string> = {
   home: '主界面',
   select: '选择',
@@ -37,13 +39,47 @@ function q(k: string, d = ''): string {
   return new URLSearchParams(window.location.search).get(k) || d;
 }
 
+function validStyle(v: string): (typeof STYLES)[number] {
+  return (STYLES as readonly string[]).includes(v) ? (v as (typeof STYLES)[number]) : 'sc2';
+}
+
+function validThemeMode(v: string): (typeof MODES)[number] {
+  return (MODES as readonly string[]).includes(v) ? (v as (typeof MODES)[number]) : 'dark';
+}
+
+function validScreen(v: string): Screen {
+  return (SCREENS as readonly string[]).includes(v) ? (v as Screen) : 'home';
+}
+
 export default function App() {
-  const initialScreen = (q('screen', 'home') as Screen);
+  const initialScreen = validScreen(q('screen', 'home'));
   const bare = q('bare') === '1';
-  const [style, setStyle] = useState<(typeof STYLES)[number]>((q('style', 'sc2') as any));
-  const [mode, setMode] = useState<(typeof MODES)[number]>((q('mode', 'dark') as any));
+  const [style, setStyle] = useState<(typeof STYLES)[number]>(validStyle(q('style', 'sc2')));
+  const [mode, setMode] = useState<(typeof MODES)[number]>(validThemeMode(q('mode', 'dark')));
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [rerenderTick, setRerenderTick] = useState(0);
+
+  const writeUrlParam = (key: string, value: string) => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    url.searchParams.set(key, value);
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  };
+
+  const navigate = (next: Screen) => {
+    setScreen(next);
+    writeUrlParam('screen', next);
+  };
+
+  const chooseStyle = (next: (typeof STYLES)[number]) => {
+    setStyle(next);
+    writeUrlParam('style', next);
+  };
+
+  const chooseMode = (next: (typeof MODES)[number]) => {
+    setMode(next);
+    writeUrlParam('mode', next);
+  };
 
   // select 屏兜底（?screen=select 直跳）：JijieData 还没开局就开一局 std8（按 stop_when 第 5 条）。
   useEffect(() => {
@@ -51,7 +87,7 @@ export default function App() {
       try {
         const d: any = JijieData;
         if (!d || !Array.isArray(d.mapList) || d.mapList.length < 3) {
-          startSession('std8');
+          startSession(querySessionMode());
         }
       } catch (e) {
         console.error('[App] select 屏兜底开局失败:', e);
@@ -76,41 +112,41 @@ export default function App() {
     >
       <button
         className={'ctrl-btn' + (screen === 'home' ? ' on' : '')}
-        onClick={() => setScreen('home')}
+        onClick={() => navigate('home')}
         data-nav-home
       >{SCREEN_LABELS.home}</button>
       <button
         className={'ctrl-btn' + (screen === 'select' ? ' on' : '')}
-        onClick={() => setScreen('select')}
+        onClick={() => navigate('select')}
         data-nav-select
       >{SCREEN_LABELS.select}</button>
       <button
         className={'ctrl-btn' + (screen === 'battle' ? ' on' : '')}
-        onClick={() => setScreen('battle')}
+        onClick={() => navigate('battle')}
         data-nav-battle
       >{SCREEN_LABELS.battle}</button>
       <button
         className={'ctrl-btn' + (screen === 'obs' ? ' on' : '')}
-        onClick={() => setScreen('obs')}
+        onClick={() => navigate('obs')}
         data-nav-obs
       >{SCREEN_LABELS.obs}</button>
       <button
         className={'ctrl-btn' + (screen === 'result' ? ' on' : '')}
-        onClick={() => { if (getTotalCount() >= 3) setScreen('result'); }}
+        onClick={() => { if (getTotalCount() >= 3) navigate('result'); }}
         title="查看结算（需三场判定完）"
         data-nav-result
       >{SCREEN_LABELS.result}</button>
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       {STYLES.map((s) => (
-        <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => setStyle(s)} data-style-btn={s}>{STYLE_LABELS[s]}</button>
+        <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => chooseStyle(s)} data-style-btn={s}>{STYLE_LABELS[s]}</button>
       ))}
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       {MODES.map((m) => (
-        <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => setMode(m)} data-mode-btn={m}>{MODE_LABELS[m]}</button>
+        <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => chooseMode(m)} data-mode-btn={m}>{MODE_LABELS[m]}</button>
       ))}
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       <button className="ctrl-btn" type="button" onClick={restartCurrentMode} data-rerandom-btn>重新随机</button>
-      <button className="ctrl-btn" type="button" onClick={() => setScreen('home')} data-back-home-btn>回主界面</button>
+      <button className="ctrl-btn" type="button" onClick={() => navigate('home')} data-back-home-btn>回主界面</button>
     </div>
   );
 
@@ -121,7 +157,7 @@ export default function App() {
           key={`home-${rerenderTick}`}
           style={style}
           mode={mode}
-          onStart={(_m: SessionMode, _name: string) => setScreen('select')}
+          onStart={(_m: SessionMode, _name: string) => navigate('select')}
         />
         {!bare && switcher}
       </>
@@ -135,7 +171,7 @@ export default function App() {
           key={`select-${rerenderTick}`}
           style={style}
           mode={mode}
-          onStart={() => setScreen('battle')}
+          onStart={() => navigate('battle')}
         />
         {!bare && switcher}
       </>
@@ -152,7 +188,24 @@ export default function App() {
   }
 
   if (screen === 'obs') {
-    return <ObsScreen key={`obs-${rerenderTick}`} style={style} mode={mode} />;
+    return (
+      <ObsScreen
+        key={`obs-${rerenderTick}`}
+        style={style}
+        mode={mode}
+        onBack={() => {
+          // OBS 返回两级（yb 06-18 确认）：先回 battle（对战），仅当 battle 无分配因子（因子+官全空 或 未开局）才回 select。
+          // 判定口径镜像 BattleScreen:22-23 兜底（allNullFac && allNullCmd），保证返回 battle 后不会被兜底再次随机覆盖。
+          const s = getSelectState();
+          const fac = s.selectedFactorList || [];
+          const cmd = s.selectedCommanderList || [];
+          const allNullFac = fac.length === 0 || fac.every((f) => f == null);
+          const allNullCmd = cmd.length === 0 || cmd.every((c) => c == null);
+          const battleEmpty = !s.jjbLive || (allNullFac && allNullCmd);
+          navigate(battleEmpty ? 'select' : 'battle');
+        }}
+      />
+    );
   }
 
   if (screen === 'result') {
@@ -179,11 +232,11 @@ export default function App() {
       <div className="jjb-inner" style={{ gap: 22 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {STYLES.map((s) => (
-            <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => setStyle(s)}>{s}</button>
+            <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => chooseStyle(s)}>{s}</button>
           ))}
           <span style={{ width: 1, height: 20, background: 'var(--panel-edge)', margin: '0 4px' }} />
           {MODES.map((m) => (
-            <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => setMode(m)}>{m}</button>
+            <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => chooseMode(m)}>{m}</button>
           ))}
         </div>
 

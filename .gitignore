@@ -81,3 +81,14 @@ Thumbs.db
 /kb-whiteboards/
 /diagrams/**/crop_*.png
 
+# React/Codex/Claude 本地审查截图与登录截图：证据已在 projectplan 记录，源文件不入库
+/claude-login.png
+/fix1-*.png
+/review-*.png
+/jjb-react-home.png
+/std10-after-drag.png
+
+# 飞书/画板导出过程产物：保留 SVG 可作为源，PNG/JSON 作为可重生成中间件
+/diagrams/2026-*/diagram.png
+/diagrams/2026-*/diagram.json
+/diagrams/2026-*/preview.png

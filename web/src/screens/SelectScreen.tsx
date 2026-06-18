@@ -15,7 +15,8 @@ import {
   getGoldFor,
   toggleGold,
   randomFillSelection,
-  type SessionMode,
+  difficultyTotal,
+  querySessionMode,
 } from '../logic/jjbSession';
 import { facFlatIdx } from '@jjb/JJBData';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
@@ -28,9 +29,7 @@ import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/drag
 // 手动校验三规则镜像真身 JJBSelect.validate（JJBData.manualSlots + ConfigData.commadnerGroupList['B'] 查表）。
 
 const SLOT_TITLES = ['第 1 场', '第 2 场', 'BOSS 战'];
-// URL ?mode= 兜底白名单：仅真实 SessionMode 才直接开局；主题值(dark/light)等非法值回落 std8，
-// 避免 startSession('dark') 致 modelFactorCount 错乱→manualSlots=null（对齐 BattleScreen MODES_SET 守卫）。
-const VALID_MODES = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji']);
+// URL 赛事模式解析（?sessionMode= 优先 + 旧 ?mode= 兼容 + std8 回落）抽到 jjbSession.querySessionMode，本文件 import 复用（LOW2 去重）。
 
 export interface SelectScreenProps {
   style: string;
@@ -61,15 +60,12 @@ function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle
 
 export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
   // 兜底：?screen=select 直跳时若 jjbLive=false 在本屏内开一局 std8 后 setState 强制重渲。
-  // URL ?mode=std8|std10|... 覆盖默认 std8（home→select 跳转时也用相同 URL 模式同源）。
+  // URL ?sessionMode=std8|std10|... 覆盖默认 std8；旧 ?mode=std10 仍兼容。
   const [, setTick] = useState(0);
   useEffect(() => {
     const s = getSelectState();
     if (!s.jjbLive) {
-      const raw = (typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('mode')
-        : null);
-      const m: SessionMode = (raw && VALID_MODES.has(raw as SessionMode)) ? (raw as SessionMode) : 'std8';
+      const m = querySessionMode();
       try { startSession(m); setTick((x) => x + 1); } catch (e) { console.error('[Select] 兜底开局失败:', e); }
     }
   }, []);
@@ -193,6 +189,10 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
               <span className="meta-k">比赛模式</span>
               <span className="meta-v" data-meta-mode>{modeLabel}</span>
             </div>
+            <div className="meta-row">
+              <span className="meta-k">难度总分</span>
+              <span className="meta-v" data-difficulty-total style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>· {difficultyTotal()}</span>
+            </div>
           </div>
         </div>
 
@@ -257,7 +257,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                           onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
                           style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
                         >
-                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} check />
+                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
                           <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
                         </span>
                       ) : (
@@ -292,7 +292,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                   }}
                   style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}
                 >
-                  <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} />
+                  <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
                 </span>
               ))}

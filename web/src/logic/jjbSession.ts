@@ -58,6 +58,20 @@ const rand = (n: number) => Math.floor(Math.random() * n);
 // ===== 9 模式入口（段2 Phase 0 全模式开局） =====
 export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'suiji';
 
+/** URL 赛事模式白名单（App.tsx 与 SelectScreen.tsx 共用，避免重复定义）。 */
+const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji'];
+
+/** 解析 URL 赛事模式：优先 ?sessionMode=（白名单），兼容旧 ?mode=std10；非法/主题值(dark/light)回落 std8。
+ *  SSR（typeof window==='undefined'）守卫防 Node 端崩。App.tsx 与 SelectScreen.tsx 共用此函数（LOW2 去重）。 */
+export function querySessionMode(): SessionMode {
+  if (typeof window === 'undefined') return 'std8';
+  const p = new URLSearchParams(window.location.search);
+  const explicit = p.get('sessionMode');
+  if (explicit && (URL_SESSION_MODES as readonly string[]).includes(explicit)) return explicit as SessionMode;
+  const legacy = p.get('mode');
+  return legacy && (URL_SESSION_MODES as readonly string[]).includes(legacy) ? (legacy as SessionMode) : 'std8';
+}
+
 /** 设各 mode 的 JijieData flag 组合（参照 InitPanel.onClick* 真实 handler）。 */
 function setModeFlags(mode: SessionMode): void {
   const d: any = JijieData;
@@ -674,6 +688,59 @@ export function getGoldFor(name: string): boolean {
 
 /** 清运行时点金（开新局时调，避免跨局残留）。 */
 export function clearGoldRuntime(): void { goldRuntime.clear(); }
+
+// ===== 段3④：难度总分（锁定因子 + 手选因子求和；点金因子分值×2） =====
+// 分值真相：因子配置.txt 第3列（表头「名字,类型,分值」），经 ConfigData.factorList_back 读取
+//   （factorList_back 是 initFactor 时的完整副本，popFactor 只消耗 factorList，这份永不被消耗）。
+//   虚空重生者(因子配置.txt:30) 行仅 2 列「虚空重生者,5」缺第3列；docs/因子点数配置.csv 标为 5 分。
+//   混乱工作室 / 礼尚往来是 XP 非酋路径硬编码因子，但当前 jjdata 分值表缺行；显式列白名单，避免恢复“所有未知=7”。
+const FACTOR_SCORE_FALLBACKS: Record<string, number> = {
+  虚空重生者: 5,
+  混乱工作室: 7,
+  礼尚往来: 7,
+};
+
+/** 单因子分值（因子配置.txt 第3列；已知缺表因子走白名单 fallback）。
+ *  name 为空 → 0；非白名单未知/坏配置 → 0 + warning，避免 typo 被静默记成高分。 */
+export function factorScore(name: string): number {
+  if (!name) return 0;
+  let matched = false;
+  try {
+    const list = (ConfigData as any).factorList_back as any[] | undefined;
+    if (Array.isArray(list)) {
+      for (const arr of list) {
+        if (arr && arr[0] === name) {
+          matched = true;
+          // 虚空重生者(因子配置.txt:30)「虚空重生者,5」仅 2 列 → arr[2] undefined → 走 fallback
+          if (arr.length >= 3) {
+            const n = Number(arr[2]);
+            if (!Number.isNaN(n)) return n;
+          }
+          break;
+        }
+      }
+    }
+  } catch { /* noop */ }
+  if (Object.prototype.hasOwnProperty.call(FACTOR_SCORE_FALLBACKS, name)) return FACTOR_SCORE_FALLBACKS[name];
+  // eslint-disable-next-line no-console
+  console.warn('[difficultyTotal] 未找到合法因子分值:', name, matched ? 'bad-row' : 'missing-row');
+  return 0;
+}
+
+/** 难度总分：锁定因子(每场 3 个，d.lockFactorList) + 手选因子(d.selectedFactorList 非空) 分值之和；
+ *  点金因子(getGoldFor 判定：GOLD_FACTORS ∪ 运行时点金)该因子分值 ×2 计入。
+ *  锁定与手选互不重叠（锁定单独渲染，不在 9 格手选槽内），故直接相加。 */
+export function difficultyTotal(): number {
+  const d: any = JijieData;
+  let sum = 0;
+  for (const f of (d.lockFactorList || []) as string[]) {
+    if (f) sum += factorScore(f) * (getGoldFor(f) ? 2 : 1);
+  }
+  for (const f of ((d.selectedFactorList || []) as (string | null)[])) {
+    if (f) sum += factorScore(f) * (getGoldFor(f) ? 2 : 1);
+  }
+  return sum;
+}
 
 // ===== 段3 结算/浮窗记分透出（镜像 JJBResult 的 winCount/winbCount/totalCount 语义） =====
 /** 带奖励场数（winLoseList===2）。 */
