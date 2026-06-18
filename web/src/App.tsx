@@ -6,6 +6,7 @@ import { ObsScreen } from './screens/ObsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { ResultScreen } from './screens/ResultScreen';
+import { BpConfigScreen } from './screens/BpConfigScreen';
 import { startSession, exposeStartSession, getSelectState, getTotalCount, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
 import JijieData from '@logic/JijieData';
@@ -16,13 +17,14 @@ import JijieData from '@logic/JijieData';
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
-const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'phase0', 'foundation'] as const;
+const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'phase0', 'foundation'] as const;
 const SCREEN_LABELS: Record<string, string> = {
   home: '主界面',
   select: '选择',
   battle: '对战',
   obs: '直播条',
   result: '结算',
+  bpconfig: 'BP设置',
 };
 const STYLE_LABELS: Record<(typeof STYLES)[number], string> = {
   metal: '金属',
@@ -33,7 +35,7 @@ const MODE_LABELS: Record<(typeof MODES)[number], string> = {
   dark: '深色',
   light: '浅色',
 };
-type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'phase0' | 'foundation';
+type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -147,6 +149,8 @@ export default function App() {
         <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => chooseMode(m)} data-mode-btn={m}>{MODE_LABELS[m]}</button>
       ))}
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
+      <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
+      <button className={'ctrl-btn' + (screen === 'bpconfig' ? ' on' : '')} type="button" onClick={() => navigate('bpconfig')} data-nav-bpconfig>BP设置</button>
       <button className="ctrl-btn" type="button" onClick={restartCurrentMode} data-rerandom-btn>重新随机</button>
       <button className="ctrl-btn" type="button" onClick={() => navigate('home')} data-back-home-btn>回主界面</button>
     </div>
@@ -214,6 +218,15 @@ export default function App() {
     return (
       <>
         <ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} />
+        {!bare && switcher}
+      </>
+    );
+  }
+
+  if (screen === 'bpconfig') {
+    return (
+      <>
+        <BpConfigScreen key={`bpconfig-${rerenderTick}`} style={style} mode={mode} />
         {!bare && switcher}
       </>
     );

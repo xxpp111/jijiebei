@@ -1,0 +1,94 @@
+/* 集结杯 R3-⑥ 每模式 BP 开关配置面
+   提取自 Claude Design 设计稿（项目 3a9216be / bp-config.css），去掉 review-shell(.rv-*)、
+   规格板(.mx-*)、品牌(.lockup-*，repo BrandLockup 自带)。token 用 repo 设计体系变量；
+   尺寸/圆角/描边/动效时长沿用设计稿标注，便于后续 Cocos/对齐。 */
+
+/* §A BP 配置屏 layout */
+.bpc .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.bpc .topbar-meta { display: flex; flex-direction: column; gap: 3px; text-align: right; }
+.bpc .meta-row { display: flex; gap: 10px; justify-content: flex-end; font-size: 12.5px; }
+.bpc .meta-k { color: var(--muted); }
+.bpc .meta-v { color: var(--ink); font-weight: 700; }
+.bpc-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 16px; }
+.bpc-kicker { font-family: var(--font-num, "Oswald", sans-serif); font-size: 13px; letter-spacing: 4px; color: var(--accent); white-space: nowrap; }
+.bpc-title { font-family: var(--font-title, var(--font-num, serif)); font-size: 26px; font-weight: 700; color: var(--ink); white-space: nowrap; letter-spacing: 1px; }
+.bpc-headnote { margin-left: auto; font-size: 13px; color: var(--muted); }
+
+.bpc-list { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+/* one mode row — height 74, padding 0 24, panel surface */
+.bpc-row {
+  position: relative; display: flex; align-items: center; gap: 20px;
+  height: 74px; padding: 0 24px 0 20px;
+  background: var(--panel-bg); border: 1px solid var(--panel-edge); color: var(--ink);
+  transition: transform .12s, box-shadow .15s, border-color .15s;
+}
+.bpc-edge { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: transparent; }
+.bpc-row.is-on .bpc-edge { background: var(--accent); }
+.bpc-row.is-off .bpc-edge { background: color-mix(in srgb, var(--muted) 60%, transparent); }
+.bpc-no { font-family: var(--font-num, "Oswald", sans-serif); font-size: 30px; color: var(--accent); min-width: 42px; text-align: left; }
+.bpc-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.bpc-namerow { display: flex; align-items: center; gap: 12px; }
+.bpc-name { font-size: 22px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
+.bpc-tag { font-size: 12px; color: var(--muted); padding: 3px 10px; border: 1px solid var(--panel-edge); white-space: nowrap; letter-spacing: 1px; }
+.bpc-form { font-size: 12.5px; color: var(--muted); letter-spacing: .5px; white-space: nowrap; }
+.bpc-spacer { margin-left: auto; }
+
+/* default-state badge */
+.bpc-def { font-size: 12px; font-weight: 700; letter-spacing: 1px; padding: 4px 11px; white-space: nowrap; border: 1px solid transparent; }
+.bpc-def.d-on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.bpc-def.d-off { color: var(--muted); border-color: var(--panel-edge); }
+.bpc-def.d-optin { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: transparent; }
+.bpc-def.d-lock { color: var(--lose); border-color: color-mix(in srgb, var(--lose) 55%, transparent); background: color-mix(in srgb, var(--lose) 9%, transparent); }
+
+/* §B BP toggle — track 52×28 r14, knob 22, travel 24, slide 160ms */
+.bpc-tg { position: relative; width: 96px; display: flex; align-items: center; gap: 11px; justify-content: flex-end; }
+.bpc-tg-state { font-family: var(--font-num, "Oswald", sans-serif); font-size: 13px; letter-spacing: 2px; color: var(--muted); min-width: 22px; text-align: right; }
+.bpc-tg.on .bpc-tg-state { color: var(--accent); font-weight: 700; }
+.bpc-track {
+  position: relative; width: 52px; height: 28px; border-radius: 14px; flex: none;
+  background: var(--drop-bg, rgba(0,0,0,.25)); box-shadow: inset 0 0 0 1.5px var(--panel-edge);
+  transition: background .16s ease, box-shadow .16s ease;
+}
+.bpc-knob {
+  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--muted); box-shadow: 0 1px 3px rgba(0,0,0,.5);
+  transition: transform .16s ease, background .16s ease;
+}
+/* ON */
+.bpc-tg.on .bpc-track { background: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent); }
+.bpc-tg.on .bpc-knob { transform: translateX(24px); background: var(--on-accent, #1a1206); }
+/* OFF but enabled (can be turned on) */
+.bpc-tg.offable .bpc-knob { background: var(--ink); opacity: .85; }
+.bpc-tg.offable { cursor: pointer; }
+.bpc-tg.offable:hover .bpc-track { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.bpc-tg.offable:hover .bpc-tg-state { color: var(--accent); }
+/* OFF locked (cannot be toggled) */
+.bpc-tg.locked { opacity: .42; cursor: not-allowed; }
+.bpc-tg.locked .bpc-track { box-shadow: inset 0 0 0 1.5px var(--panel-edge); }
+.bpc-tg.locked .bpc-tg-state { color: var(--muted); }
+.bpc-row.is-locked { opacity: .6; }
+.bpc-row.is-locked .bpc-no { color: var(--muted); }
+
+/* pure-CSS lock glyph */
+.lockico { position: relative; width: 13px; height: 13px; flex: none; display: inline-block; }
+.lockico::before { content: ""; position: absolute; left: 0; bottom: 0; width: 13px; height: 8px; border-radius: 2px; background: currentColor; }
+.lockico::after { content: ""; position: absolute; left: 2.5px; top: 0; width: 8px; height: 8px; border: 2px solid currentColor; border-bottom: none; border-radius: 5px 5px 0 0; }
+.bpc-tg.locked .lockico { color: var(--muted); }
+
+/* per-theme row decoration (mirrors .mode-btn/.slot) */
+.style-metal .bpc-row { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); border-color: rgba(216,177,90,.30); }
+.style-metal.mode-dark .bpc-row { box-shadow: inset 0 1px 0 rgba(246,231,182,.12), inset 0 0 0 1px rgba(0,0,0,.22), 0 5px 14px rgba(0,0,0,.28); }
+.style-metal.mode-light .bpc-row { box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 2px 7px rgba(90,70,20,.1); border-color: rgba(169,118,31,.38); }
+.style-sc2 .bpc-row::before { content: ""; position: absolute; left: -1px; top: -1px; width: 13px; height: 13px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); pointer-events: none; }
+.style-sc2 .bpc-row::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 13px; height: 13px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none; }
+.style-sc2.mode-dark .bpc-row { box-shadow: inset 0 -2px 0 rgba(86,207,140,.16), 0 4px 12px rgba(0,0,0,.3); }
+.style-minimal .bpc-row { border-radius: 6px; }
+.style-minimal.mode-light .bpc-row { box-shadow: 0 1px 4px rgba(20,23,28,.07); }
+.style-minimal.mode-dark .bpc-row { box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 3px 12px rgba(0,0,0,.26); }
+.style-sc2 .bpc-row.is-locked::before, .style-sc2 .bpc-row.is-locked::after { border-color: var(--muted); opacity: .5; }
+
+/* foot legend */
+.bpc-foot { margin-top: 16px; display: flex; align-items: center; gap: 26px; font-size: 12.5px; color: var(--muted); }
+.bpc-foot b { color: var(--ink); font-weight: 700; }
+.bpc-legend { display: inline-flex; align-items: center; gap: 8px; }
