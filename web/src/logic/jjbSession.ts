@@ -727,19 +727,31 @@ export function factorScore(name: string): number {
   return 0;
 }
 
-/** 难度总分：锁定因子(每场 3 个，d.lockFactorList) + 手选因子(d.selectedFactorList 非空) 分值之和；
+function weightedFactorScore(name: string | null | undefined): number {
+  if (!name) return 0;
+  return factorScore(name) * (getGoldFor(name) ? 2 : 1);
+}
+
+/** 单场难度分：该场锁定因子 + 该场实际手选槽位因子；点金因子分值 ×2 计入。 */
+export function matchDifficulty(slot: 0 | 1 | 2): number {
+  const d: any = JijieData;
+  let sum = 0;
+  const lock = ((d.lockFactorList || []) as (string | null)[])[slot];
+  sum += weightedFactorScore(lock);
+
+  const selected = (d.selectedFactorList || []) as (string | null)[];
+  const slots = manualSlots(slot);
+  for (let k = 0; k < slots; k++) {
+    sum += weightedFactorScore(selected[facFlatIdx(slot, k)]);
+  }
+  return sum;
+}
+
+/** 难度总分：三场 matchDifficulty 之和，即锁定因子 + 实际手选槽位因子分值之和；
  *  点金因子(getGoldFor 判定：GOLD_FACTORS ∪ 运行时点金)该因子分值 ×2 计入。
  *  锁定与手选互不重叠（锁定单独渲染，不在 9 格手选槽内），故直接相加。 */
 export function difficultyTotal(): number {
-  const d: any = JijieData;
-  let sum = 0;
-  for (const f of (d.lockFactorList || []) as string[]) {
-    if (f) sum += factorScore(f) * (getGoldFor(f) ? 2 : 1);
-  }
-  for (const f of ((d.selectedFactorList || []) as (string | null)[])) {
-    if (f) sum += factorScore(f) * (getGoldFor(f) ? 2 : 1);
-  }
-  return sum;
+  return matchDifficulty(0) + matchDifficulty(1) + matchDifficulty(2);
 }
 
 // ===== 段3 结算/浮窗记分透出（镜像 JJBResult 的 winCount/winbCount/totalCount 语义） =====

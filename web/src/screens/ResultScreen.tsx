@@ -2,7 +2,7 @@ import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { BrandLockup } from '../components/BrandLockup';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
-import { getSessionMatches, getScore, getSelectState } from '../logic/jjbSession';
+import { getSessionMatches, getScore, getSelectState, matchDifficulty } from '../logic/jjbSession';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
 
@@ -53,10 +53,17 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
           {matches.map((m, i) => {
             const cls = 'rcard' + (m.result ? ' rcard-' + m.result : '');
             const mapSrc = mapUrl(m.map);
+            const difficulty = matchDifficulty(i as 0 | 1 | 2);
             return (
-              <div key={i} className={cls} data-rcard-idx={i}>
+              <div key={i} className={cls} data-rcard-idx={i} data-match-difficulty={difficulty} {...{ [`data-match-difficulty-${i}`]: difficulty }}>
                 <div className="rcard-no">
                   <b>{m.slot}</b>
+                  <span
+                    className="rcard-difficulty"
+                    style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}
+                  >
+                    难度 {difficulty}
+                  </span>
                 </div>
                 <div className="rcard-map">
                   <span className="mapthumb">

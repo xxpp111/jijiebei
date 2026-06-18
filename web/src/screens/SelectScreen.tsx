@@ -16,6 +16,7 @@ import {
   toggleGold,
   randomFillSelection,
   difficultyTotal,
+  matchDifficulty,
   querySessionMode,
 } from '../logic/jjbSession';
 import { facFlatIdx } from '@jjb/JJBData';
@@ -204,15 +205,23 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
             const lock = s.lockFactorList[i];
             const selCmd = s.selectedCommanderList[i];
             const isBoss = i === 2;
+            const difficulty = matchDifficulty(i as 0 | 1 | 2);
             return (
               <div
                 key={i}
                 className={'slot' + (i === 0 ? ' slot-active' : '')}
                 data-slot-idx={i}
               >
-                <div className="slot-head">
+                <div className="slot-head" {...{ [`data-match-difficulty-${i}`]: difficulty }}>
                   <span className="slot-no">{SLOT_TITLES[i]}</span>
                   <span className="slot-map-name">{mapName}</span>
+                  <span
+                    className="slot-difficulty"
+                    data-match-difficulty={difficulty}
+                    style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}
+                  >
+                    难度 {difficulty}
+                  </span>
                   {isBoss && <span className="slot-flag">双倍</span>}
                 </div>
                 <span className="mapthumb">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
-import { startRandomSession, startSession, getSessionMatches, setVerdict, getScore, getSelectState, exposeBattleDebug, randomFillAndStart, type SessionMode } from '../logic/jjbSession';
+import { startRandomSession, startSession, getSessionMatches, setVerdict, getScore, getSelectState, exposeBattleDebug, randomFillAndStart, matchDifficulty, type SessionMode } from '../logic/jjbSession';
 import { BrandLockup } from '../components/BrandLockup';
 
 const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji']);
@@ -63,6 +63,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
     lock: m.lock,
     verdict: m.result,
     boss: i === 2,
+    difficulty: matchDifficulty(i as 0 | 1 | 2),
   }));
 
   return (

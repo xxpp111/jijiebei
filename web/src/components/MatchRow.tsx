@@ -20,16 +20,23 @@ export interface MatchRowData {
   lock?: string;
   verdict?: string; // "win" | "bonus" | "lose"
   boss?: boolean;
+  difficulty: number;
 }
 
 export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (v: 'win' | 'bonus' | 'lose') => void }) {
-  const { idx, slot, mapName, cmds, factors, lock, verdict, boss } = data;
+  const { idx, slot, mapName, cmds, factors, lock, verdict, boss, difficulty } = data;
   const mapSrc = mapUrl(mapName);
   const cls = ['match', boss && 'match-boss', verdict && 'match-done'].filter(Boolean).join(' ');
   return (
-    <div className={cls}>
+    <div className={cls} data-match-difficulty={difficulty} {...{ [`data-match-difficulty-${idx}`]: difficulty }}>
       <div className="match-no">
         <span className="match-no-t">{slot}</span>
+        <span
+          className="match-difficulty"
+          style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}
+        >
+          难度 {difficulty}
+        </span>
       </div>
       <div className="match-map">
         <span className="mapthumb">
