@@ -116,7 +116,7 @@ try {
       const { randomFactorPoorLen, manualSlots, sumSlots, identityPass, selectedFactorListLen, selectedCommanderList, status, mapCount, lockCount, modeIsRandom, modelFactorCount } = sel;
 
       if (!scoreFallbackChecked) {
-        if (factorScore('虚空重生者') !== 5) fail(`factorScore('虚空重生者') 应走白名单 fallback=5`);
+        if (factorScore('虚空重生者') !== 7) fail(`factorScore('虚空重生者') 应走白名单 fallback=7（yb 2026-06-19 拍板较难因子）`);
         if (factorScore('混乱工作室') !== 7) fail(`factorScore('混乱工作室') 应走非酋白名单 fallback=7`);
         if (factorScore('礼尚往来') !== 7) fail(`factorScore('礼尚往来') 应走非酋白名单 fallback=7`);
         const warnMessages = [];

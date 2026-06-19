@@ -10,6 +10,7 @@
 // 读：JJBData.sessionMatches()（真实桥，0 改）。写回：winLoseList[i]=RESULT_VAL（lose0/win1/bonus2）。
 import JijieData from '@logic/JijieData';
 import ConfigData from '@logic/data/JJConfigData';
+import { weightedSampleNoReplace } from './commanderWeight';
 import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, GOLD_FACTORS, type MatchVM } from '@jjb/JJBData';
 import { doublesStart, doublesReset } from './jjbDoubles';
 
@@ -201,17 +202,14 @@ function toSelectCore(): void {
         groupList.splice(ri, 1);
       }
 
-      // B 组抽取（第 161-171 行）
+      // B 组抽取（第 161-171 行）—— 德哈卡/泰凯斯降权 0.25 加权无放回（yb 拍板）
       groupList = (ConfigData.commadnerGroupList as any)['B'].slice();
       if (d.modeFeiqiu) {
         const idx = groupList.indexOf('斯台特曼');
         if (idx >= 0) groupList.splice(idx, 1);
       }
-      for (let i = 0; i < countB; i++) {
-        const ri = rand(groupList.length);
-        const cmder = groupList[ri];
+      for (const cmder of weightedSampleNoReplace(groupList, countB)) {
         d.randomCommanderPoorB.push(cmder);
-        groupList.splice(ri, 1);
       }
 
       // 自选门控（第 181-183 行）—— modeSuiji/modeFeiqiu 不 push
@@ -731,10 +729,10 @@ export function clearBpRuntime(): void { bpBanRuntime.clear(); }
 // ===== 段3④：难度总分（锁定因子 + 手选因子求和；点金因子分值×2） =====
 // 分值真相：因子配置.txt 第3列（表头「名字,类型,分值」），经 ConfigData.factorList_back 读取
 //   （factorList_back 是 initFactor 时的完整副本，popFactor 只消耗 factorList，这份永不被消耗）。
-//   虚空重生者(因子配置.txt:30) 行仅 2 列「虚空重生者,5」缺第3列；docs/因子点数配置.csv 标为 5 分。
+//   虚空重生者(因子配置.txt:30) 行仅 2 列「虚空重生者,5」缺第3列；yb 2026-06-19 拍板按 7 分（较难因子），覆盖 csv 旧 5 分。
 //   混乱工作室 / 礼尚往来是 XP 非酋路径硬编码因子，但当前 jjdata 分值表缺行；显式列白名单，避免恢复“所有未知=7”。
 const FACTOR_SCORE_FALLBACKS: Record<string, number> = {
-  虚空重生者: 5,
+  虚空重生者: 7,
   混乱工作室: 7,
   礼尚往来: 7,
 };

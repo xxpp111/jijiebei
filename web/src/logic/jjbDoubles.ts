@@ -4,6 +4,7 @@
 // 飞球（非酋）之轮：每场只锁「混乱工作室」(1个)；可分配因子池=固定3个{礼尚往来/风暴英雄/虚空裂隙}(玩家自由分配，非随机抽1)；地图每场随机真地图。
 import { RESULT_VAL, VAL_RESULT, type MatchVM } from '@jjb/JJBData';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
+import { weightedSampleNoReplace } from './commanderWeight';
 
 // 额外随机因子来源（官方24因子子集，按开局时过滤当场官突锁定因子后随机抽取）。
 const FACTOR_SOURCE = [
@@ -90,10 +91,10 @@ export function doublesStart(variant: 'guantu' | 'feiqiu' = 'guantu'): void {
     const lockedFacs = new Set(_mutEntries.flatMap((e) => e.factors));
     _factorPool = shuffle(FACTOR_SOURCE.filter((f) => !lockedFacs.has(f))).slice(0, FACTOR_POOL_SIZE);
   }
-  // 指挥官池：A 档出 4 人，B 档出 2 人，共 6（对齐 cmdPoolSize）。
+  // 指挥官池：A 档出 4 人（等概率），B 档出 2 人（德哈卡/泰凯斯降权 0.25 加权无放回），共 6（对齐 cmdPoolSize）。
   _commanderPool = [
     ...shuffle(COMMANDER_A).slice(0, CMD_A_COUNT),
-    ...shuffle(COMMANDER_B).slice(0, CMD_B_COUNT),
+    ...weightedSampleNoReplace(COMMANDER_B, CMD_B_COUNT),
   ];
   _slots = freshSlots();
   _winLoseList = new Array(MATCHES);
