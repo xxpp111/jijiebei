@@ -60,7 +60,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
     <div
       className="obs-host"
       data-bare={bare ? '1' : undefined}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0', gap: 14 }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: bare ? 0 : '24px 0', gap: 14 }}
     >
       {/* 采集区：横条（OBS 浏览器源裁切到这块） */}
       <ObsBar style={style} mode={mode} rows={rows} wins={wins} total={total} difficulty={currentDifficultyTotal()} />

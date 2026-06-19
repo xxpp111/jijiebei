@@ -280,8 +280,20 @@ async function main() {
     });
     if (bare.bare !== '1') fail(`bare attr=${bare.bare}`);
     if (bare.back || bare.control) fail(`bare controls visible back=${bare.back} control=${bare.control}`);
-    if (bare.overflowX !== 'visible' || bare.maxWidth !== 'none') fail(`bare styles overflow=${bare.overflowX} maxWidth=${bare.maxWidth}`);
-    if (bare.barWidth !== 1280 || bare.barHeight !== 232) fail(`bare bar size ${bare.barWidth}x${bare.barHeight}`);
+    // 流式新设计（OBS 横条三修）：bare 采集态横条宽度跟随 viewport（不再固定 1280），host overflow-x:auto 兜底；高度仍 232。
+    if (bare.overflowX !== 'auto') fail(`bare host overflowX=${bare.overflowX} (expect fluid auto)`);
+    if (bare.barWidth !== 1280 || bare.barHeight !== 232) fail(`bare bar @1280vp ${bare.barWidth}x${bare.barHeight} (expect fill 1280×232)`);
+    // 动态横向拉伸：放大 viewport 到 1600，横条应跟随变宽（流式），高度不变（232 采集契约）。
+    await page.setViewportSize({ width: 1600, height: 320 });
+    await page.waitForTimeout(200);
+    const wide = await page.evaluate(() => {
+      const rect = document.querySelector('.obsbar')?.getBoundingClientRect();
+      return { barWidth: Math.round(rect?.width || 0), barHeight: Math.round(rect?.height || 0) };
+    });
+    if (wide.barWidth < 1560 || wide.barWidth > 1600) fail(`fluid stretch: bar @1600vp width=${wide.barWidth} (expect ~1600)`);
+    if (wide.barHeight !== 232) fail(`fluid stretch: bar height @1600vp=${wide.barHeight} (expect 232 不变)`);
+    pass(`OBS 横条流式: @1280vp=${bare.barWidth}px @1600vp=${wide.barWidth}px height=232 (横向动态拉伸生效)`);
+    await page.setViewportSize({ width: 1280, height: 720 });
 
     if (messages.length) {
       for (const message of messages) fail('console: ' + message);
