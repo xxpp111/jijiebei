@@ -19,6 +19,11 @@ export default defineConfig({
   server: {
     port: 7788,
     fs: { allow: [resolve(__dirname, '..')] },
+    allowedHosts: ['.trycloudflare.com'], // cloudflared quick tunnel 公网测试放行（jjb-run-broadcast）
+  },
+  preview: {
+    port: 7788,
+    allowedHosts: ['.trycloudflare.com'],
   },
   build: { outDir: 'dist', target: 'es2020' },
 });
