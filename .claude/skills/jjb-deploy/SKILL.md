@@ -62,16 +62,28 @@ curl -s http://10.37.220.128:8080 | grep -o 集结杯                           
 持久化保证：`systemctl is-enabled docker`=enabled + 容器 restart=always → 机器重启 docker 自启、容器自动恢复；进程崩溃自动拉起。
 
 ## 🔁 更新线上（站点改了/双打 round 合并后）
-dist 是只读挂载，**rebuild 后重启容器即生效**，无需重建容器：
+dist 是只读挂载，**rebuild 后重启容器即生效**，无需重建容器。
+**⚠️ git 不走 dockerd proxy**——`git fetch`/`pull` 走 https，必须自带 shell proxy env，否则连 github 443 超时（dockerd 的 systemd proxy 只对 `docker pull` 生效）。
+且 fetch 失败时务必**强校验 HEAD**：`a && b && c` 列表中间命令失败时 `set -e` **不触发**，会静默 build 旧码：
 ```bash
-ssh devbox-tianlang 'cd ~/jijiebei-deploy && git pull && cd web && npm run build && docker restart jijiebei-nginx'
+ssh devbox-tianlang 'set -e
+export http_proxy=http://sys-proxy-rd-relay.byted.org:8118 https_proxy=http://sys-proxy-rd-relay.byted.org:8118 no_proxy=.byted.org,localhost,127.0.0.1
+cd ~/jijiebei-deploy
+git fetch origin jjb-live-dock
+git reset --hard origin/jjb-live-dock
+H=$(git rev-parse --short HEAD); echo "HEAD=$H"
+[ "$H" = "<期望commit>" ] || { echo "FETCH-FAILED 仍非目标 commit，中止"; exit 1; }
+cd web && npm run build && docker restart jijiebei-nginx'
+# 外部复验服务的是新构建（JS 哈希应随改动变）：
+curl -s http://10.37.220.128:8080 | grep -oE "index-[A-Za-z0-9_]+\.js"
 ```
-> 当前线上 dist 来自基线 `5f9380c`（不含双打半成品）。双打 round 合并到 origin 后，跑上面这条更新。
+> 历史基线：dist 曾来自 `5f9380c`→`2186144`(R5)→`b407227`(R7 双打真引擎，JS 哈希 `BS3hM_hn`)。
 
 ## 🚨 故障排查
 | 现象 | 根因 | 处置 |
 |---|---|---|
 | `docker pull` 超时 | dockerd proxy 失效/未配 | 查 `cat /etc/systemd/system/docker.service.d/http-proxy.conf` + `sudo systemctl show docker --property=Environment`；缺失则重配（见顶部）或用本地灌镜像 fallback |
+| `git fetch/pull` 连 github 443 超时 | git 不走 dockerd proxy | 更新命令前 `export http_proxy/https_proxy=…:8118`（见🔁更新段）；fetch 后**强校验 HEAD**，否则 build 旧码 |
 | 容器 `Restarting`，`docker logs` 报 `exec format error` | 镜像架构不对（灌了 arm64） | 直接 `docker pull`（proxy 通会取 amd64）；或本地 `save` 必须带 `--platform linux/amd64` 重灌 |
 | `curl 000` / 8080 不可达 | 容器没起或在崩溃循环 | `docker ps -a` + `docker logs jijiebei-nginx` 看真因 |
 | ssh `Permission denied` | Kerberos ticket 过期 / 用错默认 user | 用 alias `devbox-tianlang`（User=baitianlang），`kinit` 续票 |

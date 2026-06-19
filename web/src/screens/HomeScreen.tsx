@@ -5,17 +5,16 @@ import JijieData from '@logic/JijieData';
 
 // 集结杯 × CM — 首页（公开模式入口 + 选手名）。承接 design/v4-r2/home 段（className 全部沿用 theme.css/home css）。
 // 流程：输入选手名 → 点模式按钮 → startSession(mode) → 覆盖 JijieData.playerName → onStart 回调让 App 跳 select。
-// 模式集合以当前直播入口为准：8/10/极难模式 + 拯救 + 非酋（飞球）+ 双打（官突）。
-// 第五格已由「随机(suiji)」改为「非酋·飞球(feiqiu)」；suiji 退出首页/URL 入口，
-//   引擎(modeSuiji 标志链)保留供 e2e 9 模式恒等式回归。随机能力仍走 Select「随机填充」叠加层。
-// 双打=独立引擎 JJBDoubles 接通（startSession('doubles') 早分支启动）；第六格入口已解 soon。
+// 模式集合以当前直播入口为准：8/10/极难 + 拯救 + 两个双打（5号位飞球之轮=非酋双打 / 6号位官突双打）。
+// 5、6 号位皆双打：飞球之轮(feiqiu-doubles=混乱工作室+随机1) 与 官突双打(doubles=抽CSV真表) 各占一格，
+//   故 06 无需再做官突/非酋二级选择。单打 feiqiu / 老 suiji 退出首页/URL 白名单（引擎保留供 e2e 9 模式恒等式回归）。
 const MODES: { no: string; key: SessionMode | 'doubles'; name: string; tag: string; soon?: boolean }[] = [
   { no: '01', key: 'std8', name: '8 因子', tag: '标准赛' },
   { no: '02', key: 'std10', name: '10 因子', tag: '进阶' },
   { no: '03', key: 'std12', name: '极难模式', tag: '极难' },
   { no: '04', key: 'rescue', name: '拯救模式', tag: '固定7人' },
-  { no: '05', key: 'feiqiu', name: '非酋', tag: '飞球' },
-  { no: '06', key: 'doubles', name: '双打', tag: '官突' },
+  { no: '05', key: 'feiqiu-doubles', name: '飞球之轮', tag: '非酋双打' },
+  { no: '06', key: 'doubles', name: '官突双打', tag: '双打' },
 ];
 
 export interface HomeScreenProps {
