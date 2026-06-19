@@ -21,7 +21,8 @@ export interface FactorFrameProps {
 export function FactorFrame({
   src, size = 66, gold = false, sel = false, dim = false, drag = false, ghost = false, tag = null, check = false,
 }: FactorFrameProps) {
-  const cls = ['fx', gold && 'gold', tag === '官突' && 'mutator', sel && 'fx-sel', dim && 'fx-dim', drag && 'fx-drag', ghost && 'fx-ghost']
+  const isMut = tag === '官突' || tag === '非酋'; // 官突/非酋之轮锁定因子：同一区别边框（紫环），区分玩家点金金框
+  const cls = ['fx', gold && 'gold', isMut && 'mutator', sel && 'fx-sel', dim && 'fx-dim', drag && 'fx-drag', ghost && 'fx-ghost']
     .filter(Boolean).join(' ');
   return (
     <div className={cls} style={{ '--fxz': size + 'px' } as React.CSSProperties}>
@@ -29,7 +30,7 @@ export function FactorFrame({
       <img className="fx-frame" src={gold ? BORDER_GOLD : BORDER_NORMAL} alt="" />
       <span className="fx-ring"></span>
       {check && <span className="fx-check">✓</span>}
-      {tag && <span className={'fx-tag' + (tag === '锁定' || tag === '官突' ? ' lock' : '')}>{tag}</span>}
+      {tag && <span className={'fx-tag' + (tag === '锁定' || isMut ? ' lock' : '')}>{tag}</span>}
     </div>
   );
 }

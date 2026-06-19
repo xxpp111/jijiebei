@@ -1,7 +1,7 @@
 // jjbDoubles — 双打真引擎（R7 Phase 4）。
 // 从 web/src/data/mutatorPool.ts（源 docs/官突ABC配置_官突池.csv）读官突池，
 // 按 A/B/C 档每场抽 1 官突（含地图 + 锁定因子），不再委托 @jjb/JJBDoubles（Cocos 占位引擎保留只读）。
-// 飞球（非酋）双打：混乱工作室 + {礼尚往来/风暴英雄/虚空裂隙}随机1 替代官突 CSV 池。
+// 飞球（非酋）之轮：每场只锁「混乱工作室」(1个)；可分配因子池=固定3个{礼尚往来/风暴英雄/虚空裂隙}(玩家自由分配，非随机抽1)；地图每场随机真地图。
 import { RESULT_VAL, VAL_RESULT, type MatchVM } from '@jjb/JJBData';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
 
@@ -19,9 +19,9 @@ const COMMANDER_B = ['凯拉克斯', '诺娃', '德哈卡', '泰凯斯', '泽拉
 const CMD_A_COUNT = 4; // 双打池 A 档出 4
 const CMD_B_COUNT = 2; // 双打池 B 档出 2
 
-// 飞球（非酋）因子。
+// 飞球（非酋）之轮因子：混乱工作室恒锁；{礼尚往来/风暴英雄/虚空裂隙} 为可分配池（三者皆可分配，非随机抽1）。
 const FEIQIU_FIXED = '混乱工作室';
-const FEIQIU_RANDOM_POOL = ['礼尚往来', '风暴英雄', '虚空裂隙'];
+const FEIQIU_ASSIGN_POOL = ['礼尚往来', '风暴英雄', '虚空裂隙'];
 
 const MATCHES = 3;
 const CMDS_PER_MATCH = 2;
@@ -77,12 +77,11 @@ function exposeDebug(): void {
 export function doublesStart(variant: 'guantu' | 'feiqiu' = 'guantu'): void {
   _variant = variant;
   if (variant === 'feiqiu') {
-    const feiqiuFac = FEIQIU_RANDOM_POOL[Math.floor(Math.random() * FEIQIU_RANDOM_POOL.length)];
-    const feiFacs = [FEIQIU_FIXED, feiqiuFac];
-    // 三场共享同一套非酋因子，地图自选（不绑官突地图）。
-    _mutEntries = TIER_ORDER.map(() => ({ name: '非酋', map: '—', factors: feiFacs.slice() }));
-    const lockedFacs = new Set(feiFacs);
-    _factorPool = shuffle(FACTOR_SOURCE.filter((f) => !lockedFacs.has(f))).slice(0, FACTOR_POOL_SIZE);
+    // 飞球之轮：每场只锁「混乱工作室」(1个)；可分配池=固定3因子(玩家自由分配，非随机抽1)；
+    // 地图每场随机一张真地图（取自官突池去重地图集，已剔缺图）。
+    const maps = shuffle([...new Set(TIER_ORDER.flatMap((t) => MUTATOR_POOL[t].map((e) => e.map)))]);
+    _mutEntries = TIER_ORDER.map((_, i) => ({ name: '非酋', map: maps[i % maps.length] ?? '湮灭快车', factors: [FEIQIU_FIXED] }));
+    _factorPool = FEIQIU_ASSIGN_POOL.slice();
   } else {
     _mutEntries = TIER_ORDER.map((t) => {
       const pool = MUTATOR_POOL[t];
@@ -244,14 +243,14 @@ export function validateDoubles(): { ok: boolean; firstError: string; errors: st
 
 export function randomFillDoubles(): void {
   let ci = 0;
-  let fi = 0;
   for (let slot = 0; slot < MATCHES; slot++) {
     for (let k = 0; k < CMDS_PER_MATCH; k++) {
       const name = _commanderPool[ci++];
       if (name) setDoublesCmd(slot, k, name);
     }
     for (let k = 0; k < EXTRA_FACTORS; k++) {
-      const name = _factorPool[fi++];
+      // 取模：guantu 池=9 等价原顺序消费；feiqiu 池=3 则每场循环喂满那 3 个可分配因子。
+      const name = _factorPool.length ? _factorPool[(slot * EXTRA_FACTORS + k) % _factorPool.length] : undefined;
       if (name) setDoublesFac(slot, k, name);
     }
   }

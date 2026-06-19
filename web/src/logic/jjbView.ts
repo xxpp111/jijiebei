@@ -61,6 +61,11 @@ export function currentSessionMode(): SessionMode {
   return getSelectState().mode;
 }
 
+/** 双打锁定因子角标文案：非酋之轮=「非酋」/ 官突双打=「官突」（select/battle/obs/result 四屏统一）。 */
+export function currentLockTag(): string {
+  return doublesLive() && getDoublesState().config.variant === 'feiqiu' ? '非酋' : '官突';
+}
+
 export function currentModeLabel(): string {
   if (doublesLive()) return doublesModeLabel();
   const s = getSelectState();

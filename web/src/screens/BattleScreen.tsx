@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
 import { startSession, getSelectState, exposeBattleDebug, randomFillAndStart, querySessionMode, type SessionMode } from '../logic/jjbSession';
-import { currentDifficulty, currentIsDoubles, currentLockedFactors, currentMatches, currentPlayerName, currentScore, setCurrentVerdict } from '../logic/jjbView';
+import { currentDifficulty, currentIsDoubles, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, setCurrentVerdict } from '../logic/jjbView';
 import { BrandLockup } from '../components/BrandLockup';
 
 const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'doubles', 'feiqiu-doubles']);
@@ -64,6 +64,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
     factors: m.factors,
     lock: m.lock,
     lockedFactors: currentLockedFactors(m),
+    lockTag: currentLockTag(),
     verdict: m.result,
     boss: i === matches.length - 1,
     difficulty: currentDifficulty(i), // 双打无因子难度分（引擎自管 per-match 胜负计分）；单打 difficultyTotal/matchDifficulty 不受影响

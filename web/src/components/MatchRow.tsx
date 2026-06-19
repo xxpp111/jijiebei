@@ -19,13 +19,14 @@ export interface MatchRowData {
   factors: string[];
   lock?: string;
   lockedFactors?: string[]; // 双打官突完整 mutators 数组（比对用；单打走 lock 单值）
+  lockTag?: string; // 锁定因子角标：非酋之轮=「非酋」/ 官突双打=「官突」（默认官突）
   verdict?: string; // "win" | "bonus" | "lose"
   boss?: boolean;
   difficulty?: number;
 }
 
 export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (v: 'win' | 'bonus' | 'lose') => void }) {
-  const { idx, slot, mapName, cmds, factors, lock, lockedFactors, verdict, boss, difficulty } = data;
+  const { idx, slot, mapName, cmds, factors, lock, lockedFactors, lockTag, verdict, boss, difficulty } = data;
   const mapSrc = mapUrl(mapName);
   const cls = ['match', boss && 'match-boss', verdict && 'match-done'].filter(Boolean).join(' ');
   const difficultyAttrs = difficulty === undefined ? {} : { 'data-match-difficulty': difficulty, [`data-match-difficulty-${idx}`]: difficulty };
@@ -65,7 +66,7 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
             key={i}
             src={facUrl(f)}
             size={64}
-            tag={lockedFactors ? (lockedFactors.includes(f) ? '官突' : null) : (f === lock ? '锁定' : null)}
+            tag={lockedFactors ? (lockedFactors.includes(f) ? (lockTag || '官突') : null) : (f === lock ? '锁定' : null)}
           />
         ))}
       </div>

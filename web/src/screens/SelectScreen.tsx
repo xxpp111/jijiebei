@@ -524,11 +524,15 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
   };
   const handleRandomFill = () => { randomFillDoubles(); setTick((x) => x + 1); };
 
-  // 各场官突展示：topbar 汇总用（优先显示名称，fallback 到因子列表）
+  // 各场锁定因子展示：topbar 汇总用。官突=每场官突名；非酋之轮=三场共享锁定因子（混乱工作室）。
+  const isFeiqiu = cfg.variant === 'feiqiu';
+  const lockLabel = isFeiqiu ? '非酋' : '官突';
   const mutNames = cfg.matchMutatorNames || [];
-  const allMatchMuts = mutNames.length
-    ? mutNames.join(' | ')
-    : (cfg.matchMutators || []).map((ms) => ms.join('·')).join(' | ');
+  const allMatchMuts = isFeiqiu
+    ? '混乱工作室'
+    : (mutNames.length
+      ? mutNames.join(' | ')
+      : (cfg.matchMutators || []).map((ms) => ms.join('·')).join(' | '));
 
   return (
     <div
@@ -544,7 +548,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
           <div className="topbar-meta">
             <div className="meta-row"><span className="meta-k">参赛战队</span><span className="meta-v" data-meta-player>双打战队</span></div>
             <div className="meta-row"><span className="meta-k">比赛模式</span><span className="meta-v" data-meta-mode data-doubles-mode>{doublesModeLabel()}</span></div>
-            <div className="meta-row"><span className="meta-k">官突</span><span className="meta-v" data-doubles-mutators style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{allMatchMuts}</span></div>
+            <div className="meta-row"><span className="meta-k">{lockLabel}</span><span className="meta-v" data-doubles-mutators style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{allMatchMuts}</span></div>
           </div>
         </div>
 
@@ -559,7 +563,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                 <div className="slot-head">
                   <span className="slot-no">{m.slot}</span>
                   <span className="slot-map-name">{mapName}</span>
-                  <span className="slot-difficulty" style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>官突 {mutNames[i] || (m.mutators || []).join('·')}</span>
+                  <span className="slot-difficulty" style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>{isFeiqiu ? '非酋' : `官突 ${mutNames[i] || (m.mutators || []).join('·')}`}</span>
                   {isBoss && <span className="slot-flag">BOSS</span>}
                 </div>
                 <span className="mapthumb">
@@ -585,7 +589,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                   <div className="t-facs">
                     {(m.mutators || []).map((mu, k) => (
                       <span key={`mut${k}`} style={{ position: 'relative', display: 'inline-block' }}>
-                        <FactorFrame src={facUrl(mu)} size={52} tag="官突" gold={getGoldFor(mu)} />
+                        <FactorFrame src={facUrl(mu)} size={52} tag={lockLabel} gold={getGoldFor(mu)} />
                         <GoldBadge name={mu} on={getGoldFor(mu)} onToggle={() => { toggleGold(mu); setTick((x) => x + 1); }} />
                       </span>
                     ))}

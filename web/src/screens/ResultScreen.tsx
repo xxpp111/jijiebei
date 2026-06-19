@@ -3,7 +3,7 @@ import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { BrandLockup } from '../components/BrandLockup';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
-import { currentDifficulty, currentLockedFactors, currentMatches, currentModeLabel, currentPlayerName, currentScore, ensureDoublesSessionFromUrl } from '../logic/jjbView';
+import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, ensureDoublesSessionFromUrl } from '../logic/jjbView';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
 
@@ -93,7 +93,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
                   </div>
                   <div className="rcard-facs">
                     {m.factors.map((f, k) => (
-                      <FactorFrame key={k} src={facUrl(f)} size={46} tag={lockedFactors ? (lockedFactors.includes(f) ? '官突' : null) : (f === m.lock ? '锁定' : null)} />
+                      <FactorFrame key={k} src={facUrl(f)} size={46} tag={lockedFactors ? (lockedFactors.includes(f) ? currentLockTag() : null) : (f === m.lock ? '锁定' : null)} />
                     ))}
                   </div>
                 </div>

@@ -14,6 +14,7 @@ export interface ObsRow {
   factors: string[];
   lock?: string;
   lockedFactors?: string[];
+  lockTag?: string; // 非酋之轮=「非酋」/ 官突双打=「官突」
   status: 'done' | 'live' | 'wait';
   verdict?: string;
 }
@@ -75,7 +76,7 @@ function ObsMatch({ row }: { row: ObsRow }) {
               key={i}
               src={facUrl(f)}
               size={fxz}
-              tag={row.lockedFactors ? (row.lockedFactors.includes(f) ? '官突' : null) : (f === row.lock ? '锁定' : null)}
+              tag={row.lockedFactors ? (row.lockedFactors.includes(f) ? (row.lockTag || '官突') : null) : (f === row.lock ? '锁定' : null)}
             />
           ))}
         </div>
