@@ -138,7 +138,7 @@ async function main() {
         lock0: document.querySelector('[data-doubles-slot="0"]')?.getAttribute('data-doubles-lock') || '',
         dbgLive: dbg?.live, dbgSlots: dbg?.selection?.slots?.length,
         dbgCmdPool: dbg?.commanderPool?.length, dbgFacPool: dbg?.factorPool?.length,
-        dbgMuts: (dbg?.config?.mutators || []).join(','),
+        dbgMuts: (dbg?.config?.matchMutators?.[0] || []).join(','),
       };
     });
     if (dblSelect.label !== 'select-sc2-dark-doubles') fail(`doubles select label=${dblSelect.label}`);
@@ -147,7 +147,7 @@ async function main() {
     if (dblSelect.slotDivs !== 3) fail(`doubles slot divs=${dblSelect.slotDivs} ≠ 3`);
     if (dblSelect.poolCmds !== dblSelect.dbgCmdPool || dblSelect.poolCmds !== 6) fail(`doubles data-doubles-pool-cmd=${dblSelect.poolCmds} ≠ __jjbDebug ${dblSelect.dbgCmdPool}`);
     if (dblSelect.poolFacs !== dblSelect.dbgFacPool || dblSelect.poolFacs !== 9) fail(`doubles data-doubles-pool-fac=${dblSelect.poolFacs} ≠ __jjbDebug ${dblSelect.dbgFacPool}`);
-    if (!dblSelect.lock0 || dblSelect.lock0 !== dblSelect.dbgMuts) fail(`doubles data-doubles-lock(slot0)=${dblSelect.lock0} ≠ mutators ${dblSelect.dbgMuts}`);
+    if (!dblSelect.lock0 || dblSelect.lock0 !== dblSelect.dbgMuts) fail(`doubles data-doubles-lock(slot0)=${dblSelect.lock0} ≠ matchMutators[0] ${dblSelect.dbgMuts}`);
     if (!dblSelect.modeLabel.includes('双打')) fail(`doubles data-doubles-mode=${dblSelect.modeLabel}`);
     pass(`doubles select data-*: label/slots(3)/poolCmd(6)/poolFac(9)/lock(${dblSelect.lock0}) ↔ __jjbDebug.doubles 一致`);
 

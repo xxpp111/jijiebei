@@ -1,0 +1,61 @@
+/* Web-only brand override. Keep design/v4-r2 CSS read-only and render the cup title as CSS gold text on every screen. */
+.jjb .lockup .lockup-cn,
+.obsbar .lockup .lockup-cn {
+  color: transparent;
+  background: linear-gradient(180deg, #f6e7b6 0%, #d8b15a 48%, #a87e2f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: 0 1px 0 rgba(255, 247, 212, .42), 0 0 16px rgba(216, 177, 90, .26);
+}
+
+.jjb .lockup .lockup-en,
+.obsbar .lockup .lockup-en {
+  color: #d8b15a;
+  opacity: .98;
+  text-shadow: 0 0 10px rgba(216, 177, 90, .2);
+}
+
+.jjb.mode-light .lockup .lockup-cn,
+.obsbar.mode-light .lockup .lockup-cn {
+  background: linear-gradient(180deg, #8b681f 0%, #b0822b 48%, #5f4214 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .72);
+}
+
+.jjb.mode-light .lockup .lockup-en,
+.obsbar.mode-light .lockup .lockup-en {
+  color: #6f5119;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+}
+
+.lockup .lockup-cn,
+.lockup .lockup-en {
+  display: block;
+}
+
+.lockup-obs {
+  gap: 10px;
+}
+
+.lockup-obs .lockup-mark {
+  height: 30px;
+}
+
+.lockup-obs .lockup-div {
+  width: 1px;
+  height: 24px;
+}
+
+.lockup-obs .lockup-cn {
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 3px;
+}
+
+.lockup-obs .lockup-en {
+  margin-top: 3px;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 3.2px;
+}

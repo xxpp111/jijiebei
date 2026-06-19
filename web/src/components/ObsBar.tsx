@@ -1,6 +1,7 @@
 import { CommanderCard } from './CommanderCard';
 import { FactorFrame } from './FactorFrame';
-import { mapUrl, cmdUrl, facUrl, logoUrl } from '../lib/realAsset';
+import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
+import { BrandLockup } from './BrandLockup';
 
 // ObsBar — 承接 design/v4-r2/components/obs-bar.jsx 的 OBSBar/OBSMatch/OBSBadge。
 // 直播采集横条（1280×232）：左品牌+比分+pips，右 3 场列（live 场 hero 加宽）。
@@ -12,6 +13,7 @@ export interface ObsRow {
   cmds: string[];
   factors: string[];
   lock?: string;
+  lockedFactors?: string[];
   status: 'done' | 'live' | 'wait';
   verdict?: string;
 }
@@ -69,7 +71,12 @@ function ObsMatch({ row }: { row: ObsRow }) {
         </div>
         <div className="obs-facs">
           {row.factors.map((f, i) => (
-            <FactorFrame key={i} src={facUrl(f)} size={fxz} tag={f === row.lock ? '锁定' : null} />
+            <FactorFrame
+              key={i}
+              src={facUrl(f)}
+              size={fxz}
+              tag={row.lockedFactors ? (row.lockedFactors.includes(f) ? '官突' : null) : (f === row.lock ? '锁定' : null)}
+            />
           ))}
         </div>
       </div>
@@ -77,8 +84,7 @@ function ObsMatch({ row }: { row: ObsRow }) {
   );
 }
 
-export function ObsBar({ style, mode, rows, wins, total, difficulty }: { style: string; mode: string; rows: ObsRow[]; wins: number; total: number; difficulty: number }) {
-  const logo = logoUrl(style, mode);
+export function ObsBar({ style, mode, rows, wins, total, difficulty }: { style: string; mode: string; rows: ObsRow[]; wins: number; total: number; difficulty?: number }) {
   const pips = rows.map((r) =>
     r.status === 'live' ? 'live' : r.status === 'wait' ? 'wait' : r.verdict === 'win' || r.verdict === 'bonus' ? 'win' : r.verdict === 'lose' ? 'lose' : 'wait',
   );
@@ -89,9 +95,7 @@ export function ObsBar({ style, mode, rows, wins, total, difficulty }: { style: 
       <div className="obsbar-inner">
         <div className="obs-score">
           <div className="obs-score-brand">
-            {logo ? <img className="obs-score-mark" src={logo} alt="CM" /> : <span className="obs-score-mark">CM</span>}
-            <span className="obs-score-div"></span>
-            <span className="obs-score-cn">集结杯</span>
+            <BrandLockup styleName={style} modeName={mode} size="obs" />
           </div>
           <div>
             <div className="obs-score-main">
@@ -99,10 +103,12 @@ export function ObsBar({ style, mode, rows, wins, total, difficulty }: { style: 
               <span className="obs-score-of">/<b>{total}</b></span>
             </div>
             <span className="obs-score-lbl">当前局分 · 已胜场</span>
-            <div className="obs-difficulty" data-difficulty-total>
-              <span className="obs-difficulty-val">{difficulty}</span>
-              <span className="obs-difficulty-lbl">难度总分</span>
-            </div>
+            {difficulty !== undefined && (
+              <div className="obs-difficulty" data-difficulty-total>
+                <span className="obs-difficulty-val">{difficulty}</span>
+                <span className="obs-difficulty-lbl">难度总分</span>
+              </div>
+            )}
           </div>
           <div className="obs-pips">
             {pips.map((p, i) => (

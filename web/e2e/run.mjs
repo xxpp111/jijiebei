@@ -375,15 +375,15 @@ try {
 
     const st0 = getDoublesState();
     const cmdPool = st0.commanderPool, facPool = st0.factorPool;
-    const muts = st0.config.mutators || [];
+    const muts0 = (st0.config.matchMutators || [[]])[0] || [];
     // 手选第 0 场：2 指挥官 + 3 随机因子（适配层 setters → 引擎 selection）
     setDoublesCmd(0, 0, cmdPool[0]); setDoublesCmd(0, 1, cmdPool[1]);
     setDoublesFac(0, 0, facPool[0]); setDoublesFac(0, 1, facPool[1]); setDoublesFac(0, 2, facPool[2]);
     const m0 = doublesMatches()[0];
     if (m0.cmds.length !== 2 || m0.cmds[0] !== cmdPool[0] || m0.cmds[1] !== cmdPool[1]) fail(`doubles: 场0 cmds=${JSON.stringify(m0.cmds)} ≠ 手选 [${cmdPool[0]},${cmdPool[1]}]`);
-    const expFac0 = muts.concat([facPool[0], facPool[1], facPool[2]]);
-    if (JSON.stringify(m0.factors) !== JSON.stringify(expFac0)) fail(`doubles: 场0 factors=${JSON.stringify(m0.factors)} ≠ 官突${JSON.stringify(muts)}+手选3`);
-    if (m0.lock !== muts[0]) fail(`doubles: 场0 lock=${m0.lock} ≠ 官突 mutators[0]=${muts[0]}`);
+    const expFac0 = muts0.concat([facPool[0], facPool[1], facPool[2]]);
+    if (JSON.stringify(m0.factors) !== JSON.stringify(expFac0)) fail(`doubles: 场0 factors=${JSON.stringify(m0.factors)} ≠ 官突${JSON.stringify(muts0)}+手选3`);
+    if (m0.lock !== muts0[0]) fail(`doubles: 场0 lock=${m0.lock} ≠ matchMutators[0][0]=${muts0[0]}`);
     if (m0.doubles !== true) fail(`doubles: 场0 doubles 标记=${m0.doubles} ≠ true`);
 
     // 随机填充其余场 + 校验全满
@@ -399,7 +399,7 @@ try {
     if (mEnd[0].result !== 'win' || mEnd[1].result !== 'bonus' || mEnd[2].result !== 'lose') fail(`doubles: matches.result=${JSON.stringify(mEnd.map((x) => x.result))} ≠ [win,bonus,lose]`);
     // 隔离复核：双打全流程操作后，单打 difficultyTotal 仍 = 基线（JJBDoubles 零污染 JijieData 计分）
     if (difficultyTotal() !== diffBaseline) fail(`doubles 隔离: 双打全流程后单打 difficultyTotal ${difficultyTotal()} ≠ 基线 ${diffBaseline}`);
-    console.log(`  [doubles] 全路径：场0手选(cmd2/fac3+官突lock=${muts[0]})✓ randomFill+validate✓ verdict[win,bonus,lose]→score=2✓ 难度分隔离(单打 difficultyTotal=${diffBaseline} 双打前后不变)✓`);
+    console.log(`  [doubles] 全路径：场0手选(cmd2/fac3+官突lock=${muts0[0]})✓ randomFill+validate✓ verdict[win,bonus,lose]→score=2✓ 难度分隔离(单打 difficultyTotal=${diffBaseline} 双打前后不变)✓`);
 
     // ===== R5③ 双打会话级持久断言：doubles 经 startSession 切单打再切回 doubles，池仍满 =====
     // ① startSession('std8') 非 doubles 分支应重置 JJBDoubles（doublesLive→false）
@@ -426,16 +426,17 @@ try {
     if (dblFillFac !== 9) fail(`R5③ doubles 经模式切换后随机填充 fac=${dblFillFac} ≠ 9`);
     pass(`R5③ 双打持久: startSession(std8)重置doubles✓ 切回doubles池仍满(cmd6/fac9)✓ 随机填充仍可用(cmd6/fac9)✓`);
 
-    // ===== R5②-B 官突完整取值断言：doublesMatches()[i].factors 含完整风暴+虚空 + lock/mutators 一致 =====
+    // ===== R5②-B 官突完整取值断言：doublesMatches()[i].factors 含 CSV 各场官突 + lock/mutators 与 matchMutators 一致 =====
     startSession('doubles');
     const rm = doublesMatches();
-    const allMuts = (globalThis.window.__jjbDebug.doubles.config.mutators || []);
+    const matchMutators = (globalThis.window.__jjbDebug.doubles.config.matchMutators || []);
     rm.forEach((mm, i) => {
-      if (!(mm.mutators || []).every((mu) => allMuts.includes(mu))) fail(`R5②-B 场${i} mutators=${JSON.stringify(mm.mutators)} ≠ 完整官突 ${JSON.stringify(allMuts)}`);
-      if (mm.lock !== allMuts[0]) fail(`R5②-B 场${i} lock=${mm.lock} ≠ mutators[0]=${allMuts[0]}`);
-      if (!allMuts.every((mu) => mm.factors.includes(mu))) fail(`R5②-B 场${i} factors=${JSON.stringify(mm.factors)} 未含完整官突 ${JSON.stringify(allMuts)}`);
+      const perMuts = matchMutators[i] || [];
+      if (JSON.stringify(mm.mutators || []) !== JSON.stringify(perMuts)) fail(`R5②-B 场${i} mutators=${JSON.stringify(mm.mutators)} ≠ matchMutators[${i}]=${JSON.stringify(perMuts)}`);
+      if (mm.lock !== perMuts[0]) fail(`R5②-B 场${i} lock=${mm.lock} ≠ matchMutators[${i}][0]=${perMuts[0]}`);
+      if (!perMuts.every((mu) => mm.factors.includes(mu))) fail(`R5②-B 场${i} factors=${JSON.stringify(mm.factors)} 未含官突 ${JSON.stringify(perMuts)}`);
     });
-    pass(`R5②-B 官突取值: 三场 factors 含完整[${allMuts.join(',')}] mutators数组一致 ✓`);
+    pass(`R5②-B 官突取值: 三场各含 CSV 官突 matchMutators 数组一致 ✓`);
   } catch (e) {
     fail(`doubles: 接缝异常 ${e && e.message ? e.message : e}`);
   }

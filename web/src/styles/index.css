@@ -5,8 +5,12 @@
 @import '../../../design/v4-r2/styles.css';
 @import '../../../design/v4-r2/v4.css';
 @import '../../../design/v4-r2/obs.css';
+@import './brand-gold.css';
 @import './obs-fuller.css';
 @import './jjb-select.css';
 
 html, body { margin: 0; background: #0a0b0e; }
+
+/* 官突专属边框 — 紫色外环区别玩家点金金框 */
+.fx.mutator { box-shadow: 0 0 0 2px #9B73FF, 0 0 8px rgba(155, 115, 255, 0.55); border-radius: 6px; }
 #react-root { display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 18px; }

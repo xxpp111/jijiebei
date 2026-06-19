@@ -21,23 +21,26 @@ export interface MatchRowData {
   lockedFactors?: string[]; // 双打官突完整 mutators 数组（比对用；单打走 lock 单值）
   verdict?: string; // "win" | "bonus" | "lose"
   boss?: boolean;
-  difficulty: number;
+  difficulty?: number;
 }
 
 export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (v: 'win' | 'bonus' | 'lose') => void }) {
   const { idx, slot, mapName, cmds, factors, lock, lockedFactors, verdict, boss, difficulty } = data;
   const mapSrc = mapUrl(mapName);
   const cls = ['match', boss && 'match-boss', verdict && 'match-done'].filter(Boolean).join(' ');
+  const difficultyAttrs = difficulty === undefined ? {} : { 'data-match-difficulty': difficulty, [`data-match-difficulty-${idx}`]: difficulty };
   return (
-    <div className={cls} data-match-difficulty={difficulty} {...{ [`data-match-difficulty-${idx}`]: difficulty }}>
+    <div className={cls} {...difficultyAttrs}>
       <div className="match-no">
         <span className="match-no-t">{slot}</span>
-        <span
-          className="match-difficulty"
-          style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}
-        >
-          难度 {difficulty}
-        </span>
+        {difficulty !== undefined && (
+          <span
+            className="match-difficulty"
+            style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}
+          >
+            难度 {difficulty}
+          </span>
+        )}
       </div>
       <div className="match-map">
         <span className="mapthumb">
@@ -58,7 +61,12 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
       </div>
       <div className="match-factors">
         {factors.map((f, i) => (
-          <FactorFrame key={i} src={facUrl(f)} size={64} tag={lockedFactors ? (lockedFactors.includes(f) ? '锁定' : null) : (f === lock ? '锁定' : null)} />
+          <FactorFrame
+            key={i}
+            src={facUrl(f)}
+            size={64}
+            tag={lockedFactors ? (lockedFactors.includes(f) ? '官突' : null) : (f === lock ? '锁定' : null)}
+          />
         ))}
       </div>
       <div className="verdict">

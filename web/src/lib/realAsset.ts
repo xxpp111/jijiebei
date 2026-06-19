@@ -11,7 +11,7 @@ const real = import.meta.glob('../../../assets/resources/images/**/*.png', {
 }) as Record<string, string>;
 
 function pick(dir: string, name: string): string {
-  if (!name) return '';
+  if (!name || name === '—') return '';
   const target = '/images/' + dir + '/' + name + '.png';
   for (const k in real) if (k.endsWith(target)) return real[k];
   // eslint-disable-next-line no-console

@@ -1,21 +1,24 @@
+import { useEffect, useState } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { BrandLockup } from '../components/BrandLockup';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
-import { getSessionMatches, getScore, getSelectState, matchDifficulty } from '../logic/jjbSession';
-import { doublesLive, doublesMatches, doublesScore } from '../logic/jjbDoubles';
+import { currentDifficulty, currentLockedFactors, currentMatches, currentModeLabel, currentPlayerName, currentScore, ensureDoublesSessionFromUrl } from '../logic/jjbView';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
 
 // ResultScreen — 结算屏（段3③）。承接后端 JJBResult.build：TopBar + 大比分 banner + 战绩卡列表 + 页脚。
 // 大比分 = getScore()（winCount，含带奖励不双计）；战绩卡 result 从 sessionMatches 反查。0 改 jijie2。
 export function ResultScreen({ style, mode }: { style: string; mode: string }) {
-  const dbl = doublesLive();
-  const matches = dbl ? doublesMatches() : getSessionMatches();
-  const wins = dbl ? doublesScore() : getScore();
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (ensureDoublesSessionFromUrl()) setTick((x) => x + 1);
+  }, []);
+
+  const matches = currentMatches();
+  const wins = currentScore();
   const total = matches.length;
-  const s = getSelectState();
-  const playerName = dbl ? '双打战队' : (s.playerName || '集结杯选手');
+  const playerName = currentPlayerName();
 
   return (
     <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`result-${style}-${mode}`}>
@@ -35,7 +38,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
             </div>
             <div className="meta-row">
               <span className="meta-k">比赛模式</span>
-              <span className="meta-v" data-meta-mode>{modeLabel(s)}</span>
+              <span className="meta-v" data-meta-mode>{currentModeLabel()}</span>
             </div>
           </div>
         </div>
@@ -55,18 +58,21 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
           {matches.map((m, i) => {
             const cls = 'rcard' + (m.result ? ' rcard-' + m.result : '');
             const mapSrc = mapUrl(m.map);
-            const difficulty = dbl ? 0 : matchDifficulty(i as 0 | 1 | 2);
-            const lockedFactors = dbl ? (m as any).mutators : undefined;
+            const difficulty = currentDifficulty(i);
+            const lockedFactors = currentLockedFactors(m);
+            const difficultyAttrs = difficulty === undefined ? {} : { 'data-match-difficulty': difficulty, [`data-match-difficulty-${i}`]: difficulty };
             return (
-              <div key={i} className={cls} data-rcard-idx={i} data-match-difficulty={difficulty} {...{ [`data-match-difficulty-${i}`]: difficulty }}>
+              <div key={i} className={cls} data-rcard-idx={i} {...difficultyAttrs}>
                 <div className="rcard-no">
                   <b>{m.slot}</b>
-                  <span
-                    className="rcard-difficulty"
-                    style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}
-                  >
-                    难度 {difficulty}
-                  </span>
+                  {difficulty !== undefined && (
+                    <span
+                      className="rcard-difficulty"
+                      style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}
+                    >
+                      难度 {difficulty}
+                    </span>
+                  )}
                 </div>
                 <div className="rcard-map">
                   <span className="mapthumb">
@@ -87,7 +93,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
                   </div>
                   <div className="rcard-facs">
                     {m.factors.map((f, k) => (
-                      <FactorFrame key={k} src={facUrl(f)} size={46} gold={lockedFactors ? lockedFactors.includes(f) : undefined} tag={lockedFactors ? (lockedFactors.includes(f) ? '锁定' : null) : (f === m.lock ? '锁定' : null)} />
+                      <FactorFrame key={k} src={facUrl(f)} size={46} tag={lockedFactors ? (lockedFactors.includes(f) ? '官突' : null) : (f === m.lock ? '锁定' : null)} />
                     ))}
                   </div>
                 </div>
@@ -113,19 +119,4 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
       </div>
     </div>
   );
-}
-
-function modeLabel(s: ReturnType<typeof getSelectState>): string {
-  if (s.modelFactorCount === 4) return '极难模式';
-  const fc = s.modelFactorCount === 0 ? '随机'
-    : s.modelFactorCount === 2 ? '8 因子'
-    : s.modelFactorCount === 3 ? '10 因子'
-    : `${s.modelFactorCount} 因子`;
-  const ml = s.modeIsZhengjiu ? '拯救'
-    : s.modeIsOnePick ? '单指'
-    : s.modeIsVeryHard2 || s.modeIsVeryHard ? '极难'
-    : s.modeFeiqiu ? '非酋'
-    : s.modeSuiji ? '随机'
-    : '手选';
-  return `${fc} · ${ml}`;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ObsBar, type ObsRow } from '../components/ObsBar';
-import { startRandomSession, getSessionMatches, exposeObsbarDebug, jjbLive, setVerdict, getScore, difficultyTotal } from '../logic/jjbSession';
+import { startRandomSession, exposeObsbarDebug, jjbLive } from '../logic/jjbSession';
+import { currentDifficultyTotal, currentLockedFactors, currentMatches, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
 
 // ObsScreen — 直播采集 OBS 横条（段3 真实化 + 横条判定）。
 // 布局策略（用户愿景②）：单窗口，上方横条进 OBS 采集区、下方判定控制条放采集线外
@@ -16,6 +17,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
   useEffect(() => {
     try {
       // 有当前局（home→select→battle 流来的）则读真实局；直访 ?screen=obs 无局时兜底开一局展示。
+      if (ensureDoublesSessionFromUrl()) { setReady(true); return; }
       if (!jjbLive()) startRandomSession(2);
       setReady(true);
     } catch (e) {
@@ -28,7 +30,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
   if (!ready) return null;
   void tick;
 
-  const matches = getSessionMatches();
+  const matches = currentMatches();
   // 真实 status/verdict 推导：已判定(result 有值)→done；首个未判定→live；其余→wait。
   let liveAssigned = false;
   const rows: ObsRow[] = matches.map((m, i) => {
@@ -43,14 +45,14 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
     } else {
       status = 'wait';
     }
-    return { idx: i, no: m.slot, mapName: m.map, cmds: m.cmds, factors: m.factors, lock: m.lock, status, verdict };
+    return { idx: i, no: m.slot, mapName: m.map, cmds: m.cmds, factors: m.factors, lock: m.lock, lockedFactors: currentLockedFactors(m), status, verdict };
   });
-  const wins = getScore();
+  const wins = currentScore();
   const total = matches.length;
   exposeObsbarDebug(rows, wins, total);
 
   const judge = (i: number, v: 'win' | 'bonus' | 'lose') => {
-    setVerdict(i, v);
+    setCurrentVerdict(i, v);
     setTick((x) => x + 1);
   };
 
@@ -61,7 +63,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0', gap: 14 }}
     >
       {/* 采集区：横条（OBS 浏览器源裁切到这块） */}
-      <ObsBar style={style} mode={mode} rows={rows} wins={wins} total={total} difficulty={difficultyTotal()} />
+      <ObsBar style={style} mode={mode} rows={rows} wins={wins} total={total} difficulty={currentDifficultyTotal()} />
 
       {/* 采集线外：返回入口（!bare 主播操作态可点；bare 纯采集隐藏，不干扰 OBS 固定采集） */}
       {!bare && (

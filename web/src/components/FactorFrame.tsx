@@ -21,7 +21,7 @@ export interface FactorFrameProps {
 export function FactorFrame({
   src, size = 66, gold = false, sel = false, dim = false, drag = false, ghost = false, tag = null, check = false,
 }: FactorFrameProps) {
-  const cls = ['fx', gold && 'gold', sel && 'fx-sel', dim && 'fx-dim', drag && 'fx-drag', ghost && 'fx-ghost']
+  const cls = ['fx', gold && 'gold', tag === '官突' && 'mutator', sel && 'fx-sel', dim && 'fx-dim', drag && 'fx-drag', ghost && 'fx-ghost']
     .filter(Boolean).join(' ');
   return (
     <div className={cls} style={{ '--fxz': size + 'px' } as React.CSSProperties}>

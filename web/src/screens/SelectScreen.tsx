@@ -28,6 +28,7 @@ import {
   setDoublesCmd, clearDoublesCmd, setDoublesFac, clearDoublesFac,
   validateDoubles, randomFillDoubles,
 } from '../logic/jjbDoubles';
+import { getBpModeEnabled } from '../logic/bpConfig';
 
 // 集结杯 × CM — 选择面板整屏（段2 Phase 2：拖拽手选 + 校验 + 手选进 battle）。
 // 严格承接 design/v4-r2/components/select-screen.jsx 的 SelectScreenV4 DOM/className：
@@ -339,7 +340,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 >
                   <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
-                  <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); setTick((x) => x + 1); }} />
+                  {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); setTick((x) => x + 1); }} />}
                 </span>
               ))}
             </div>
@@ -523,7 +524,11 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
   };
   const handleRandomFill = () => { randomFillDoubles(); setTick((x) => x + 1); };
 
-  const muts = cfg.mutators || [];
+  // 各场官突展示：topbar 汇总用（优先显示名称，fallback 到因子列表）
+  const mutNames = cfg.matchMutatorNames || [];
+  const allMatchMuts = mutNames.length
+    ? mutNames.join(' | ')
+    : (cfg.matchMutators || []).map((ms) => ms.join('·')).join(' | ');
 
   return (
     <div
@@ -539,7 +544,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
           <div className="topbar-meta">
             <div className="meta-row"><span className="meta-k">参赛战队</span><span className="meta-v" data-meta-player>双打战队</span></div>
             <div className="meta-row"><span className="meta-k">比赛模式</span><span className="meta-v" data-meta-mode data-doubles-mode>{doublesModeLabel()}</span></div>
-            <div className="meta-row"><span className="meta-k">官突因子</span><span className="meta-v" data-doubles-mutators style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{muts.join(' / ')}</span></div>
+            <div className="meta-row"><span className="meta-k">官突</span><span className="meta-v" data-doubles-mutators style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{allMatchMuts}</span></div>
           </div>
         </div>
 
@@ -550,11 +555,11 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
             const mapSrc = mapUrl(mapName);
             const isBoss = i === matchVMs.length - 1;
             return (
-              <div key={i} className={'slot' + (i === 0 ? ' slot-active' : '')} data-slot-idx={i} data-doubles-slot={i} data-doubles-lock={muts.join(',')}>
+              <div key={i} className={'slot' + (i === 0 ? ' slot-active' : '')} data-slot-idx={i} data-doubles-slot={i} data-doubles-lock={(m.mutators || []).join(',')}>
                 <div className="slot-head">
                   <span className="slot-no">{m.slot}</span>
                   <span className="slot-map-name">{mapName}</span>
-                  <span className="slot-difficulty" style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>官突 {muts.join('·')}</span>
+                  <span className="slot-difficulty" style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>官突 {mutNames[i] || (m.mutators || []).join('·')}</span>
                   {isBoss && <span className="slot-flag">BOSS</span>}
                 </div>
                 <span className="mapthumb">
@@ -578,14 +583,18 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                     })}
                   </div>
                   <div className="t-facs">
-                    {muts.map((mu, k) => (
-                      <FactorFrame key={`mut${k}`} src={facUrl(mu)} size={52} gold tag="官突" />
+                    {(m.mutators || []).map((mu, k) => (
+                      <span key={`mut${k}`} style={{ position: 'relative', display: 'inline-block' }}>
+                        <FactorFrame src={facUrl(mu)} size={52} tag="官突" gold={getGoldFor(mu)} />
+                        <GoldBadge name={mu} on={getGoldFor(mu)} onToggle={() => { toggleGold(mu); setTick((x) => x + 1); }} />
+                      </span>
                     ))}
                     {Array.from({ length: cfg.extraFactors }).map((_, k) => {
                       const v = sel.factors[k];
                       return v ? (
-                        <span key={k} ref={setTarget(`factor:${i}:${k}`)} data-doubles-fac={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }} style={{ cursor: 'pointer' }}>
-                          <FactorFrame src={facUrl(v)} size={52} />
+                        <span key={k} ref={setTarget(`factor:${i}:${k}`)} data-doubles-fac={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }} style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}>
+                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
+                          <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
                         </span>
                       ) : (
                         <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
@@ -603,8 +612,9 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
             <div className="block-head sm"><span className="block-kicker">FACTORS</span><span className="block-title">随机因子池</span></div>
             <div className="factor-row" style={{ gap: 14, flexWrap: 'wrap' }} data-doubles-pool-factors>
               {facPool.map((f, i) => (
-                <span key={i} data-doubles-pool-fac={f} onPointerDown={(ev) => onPoolPointerDown(ev, 'factor', f, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none', display: 'inline-block' }}>
-                  <FactorFrame src={facUrl(f)} size={66} check={isPickedDoubles(slots, 'fac', f)} />
+                <span key={i} data-doubles-pool-fac={f} onPointerDown={(ev) => onPoolPointerDown(ev, 'factor', f, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}>
+                  <FactorFrame src={facUrl(f)} size={66} check={isPickedDoubles(slots, 'fac', f)} gold={getGoldFor(f)} />
+                  <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
                 </span>
               ))}
             </div>

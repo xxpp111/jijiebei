@@ -7,8 +7,9 @@ import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { BpConfigScreen } from './screens/BpConfigScreen';
-import { startSession, exposeStartSession, getSelectState, getTotalCount, querySessionMode, type SessionMode } from './logic/jjbSession';
+import { startSession, exposeStartSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
+import { currentSessionMode, currentTotal } from './logic/jjbView';
 import JijieData from '@logic/JijieData';
 
 // 路由（query）：?screen=home|select|battle|obs|phase0|foundation；
@@ -72,8 +73,8 @@ export default function App() {
   const navigate = (next: Screen) => {
     setScreen(next);
     writeUrlParam('screen', next);
-    // 会话级模式持久：当前局模式（含 doubles）写入 URL，防刷新丢状态
-    const currentMode = doublesLive() ? 'doubles' : getSelectState().mode;
+    // 会话级模式持久：当前局模式（含 doubles/feiqiu-doubles）写入 URL，防刷新丢状态
+    const currentMode = currentSessionMode();
     if (currentMode) writeUrlParam('sessionMode', currentMode);
   };
 
@@ -103,7 +104,7 @@ export default function App() {
   }, [screen]);
 
   const restartCurrentMode = () => {
-    const currentMode = getSelectState().mode;
+    const currentMode = currentSessionMode();
     startSession(currentMode);
     setRerenderTick((x) => x + 1);
   };
@@ -139,7 +140,7 @@ export default function App() {
       >{SCREEN_LABELS.obs}</button>
       <button
         className={'ctrl-btn' + (screen === 'result' ? ' on' : '')}
-        onClick={() => { if (getTotalCount() >= 3) navigate('result'); }}
+        onClick={() => { if (currentTotal() >= 3) navigate('result'); }}
         title="查看结算（需三场判定完）"
         data-nav-result
       >{SCREEN_LABELS.result}</button>
@@ -203,6 +204,10 @@ export default function App() {
         style={style}
         mode={mode}
         onBack={() => {
+          if (doublesLive()) {
+            navigate('battle');
+            return;
+          }
           // OBS 返回两级（yb 06-18 确认）：先回 battle（对战），仅当 battle 无分配因子（因子+官全空 或 未开局）才回 select。
           // 判定口径镜像 BattleScreen:22-23 兜底（allNullFac && allNullCmd），保证返回 battle 后不会被兜底再次随机覆盖。
           const s = getSelectState();

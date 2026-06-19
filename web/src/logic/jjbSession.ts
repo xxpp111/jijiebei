@@ -11,7 +11,7 @@
 import JijieData from '@logic/JijieData';
 import ConfigData from '@logic/data/JJConfigData';
 import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, GOLD_FACTORS, type MatchVM } from '@jjb/JJBData';
-import JJBDoubles from '@jjb/JJBDoubles';
+import { doublesStart, doublesReset } from './jjbDoubles';
 
 // jjbLive re-export（段2 Phase 1 BattleScreen/e2e 读当前局是否开局用；非 9 模式逻辑，仅透出）
 export { jjbLive };
@@ -57,13 +57,13 @@ function restoreConfig(): void {
 const rand = (n: number) => Math.floor(Math.random() * n);
 
 // ===== 9 模式入口（段2 Phase 0 全模式开局）+ doubles 双打（段3④ 独立引擎接通） =====
-export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'suiji' | 'doubles';
+export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'suiji' | 'doubles' | 'feiqiu-doubles';
 
 /** URL 赛事模式白名单（App.tsx 与 SelectScreen.tsx 共用，避免重复定义）。
  *  suiji 第五格入口已由 feiqiu 顶替下线：故移出 URL 白名单 → ?mode=suiji / ?sessionMode=suiji 回落 std8。
  *  'suiji' 仍保留在 SessionMode 类型与 setModeFlags 内（startSession('suiji') 与 e2e 9 模式恒等式回归依赖），仅非 URL/首页可达。
- *  'doubles' 双打入白名单：?mode=doubles / ?sessionMode=doubles 可达，startSession 早分支启动 JJBDoubles 独立引擎。 */
-const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'doubles'];
+ *  'doubles' 双打入白名单：官突双打。'feiqiu-doubles'：飞球（非酋）双打，混乱工作室+随机1替代官突 CSV 池。 */
+const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'doubles', 'feiqiu-doubles'];
 
 /** 解析 URL 赛事模式：优先 ?sessionMode=（白名单），兼容旧 ?mode=std10；非法/主题值(dark/light)回落 std8。
  *  SSR（typeof window==='undefined'）守卫防 Node 端崩。App.tsx 与 SelectScreen.tsx 共用此函数（LOW2 去重）。 */
@@ -310,8 +310,9 @@ export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: 
   // 双打=独立引擎：JJBDoubles 自管池/槽/洗牌/计分，不读写 JijieData 单打管线。
   // 早分支启动后即返——绕开 restoreConfig/setModeFlags/toStart/toSelect/9格固化；调试镜像走 __jjbDebug.doubles。
   clearBpRuntime(); // 任何开局都重置 BP ban（含双打早分支，避免跨局残留）
-  if (mode === 'doubles') { JJBDoubles.start(); return; }
-  JJBDoubles.reset(); // 非 doubles 模式开局时重置双打引擎（防跨局 doublesLive 残留，影响 navigate 模式判断）
+  if (mode === 'doubles') { doublesStart('guantu'); return; }
+  if (mode === 'feiqiu-doubles') { doublesStart('feiqiu'); return; }
+  doublesReset(); // 非 doubles 模式开局时重置双打引擎（防跨局 doublesLive 残留，影响 navigate 模式判断）
   restoreConfig(); // 每局重置 ConfigData 母池，防枯竭
   setModeFlags(mode);
   toStartCore();
@@ -684,7 +685,8 @@ export function exposeSelectError(msg: string, count: number): void {
   } catch { /* noop */ }
 }
 
-// ===== 段3 点金（select 屏运行时 toggle 因子金/非金；后端无此逻辑，纯 React 视觉态，不入计分） =====
+// ===== 段3 点金（select 屏运行时 toggle 因子金/非金）=====
+// 单打：金因子分值 ×2 计入难度分（weightedFactorScore）；双打：纯视觉态，不接计分引擎。
 const goldRuntime = new Set<string>();
 
 /** toggle 某因子的运行时点金态（点金 / 取消金）。 */
