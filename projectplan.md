@@ -2138,3 +2138,52 @@ cd /Users/bytedance/项目/jijiebei && ANTHROPIC_BASE_URL=http://127.0.0.1:8686 
 
 ## 接手第一步（post-compact）
 先与 yb 对齐上面 5 个开放项（尤其「种族=AI?」「图片用角标还是新图」「开关放哪屏」），再出设计方案，**不要直接跳实现**。真相源 web/src/logic + 真相表 0)节；功能落 web 侧，assets/resources 红线只读（缺图找 yb）。
+
+---
+
+# 【随机敌方 结案 2026-06-20】上面 2115-2140 调研已 SHIP（commit d208aa6）
+
+最终决策：种族=敌方AI维度（直接随AI、种族随之定，19 AI=神8/人6/虫5）；印花用真族徽图 `web/src/assets/races/race-{protoss,terran,zerg}.png`（yb 给的官方蓝徽）；总开关在 BP 设置面；select 操作区只读三族印花状态条；topbar 选手名 grid 居中；入口宣传条 PromoBar；e2e 7 断言 + 主回归全绿。已部署开发机 8080 + cloudflared 隧道。上面 5 个开放项均已落地，本节结案。
+
+---
+
+# 【集结杯 → 比赛平台 路线图 2026-06-20】★当前主线★
+
+## 方向
+从"突变因子随机工具"升级成"比赛平台"：练习/比赛双模式、完整 BP 规则、非实时码方案选因子、截图导出、后端存对局/选手/积分/日志、选手 ID 直播展示、主播权限。**核心原则**：架构简洁/轻便/可扩展，面向大量玩家、提效降本减少人际沟通，数据自掌控（在 DevOps、可导出）。
+调研报告全文：`tmp/platform-research-report.md`（5-agent workflow 产出，已对 live truth 核实）。
+
+## 技术选型（调研定稿）
+- **后端**：PocketBase(SQLite) + Litestream 备份。单 15MB Go 二进制、一进程、SQLite 单文件 `cp` 即导出、自带认证+Admin UI、与现 nginx 共存（加 `/api` 反代）。淘汰 Supabase(8容器)/Appwrite(20容器)。
+- **码方案**：索引化 JSON → base64url 进 URL `#hash`，零依赖（~100字节，远低于 2000 上限）。
+- **截图**：snapDOM（foreignObject 路线，专治 clip-path 斜切 + SC2 中文字体）。
+- **DB**：SQLite（非 Postgres），单机读多写少写串行友好。
+
+## BP 规则定稿
+- **练习面**(默认)：随意——禁几个因子/自选几个指挥官都行，不限制不提示。
+- **规则面**(开比赛模式)：违规弹提示(不强拦)：禁因子=玩家自己挑任意1个(含锁定)，禁第2个→提示"超出比赛规则"；二选一=禁因子 ⊕ 自选指挥官；自选指挥官=单刷三模式锁 2A1B(A弱势≤2/B强力≤1)、双打额外 4 纯随机池(不卡2A1B)。
+
+## 架构剥离方案（★Cocos 尊重原则★）
+现状：React 仍依赖 3 旧 TS（JJConfigData抽签引擎203行/JijieData状态95行/JJBData工具151行），但已不依赖 Cocos 引擎。**剥离 = 在 web/ 内复制/内联这 3 文件 + 5 CSV + 212图，断 GameData 死链；`assets/Script` 旧线原封不动——XP 的知识成果，不维护不篡改，README 标 DEPRECATED 致敬**。约半天低风险。
+
+## config 单源化
+现状乱：指挥官配置4份/官突池4份/因子点数2份不一致/mutatorPool"自动生成"无脚本/CRLF脆弱解析。目标：`docs/*.csv 母表 → 生成脚本 → web/src/config/*.ts 单一真相源`（与后端 JSON 同形，留后端化口）。
+
+## 数据 schema（PocketBase 集合）
+players / matches(比赛+练习, `payload_code` 单字段存整局) / scores(delta+reason+season) / logs / accounts(内置auth, role=admin/host/viewer)。天梯=scores 按 season 聚合，不单独建表。
+
+## 6 Phase 路线图（前后端并行泳道）
+- **P0 架构清场**(前端·1天·强烈先做)：剥离 + config 单源化第一刀 + 顺手硬收尾(dead code random-enemy.css:57-90 / 散落截图 / 补 .gitignore)。无依赖。验证：删 vite 两 alias 后仍 build + 4 套 Playwright + 9 模式 e2e 全绿、`grep @logic|@jjb web/src`=0。
+- **P1 入口分流 + BP 规则**(前端 Claude Design)。
+- **P2 截图导出**(前端 snapDOM)。
+- **P3 码方案**(前端)。
+- **P4 主播横条 + 选手 ID 展示**(前端 UI，数据接 P5)。
+- **P5 后端**(/goal spoke loop)：PocketBase + 5 集合 schema + 权限 + 部署 + Litestream。**可与 P1-P4 并行起跑**，汇流=前端调 /api。
+- **P6 积分/天梯**(后端 hook + 前端展示)。
+- **P7 飞书多维表格镜像**(低优)：PocketBase 数据单向同步到飞书 Bitable，方便飞书内时刻看；PocketBase 仍是自掌控主源。
+
+## 开放问题决策（按报告建议默认，可后调）
+积分=先最简(每局胜负×难度系数纯累加+赛季SUM)、Elo后续；练习数据=默认纯前端不落库、主动保存才写；Cocos=弃用且尊重不改；字体版权=对外前待核；码=带v+校验池，比赛模式复用码方案编码，挑战池100条自制突变去留待定。
+
+## 接手第一步（post-compact）
+开 **P0 架构清场**（分支 `jjb-platform`，从 main=d208aa6 基线）：① web/ 内复制内联 JJConfigData/JijieData/JJBData（**不动 assets/Script**）② 搬 5 CSV(assets/resources/jjdata)+212图(assets/resources/images) 进 web ③ 改 8 处 @logic/@jjb import 为本地 ④ 建 web/src/config/ + 生成脚本骨架 ⑤ 清死数据 assets/resources/data + 硬收尾(dead code/截图/.gitignore)。验证：删 vite 两 alias 仍 build + 4 套 Playwright + 9 模式 e2e 全绿 + grep 零命中。关键文件速查见 `tmp/platform-research-report.md` 末尾。
