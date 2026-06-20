@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { startSession, type SessionMode } from '../logic/jjbSession';
 import { BrandLockup } from '../components/BrandLockup';
+import { PromoBar } from '../components/PromoBar';
 import JijieData from '@logic/JijieData';
 
 // 集结杯 × CM — 首页（公开模式入口 + 选手名）。承接 design/v4-r2/home 段（className 全部沿用 theme.css/home css）。
@@ -93,19 +94,8 @@ export function HomeScreen({ style, mode, onStart }: HomeScreenProps) {
           </div>
         </div>
 
-        <div className="foot">
-          <span className="foot-org">CM × 集结杯</span>
-          <span className="foot-links">
-            <a className="foot-link" href="https://space.bilibili.com/347915855" target="_blank" rel="noreferrer" style={{ cursor: 'pointer', textDecoration: 'none' }}>
-              <b>B站主播</b>儒雅随和の土豆
-            </a>
-            <a className="foot-link" href="https://space.bilibili.com/277263402" target="_blank" rel="noreferrer" style={{ cursor: 'pointer', textDecoration: 'none' }}>
-              <b>CM 合作任务</b>B站主页
-            </a>
-            <a className="foot-link" href="https://mcn1taa2k785.feishu.cn/wiki/WF0ZwD2QciFDqGkmHSMcRrdvnyd" target="_blank" rel="noreferrer" style={{ cursor: 'pointer', textDecoration: 'none' }}>
-              <b>集结杯文档</b>飞书知识库
-            </a>
-          </span>
+        <div className="foot foot-promo">
+          <PromoBar />
         </div>
       </div>
     </div>

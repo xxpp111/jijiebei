@@ -1,6 +1,8 @@
 import { CommanderCard } from './CommanderCard';
 import { FactorFrame } from './FactorFrame';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
+import { EnemyBadge } from './EnemyBadge';
+import type { RaceCode } from '../data/aiEnemyPool';
 import { BrandLockup } from './BrandLockup';
 
 // ObsBar — 承接 design/v4-r2/components/obs-bar.jsx 的 OBSBar/OBSMatch/OBSBadge。
@@ -17,6 +19,8 @@ export interface ObsRow {
   lockTag?: string; // 非酋之轮=「非酋」/ 官突双打=「官突」
   status: 'done' | 'live' | 'wait';
   verdict?: string;
+  enemyRace?: RaceCode; // 随机敌方：种族
+  enemyAi?: string; // 随机敌方：AI 敌军组合中文名
 }
 
 function ObsBadge({ status, verdict }: { status: string; verdict?: string }) {
@@ -62,6 +66,7 @@ function ObsMatch({ row }: { row: ObsRow }) {
               {row.mapName}
             </span>
           )}
+          <EnemyBadge race={row.enemyRace} ai={row.enemyAi} size="sm" />
         </span>
       </div>
       <div className="obs-line">

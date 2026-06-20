@@ -1,0 +1,118 @@
+/* 随机敌方样式 — 承接 Claude Design 项目 e956fe00 的 proposals/random-enemy/01,02。
+   .menemy 印花块(叠地图右上角，三档 lg/md/sm) + .bp-enemy(BP 设置面金棕分区) + .quick/.re-sw(select 顶部镜像开关)。
+   配色对齐 v4-r2：金棕 #B8893A / 钢蓝 #3E5871 / 浅 #DCE4ED。真印花 png 入库后 .menemy-em 自动替换 .menemy-glyph 文字徽章。 */
+
+/* 地图缩略图容器需 relative 以容纳印花绝对定位 */
+.mapthumb { position: relative; }
+
+/* ===== 印花块 .menemy（叠地图右上角） ===== */
+.menemy {
+  position: absolute; top: 6px; right: 6px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 11px 4px 7px;
+  background: linear-gradient(180deg, rgba(10, 15, 22, .74), rgba(10, 15, 22, .86));
+  box-shadow: inset 0 0 0 1px rgba(199, 209, 222, .26), 0 2px 8px rgba(0, 0, 0, .45);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  pointer-events: none;
+}
+.menemy .menemy-em { height: 30px; width: auto; display: block; flex: none; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .7)); }
+.menemy .menemy-glyph {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 30px; flex: none; border-radius: 3px;
+  font-weight: 900; font-size: 16px; color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .5);
+}
+.menemy .menemy-glyph[data-race="P"] { background: linear-gradient(180deg, #e8c878, #b8893a); color: #1a1206; }
+.menemy .menemy-glyph[data-race="T"] { background: linear-gradient(180deg, #5b86b0, #3e5871); }
+.menemy .menemy-glyph[data-race="Z"] { background: linear-gradient(180deg, #9a5ba0, #6a2f70); }
+.menemy .menemy-col { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+.menemy .menemy-rk { font-size: 8.5px; font-weight: 700; letter-spacing: 2px; color: var(--accent, #b8893a); }
+.menemy .menemy-nm { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; text-shadow: 0 1px 3px rgba(0, 0, 0, .85); }
+
+/* md — battle 中卡 */
+.menemy-md .menemy-em { height: 28px; }
+.menemy-md .menemy-glyph { width: 24px; height: 28px; font-size: 15px; }
+.menemy-md .menemy-nm { font-size: 13px; }
+
+/* sm — OBS 横条小卡（印花缩小、省「敌方」字） */
+.menemy-sm { top: 4px; right: 4px; gap: 6px; padding: 3px 8px 3px 5px;
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px)); }
+.menemy-sm .menemy-em { height: 23px; }
+.menemy-sm .menemy-glyph { width: 20px; height: 23px; font-size: 13px; }
+.menemy-sm .menemy-nm { font-size: 12px; }
+
+/* ===== BP 设置面 .bp-enemy（独立金棕分区，全局随机敌方开关） ===== */
+.bp-enemy {
+  margin: 4px 22px 20px; padding: 16px 18px;
+  background: color-mix(in srgb, var(--accent, #b8893a) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent, #b8893a) 32%, transparent);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  display: flex; align-items: center; gap: 16px;
+}
+.bp-enemy .bp-enemy-i { flex: 1; min-width: 0; }
+.bp-enemy .bp-enemy-k { font-size: 10px; letter-spacing: 3px; color: var(--accent, #b8893a); display: block; margin-bottom: 5px; }
+.bp-enemy .bp-enemy-nm { font-size: 16px; font-weight: 700; color: #dce4ed; line-height: 1.2; }
+.bp-enemy .bp-enemy-sub { font-size: 11.5px; color: var(--muted, #8a94a3); margin-top: 4px; }
+
+/* ===== select 顶部镜像开关 .quick + .re-sw 拨钮 ===== */
+.quick {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 8px 14px; background: rgba(255, 255, 255, .04);
+  box-shadow: inset 0 0 0 1px rgba(199, 209, 222, .18);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  align-self: center; margin-left: 8px;
+}
+.quick .quick-l { line-height: 1.25; }
+.quick .quick-l .quick-t { font-size: 13.5px; font-weight: 700; color: #dce4ed; display: block; }
+.quick .quick-l .quick-k { font-size: 9.5px; letter-spacing: 2px; color: var(--accent, #b8893a); display: block; }
+.re-sw {
+  position: relative; display: inline-flex; align-items: center;
+  width: 58px; height: 28px; flex: none;
+  background: rgba(255, 255, 255, .05);
+  box-shadow: inset 0 0 0 1px var(--panel-edge, #c9d1da), inset 0 2px 5px rgba(0, 0, 0, .4);
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+  transition: background .18s, box-shadow .18s;
+}
+.re-sw .re-sw-state { position: absolute; right: 9px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted, #8a94a3); transition: color .18s, left .18s; }
+.re-sw .re-sw-track { position: absolute; inset: 0; }
+.re-sw .re-sw-knob {
+  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+  background: linear-gradient(180deg, #6c819b, #3e5871);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .25);
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+  transition: transform .2s cubic-bezier(.4, .8, .3, 1.2), background .18s;
+}
+.re-sw[data-on="1"] {
+  background: color-mix(in srgb, var(--accent, #b8893a) 22%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent, #b8893a), 0 0 12px color-mix(in srgb, var(--accent, #b8893a) 38%, transparent);
+}
+.re-sw[data-on="1"] .re-sw-knob { transform: translateX(30px); background: linear-gradient(180deg, color-mix(in srgb, var(--accent, #b8893a) 60%, #fff), var(--accent, #b8893a)); }
+.re-sw[data-on="1"] .re-sw-state { left: 9px; right: auto; color: var(--accent, #b8893a); }
+
+/* ===== select 操作区只读敌方状态条 .estat（设计稿 03 方案A）=====
+   select 不放重复开关（总开关在 BP 设置面），操作区左端放只读提示：三族徽 + 「敌方 每场随机 ON」。
+   纯展示、不可点；关闭时整条不渲染。移除原 .quick 镜像开关后 topbar 回 logo+meta 两元素，
+   space-between 自然不再把选手 meta 顶到中点漂浮（故此前的 .jjb-inner.sel .topbar 覆盖一并撤除）。
+   注：上方 .quick / .re-sw 样式块暂留作 BP「select 一键开关」方案B 储备，当前 select 不引用。 */
+.estat {
+  display: inline-flex; align-items: center; gap: 11px; margin-right: auto;
+  padding: 9px 15px; background: rgba(255, 255, 255, .04);
+  box-shadow: inset 0 0 0 1px var(--panel-edge, #c9d1da);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+}
+.estat .ems { display: flex; align-items: center; gap: 3px; }
+.estat .ems img { height: 28px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .55)); }
+.estat .et { display: flex; flex-direction: column; line-height: 1.25; }
+.estat .estat-k { font-family: "Oswald", sans-serif; font-size: 9px; letter-spacing: 2px; color: var(--muted, #8a94a3); }
+.estat .estat-v { font-size: 14px; font-weight: 700; color: var(--ink, #dce4ed); }
+.estat .estat-on { font-family: "Oswald", sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--accent, #b8893a); display: inline-flex; align-items: center; gap: 6px; }
+.estat .estat-on .estat-d { width: 7px; height: 7px; border-radius: 50%; background: var(--accent, #b8893a); box-shadow: 0 0 7px var(--accent, #b8893a); }
+.style-minimal .estat { border-radius: 7px; }
+
+/* select topbar 居中：移除随机敌方开关后只剩 logo + 选手 meta 两块，space-between 会把两块拉到两端、
+   中间留 ~900px 大空档显空旷。改用 grid 三列(1fr auto 1fr)——logo 落左格、选手信息落正中格、右格对称
+   留白，整体更协调。仅 .jjb-inner.sel（单打+双打 select），不影响 bpconfig 等其它 topbar。 */
+.jjb-inner.sel .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.jjb-inner.sel .topbar > :first-child { justify-self: start; }
+.jjb-inner.sel .topbar .topbar-meta { justify-self: center; text-align: center; align-items: center; }
+.jjb-inner.sel .topbar .meta-row { justify-content: center; }

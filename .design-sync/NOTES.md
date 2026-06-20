@@ -36,3 +36,15 @@
 - 服务：`docker run -d --name jijiebei-nginx --restart=always -p 8080:80 -v ~/jijiebei-deploy/web/dist:/usr/share/nginx/html:ro nginx:1.27-alpine`。
 - 真持久化：docker daemon enabled + 容器 restart=always → 机器重启/进程崩溃均自愈。实测外部 IP 200/0.38s、RestartCount=0。
 - dist 来自 clone 的干净基线 5f9380c（不含双打半成品）。双打 round 合并后需 rebuild+重挂 dist 才更新线上。
+
+## 2026-06-20 随机敌方实现 + design-sync 适用性复核（重要）
+
+- **/design-sync skill（组件库高保真转换器）对 jjb 不适用，本轮未跑**：再次确认上文「形态判断」——jjb 是 React/Vite **应用**、非组件库 package、无 Storybook，`package-build.mjs` 期望 dist 导出 `window.<global>.*` 不满足。本轮 yb 调 `/design-sync`，hub 判定**不盲跑重型转换器**（几小时 + 大 token + 会卡在 package shape），改走「手工增量 + Playwright 验收」。**下次再调 `/design-sync` 同样不跑自动转换器**，要么手工增量推个别组件、要么只做 Playwright 验收。
+- **随机敌方功能已实现落 repo**（web 侧，对齐云端 `e956fe00` 的 `proposals/random-enemy/01,02` 设计稿）：
+  - 数据 `web/src/data/aiEnemyPool.ts`（19 种 AI + 种族 P/T/Z，id=race 前缀消歧 GroundClassic/AirClassic）
+  - 逻辑 `web/src/logic/{randomConfig(全局开关), aiEnemySelector(直接随AI+per-match状态)}`
+  - 门面 `jjbView.currentEnemyRace/Ai`；接线 `jjbSession.toStartCore` + `jjbDoubles.doublesStart/Reset`
+  - 渲染 `components/EnemyBadge.tsx` + 接 MatchRow/ObsBar/Select/Battle/Obs/BpConfig + `styles/random-enemy.css`
+  - e2e `web/e2e/random-enemy.mjs`（6 项 PASS）；tsc/build/三套回归全绿
+- **race 印花真图待入库**：云端 `e956fe00` 的 `assets/races/race-{protoss,terran,zerg}.png`（各 ~6KB）需落 `web/src/assets/races/`。**base64 无法经模型手抄落盘（会损坏，实测截断过）**，须走 handoff tar.gz（curl 落盘不经模型）或 yb 直接给文件。落盘后 `realAsset.raceUrl` 的 glob 自动命中替换文字徽章兜底，零改代码。
+- 云端 `e956fe00` 设计稿已提炼到 repo `design/random-enemy/SPEC.md`（完整 html 留云端可 get_file 重读）。

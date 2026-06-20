@@ -13,6 +13,9 @@ import ConfigData from '@logic/data/JJConfigData';
 import { weightedSampleNoReplace } from './commanderWeight';
 import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, GOLD_FACTORS, type MatchVM } from '@jjb/JJBData';
 import { doublesStart, doublesReset } from './jjbDoubles';
+import { rollEnemiesForSession, getEnemyRoll } from './aiEnemySelector';
+import { setRandomEnemyEnabled } from './randomConfig';
+import { AI_ENEMY_POOL } from '../data/aiEnemyPool';
 
 // jjbLive re-export（段2 Phase 1 BattleScreen/e2e 读当前局是否开局用；非 9 模式逻辑，仅透出）
 export { jjbLive };
@@ -157,6 +160,8 @@ function toStartCore(): void {
     ConfigData.popFactor(lockFactor);
     d.lockFactorList.push(lockFactor);
   }
+
+  rollEnemiesForSession(3); // 随机敌方：单打 3 场，开关 ON 时每场 roll 种族+AI（双打走 doublesStart 内 roll）
 }
 
 /** 复刻 JijieContro.toSelect 真实分支（除 UI 副作用 this.jjUI.updateToSelect + map*.spCommander.setCName 外）。 */
@@ -377,6 +382,9 @@ export function exposeStartSession(): void {
   w.__jjb.randomFillSelection = randomFillSelection;
   w.__jjb.randomFillAndStart = randomFillAndStart;
   w.__jjb.jjbLive = jjbLive;
+  w.__jjb.setRandomEnemyEnabled = setRandomEnemyEnabled; // 随机敌方 e2e 钩子
+  w.__jjb.getEnemyRoll = getEnemyRoll;
+  w.__jjb.aiEnemyPool = AI_ENEMY_POOL;
 }
 
 function fillSelectionSlots(d: any): void {

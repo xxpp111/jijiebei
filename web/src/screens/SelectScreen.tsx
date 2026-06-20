@@ -3,6 +3,7 @@ import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { DropCell } from '../components/DropCell';
 import { BrandLockup } from '../components/BrandLockup';
+import { EnemyBadge } from '../components/EnemyBadge';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 import {
   getSelectState,
@@ -29,6 +30,26 @@ import {
   validateDoubles, randomFillDoubles,
 } from '../logic/jjbDoubles';
 import { getBpModeEnabled } from '../logic/bpConfig';
+import { currentEnemyRace, currentEnemyAi } from '../logic/jjbView';
+import { getRandomEnemyEnabled } from '../logic/randomConfig';
+import { raceUrl } from '../lib/realAsset';
+
+// 操作区只读敌方状态条（设计稿 03 方案A）：select 不放开关，仅随机敌方开启时提示「功能已开·三族每场随机」；
+// 切换在 BP 设置面，这里纯只读（三族徽 + ON 点）。关闭时不渲染、不占位。
+function EnemyStatusPill() {
+  if (!getRandomEnemyEnabled()) return null;
+  return (
+    <div className="estat" data-screen-label="enemy-status">
+      <span className="ems">
+        <img src={raceUrl('P')} alt="" />
+        <img src={raceUrl('T')} alt="" />
+        <img src={raceUrl('Z')} alt="" />
+      </span>
+      <span className="et"><span className="estat-k">敌方</span><span className="estat-v">每场随机</span></span>
+      <span className="estat-on"><span className="estat-d"></span>ON</span>
+    </div>
+  );
+}
 
 // 集结杯 × CM — 选择面板整屏（段2 Phase 2：拖拽手选 + 校验 + 手选进 battle）。
 // 严格承接 design/v4-r2/components/select-screen.jsx 的 SelectScreenV4 DOM/className：
@@ -229,7 +250,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
             </div>
             <div className="meta-row">
               <span className="meta-k">难度总分</span>
-              <span className="meta-v" data-difficulty-total style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>· {difficultyTotal()}</span>
+              <span className="meta-v" data-difficulty-total style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{difficultyTotal()}</span>
             </div>
           </div>
         </div>
@@ -269,6 +290,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                       {mapName}
                     </span>
                   )}
+                  <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} size="lg" />
                 </span>
                 <div className="slot-targets">
                   <div className="t-cmds">
@@ -428,6 +450,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                   {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
                 </div>
               )}
+              <EnemyStatusPill />
               <button
                 className="startbtn"
                 data-random-fill-btn
@@ -572,6 +595,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                   ) : (
                     <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>{mapName}</span>
                   )}
+                  <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} size="lg" />
                 </span>
                 <div className="slot-targets">
                   <div className="t-cmds">
@@ -644,6 +668,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                   {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
                 </div>
               )}
+              <EnemyStatusPill />
               <button className="startbtn" data-doubles-random-fill-btn style={{ margin: 0, padding: '14px 26px' }} onClick={handleRandomFill}>随机填充</button>
               <button className="startbtn" data-doubles-start-btn style={{ margin: 0 }} onClick={handleStart}>比赛开始 <span className="startbtn-arrow">▶</span></button>
             </div>

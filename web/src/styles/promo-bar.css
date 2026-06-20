@@ -1,0 +1,48 @@
+/* 入口宣传条 .promo — 承接 Claude Design e956fe00 proposals/promo-cards/promo-bar.html（块B）。
+   三卡横排替换原 .foot 细链；bilibili 蓝 #00AEEC / 飞书绿松石 #38B2A3 固定，区头/箭头随 accent；
+   卡随主题：metal 斜切 / minimal 圆角 / sc2 直角。 */
+
+/* 容器 .foot 改块级让宣传条占满（原 .foot 是 flex 横排细链） */
+.foot.foot-promo { display: block; }
+.promo-wrap { width: 100%; }
+
+.promo-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.promo-head .pk { font-family: "Oswald", sans-serif; font-size: 11px; letter-spacing: 4px; color: var(--accent, #b8893a); }
+.promo-head .pl { flex: 1; height: 1px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent, #b8893a) 45%, transparent), transparent); }
+
+.promo { display: flex; gap: 18px; }
+.promo .pcard {
+  flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 11px;
+  padding: 15px; text-decoration: none; cursor: pointer;
+  background: rgba(255, 255, 255, .045);
+  box-shadow: inset 0 0 0 1px var(--panel-edge, #c9d1da);
+  transition: transform .14s, box-shadow .16s, background .16s;
+}
+.style-metal .promo .pcard { clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px)); }
+.style-minimal .promo .pcard { border-radius: 10px; }
+.promo .pcard.b { --brand: #00AEEC; }
+.promo .pcard.d { --brand: #38B2A3; }
+
+.promo .pic {
+  width: 48px; height: 48px; flex: none; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 42%, transparent);
+  border-radius: 10px; color: var(--brand);
+}
+.style-metal .promo .pic { clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); border-radius: 0; }
+.promo .pic svg { width: 26px; height: 26px; display: block; }
+
+.promo .ptx { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; line-height: 1.15; }
+.promo .pm { font-size: 14px; font-weight: 700; color: var(--ink, #dce4ed); letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.promo .ps { font-size: 12px; color: var(--muted, #8a94a3); display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.promo .ps .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex: none; box-shadow: 0 0 6px color-mix(in srgb, var(--brand) 70%, transparent); }
+.promo .pchev { flex: none; font-size: 18px; color: var(--muted, #8a94a3); transition: color .16s, transform .16s; font-family: "Oswald", sans-serif; }
+
+.promo .pcard:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--brand) 9%, rgba(255, 255, 255, .03));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 70%, transparent), 0 8px 22px rgba(0, 0, 0, .4), 0 0 0 1px color-mix(in srgb, var(--brand) 24%, transparent);
+}
+.promo .pcard:hover .pic { background: color-mix(in srgb, var(--brand) 26%, transparent); box-shadow: inset 0 0 0 1px var(--brand); }
+.promo .pcard:hover .pchev { color: var(--brand); transform: translateX(3px); }
+.promo .pcard:hover .pm { color: #fff; }

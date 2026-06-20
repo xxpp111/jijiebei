@@ -19,6 +19,8 @@ import {
   setDoublesVerdict,
   type MatchVM,
 } from './jjbDoubles';
+import { getEnemyRoll } from './aiEnemySelector';
+import type { RaceCode } from '../data/aiEnemyPool';
 
 export type Verdict = 'win' | 'bonus' | 'lose';
 export type CurrentMatch = MatchVM & { mutators?: string[] };
@@ -86,6 +88,16 @@ export function currentModeLabel(): string {
 export function setCurrentVerdict(matchIdx: number, verdict: Verdict): void {
   if (doublesLive()) setDoublesVerdict(matchIdx, verdict);
   else setVerdict(matchIdx, verdict);
+}
+
+/** 随机敌方：当前第 i 场敌方种族（开关 ON 时有值，单打/双打统一，不分流）；OFF→undefined 不显示。 */
+export function currentEnemyRace(matchIdx: number): RaceCode | undefined {
+  return getEnemyRoll(matchIdx)?.race;
+}
+
+/** 随机敌方：当前第 i 场敌方 AI 敌军组合中文名；OFF→undefined。 */
+export function currentEnemyAi(matchIdx: number): string | undefined {
+  return getEnemyRoll(matchIdx)?.nameZh;
 }
 
 /** Reload/deep-link guard: preserve doubles when the URL says this is a doubles session. */

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ObsBar, type ObsRow } from '../components/ObsBar';
 import { startRandomSession, exposeObsbarDebug, jjbLive } from '../logic/jjbSession';
-import { currentDifficultyTotal, currentLockedFactors, currentLockTag, currentMatches, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
+import { currentDifficultyTotal, currentEnemyAi, currentEnemyRace, currentLockedFactors, currentLockTag, currentMatches, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
 
 // ObsScreen — 直播采集 OBS 横条（段3 真实化 + 横条判定）。
 // 布局策略（用户愿景②）：单窗口，上方横条进 OBS 采集区、下方判定控制条放采集线外
@@ -45,7 +45,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
     } else {
       status = 'wait';
     }
-    return { idx: i, no: m.slot, mapName: m.map, cmds: m.cmds, factors: m.factors, lock: m.lock, lockedFactors: currentLockedFactors(m), lockTag: currentLockTag(), status, verdict };
+    return { idx: i, no: m.slot, mapName: m.map, cmds: m.cmds, factors: m.factors, lock: m.lock, lockedFactors: currentLockedFactors(m), lockTag: currentLockTag(), status, verdict, enemyRace: currentEnemyRace(i), enemyAi: currentEnemyAi(i) };
   });
   const wins = currentScore();
   const total = matches.length;

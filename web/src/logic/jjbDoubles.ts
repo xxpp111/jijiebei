@@ -5,6 +5,7 @@
 import { RESULT_VAL, VAL_RESULT, type MatchVM } from '@jjb/JJBData';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
 import { weightedSampleNoReplace } from './commanderWeight';
+import { rollEnemiesForSession, clearEnemyRolls } from './aiEnemySelector';
 
 // 额外随机因子来源（官方24因子子集，按开局时过滤当场官突锁定因子后随机抽取）。
 const FACTOR_SOURCE = [
@@ -99,6 +100,7 @@ export function doublesStart(variant: 'guantu' | 'feiqiu' = 'guantu'): void {
   _slots = freshSlots();
   _winLoseList = new Array(MATCHES);
   _live = true;
+  rollEnemiesForSession(MATCHES); // 随机敌方：开关 ON 时每场 roll 种族+AI，OFF 则清空
   exposeDebug();
 }
 
@@ -110,6 +112,7 @@ export function doublesReset(): void {
   _commanderPool = [];
   _slots = freshSlots();
   _winLoseList = [];
+  clearEnemyRolls();
   exposeDebug();
 }
 

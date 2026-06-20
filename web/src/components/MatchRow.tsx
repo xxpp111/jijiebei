@@ -1,6 +1,8 @@
 import { CommanderCard } from './CommanderCard';
 import { FactorFrame } from './FactorFrame';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
+import { EnemyBadge } from './EnemyBadge';
+import type { RaceCode } from '../data/aiEnemyPool';
 
 // VBtn / MatchRow — 承接 design/v4-r2/components/battle-screen.jsx，接 onClick 写真实 winLoseList。
 function VBtn({ label, kind, on, onClick }: { label: string; kind: string; on: boolean; onClick: () => void }) {
@@ -23,10 +25,12 @@ export interface MatchRowData {
   verdict?: string; // "win" | "bonus" | "lose"
   boss?: boolean;
   difficulty?: number;
+  enemyRace?: RaceCode; // 随机敌方：种族（开关 ON 有值）
+  enemyAi?: string; // 随机敌方：AI 敌军组合中文名
 }
 
 export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (v: 'win' | 'bonus' | 'lose') => void }) {
-  const { idx, slot, mapName, cmds, factors, lock, lockedFactors, lockTag, verdict, boss, difficulty } = data;
+  const { idx, slot, mapName, cmds, factors, lock, lockedFactors, lockTag, verdict, boss, difficulty, enemyRace, enemyAi } = data;
   const mapSrc = mapUrl(mapName);
   const cls = ['match', boss && 'match-boss', verdict && 'match-done'].filter(Boolean).join(' ');
   const difficultyAttrs = difficulty === undefined ? {} : { 'data-match-difficulty': difficulty, [`data-match-difficulty-${idx}`]: difficulty };
@@ -53,6 +57,7 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
               {mapName}
             </span>
           )}
+          <EnemyBadge race={enemyRace} ai={enemyAi} size="md" />
         </span>
       </div>
       <div className="match-cmds">
