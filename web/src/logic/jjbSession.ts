@@ -8,10 +8,10 @@
 //   toStart 末尾调 this.jjUI.updateToStart/toSelect()(UI 副作用)，段1 PoC 用复刻最小开局打通数据接缝，
 //   段2 cutover 再解耦 JijieControl→JJUI（Phase 1 审计已标 UI 副作用剥离工作）。
 // 读：JJBData.sessionMatches()（真实桥，0 改）。写回：winLoseList[i]=RESULT_VAL（lose0/win1/bonus2）。
-import JijieData from '@logic/JijieData';
-import ConfigData from '@logic/data/JJConfigData';
+import JijieData from './legacy/JijieData';
+import ConfigData from './legacy/JJConfigData';
 import { weightedSampleNoReplace } from './commanderWeight';
-import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, GOLD_FACTORS, type MatchVM } from '@jjb/JJBData';
+import { facFlatIdx, manualSlots, sessionMatches, RESULT_VAL, jjbLive, GOLD_FACTORS, type MatchVM } from './legacy/JJBData';
 import { doublesStart, doublesReset } from './jjbDoubles';
 import { rollEnemiesForSession, getEnemyRoll } from './aiEnemySelector';
 import { setRandomEnemyEnabled } from './randomConfig';
@@ -21,7 +21,7 @@ import { AI_ENEMY_POOL } from '../data/aiEnemyPool';
 export { jjbLive };
 
 // 真实 csv（\r\n 分隔），编译期 raw 捆绑——无 fetch 时序、build 后亦可用。
-const csv = import.meta.glob('../../../assets/resources/jjdata/*.txt', {
+const csv = import.meta.glob('../data/jjdata/*.txt', {
   query: '?raw',
   import: 'default',
   eager: true,

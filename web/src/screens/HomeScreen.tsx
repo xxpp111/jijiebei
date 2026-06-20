@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { startSession, type SessionMode } from '../logic/jjbSession';
 import { BrandLockup } from '../components/BrandLockup';
 import { PromoBar } from '../components/PromoBar';
-import JijieData from '@logic/JijieData';
+import JijieData from '../logic/legacy/JijieData';
 
 // 集结杯 × CM — 首页（公开模式入口 + 选手名）。承接 design/v4-r2/home 段（className 全部沿用 theme.css/home css）。
 // 流程：输入选手名 → 点模式按钮 → startSession(mode) → 覆盖 JijieData.playerName → onStart 回调让 App 跳 select。

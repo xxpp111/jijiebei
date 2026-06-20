@@ -1,8 +1,8 @@
 // jjbDoubles — 双打真引擎（R7 Phase 4）。
 // 从 web/src/data/mutatorPool.ts（源 docs/官突ABC配置_官突池.csv）读官突池，
-// 按 A/B/C 档每场抽 1 官突（含地图 + 锁定因子），不再委托 @jjb/JJBDoubles（Cocos 占位引擎保留只读）。
+// 按 A/B/C 档每场抽 1 官突（含地图 + 锁定因子），不再委托 Cocos 线 JJBDoubles（占位引擎保留只读）。
 // 飞球（非酋）之轮：每场只锁「混乱工作室」(1个)；可分配因子池=固定3个{礼尚往来/风暴英雄/虚空裂隙}(玩家自由分配，非随机抽1)；地图每场随机真地图。
-import { RESULT_VAL, VAL_RESULT, type MatchVM } from '@jjb/JJBData';
+import { RESULT_VAL, VAL_RESULT, type MatchVM } from './legacy/JJBData';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
 import { weightedSampleNoReplace } from './commanderWeight';
 import { rollEnemiesForSession, clearEnemyRolls } from './aiEnemySelector';

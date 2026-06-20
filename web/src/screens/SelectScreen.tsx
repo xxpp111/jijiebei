@@ -22,7 +22,7 @@ import {
   matchDifficulty,
   querySessionMode,
 } from '../logic/jjbSession';
-import { facFlatIdx } from '@jjb/JJBData';
+import { facFlatIdx } from '../logic/legacy/JJBData';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
 import {
   doublesLive, doublesMatches, doublesModeLabel, getDoublesState,

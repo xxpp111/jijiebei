@@ -93,7 +93,8 @@ async function main() {
     }));
     if (initial.label !== 'select-sc2-dark-std8') fail(`select label=${initial.label}`);
     if (initial.poolChecks !== 0 || initial.slotChecks !== 0) fail(`initial checks pool=${initial.poolChecks} slot=${initial.slotChecks}`);
-    if (!/^·\s*\d+$/.test(initial.difficulty)) fail(`initial difficulty invalid: ${initial.difficulty}`);
+    // 难度总分显示为纯数字（d208aa6 select 重构改 label+value「难度总分」+ 值，去掉旧 · 前缀）。
+    if (!/^\d+$/.test(initial.difficulty)) fail(`initial difficulty invalid: ${initial.difficulty}`);
 
     await page.click('[data-random-fill-btn]');
     await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac] .fx-check').length === 5);
@@ -104,7 +105,7 @@ async function main() {
     }));
     if (afterFill.poolChecks !== 5) fail(`after fill poolChecks=${afterFill.poolChecks}`);
     if (afterFill.slotChecks !== 0) fail(`after fill slotChecks=${afterFill.slotChecks}`);
-    if (!/^·\s*\d+$/.test(afterFill.difficulty)) fail(`after fill difficulty invalid: ${afterFill.difficulty}`);
+    if (!/^\d+$/.test(afterFill.difficulty)) fail(`after fill difficulty invalid: ${afterFill.difficulty}`);
 
     await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=std8&cb=ui-smoke-session-mode-param`, { waitUntil: 'networkidle' });
     const sessionModeParam = await page.evaluate(() => ({

@@ -2187,3 +2187,27 @@ players / matches(比赛+练习, `payload_code` 单字段存整局) / scores(del
 
 ## 接手第一步（post-compact）
 开 **P0 架构清场**（分支 `jjb-platform`，从 main=d208aa6 基线）：① web/ 内复制内联 JJConfigData/JijieData/JJBData（**不动 assets/Script**）② 搬 5 CSV(assets/resources/jjdata)+212图(assets/resources/images) 进 web ③ 改 8 处 @logic/@jjb import 为本地 ④ 建 web/src/config/ + 生成脚本骨架 ⑤ 清死数据 assets/resources/data + 硬收尾(dead code/截图/.gitignore)。验证：删 vite 两 alias 仍 build + 4 套 Playwright + 9 模式 e2e 全绿 + grep 零命中。关键文件速查见 `tmp/platform-research-report.md` 末尾。
+
+---
+
+## P0 架构清场 完成记录（2026-06-21，分支 jjb-platform）
+
+**结论：web/ 已自包含——删 vite `@logic`/`@jjb` alias 后仍 build；4 套 e2e 全绿；`assets/` 全程零改动（冻结为 XP 遗产）。**
+
+### 实际执行（★=对原计划的偏离）
+- **① 内联 3 旧 TS** → `web/src/logic/legacy/{JijieData,JJConfigData,JJBData}.ts` + `README.md`（DEPRECATED 致敬）。只读复制，`assets/Script` 原件零改。
+- **② 断 GameData 死链**：legacy/JJConfigData 删 `import GameData` + `calcCurrentScore()`（web 零引用）；GameData/PlayerData 不复制。
+- **③ 搬 5 CSV + 213 图**：★**复制非 git mv**——守 Cocos 冻结红线（jjb-dev-loop 明文 `assets/resources/jjdata` 零改动）+ 与 ① 同一尊重模型，`assets/resources` 一字节未动、web 侧用副本。落点 `web/src/data/jjdata/`(5 txt) + `web/src/images/`(213 真图，排除 .meta，9.6M)。改 2 条 glob：`jjbSession.ts`→`../data/jjdata/*.txt`、`lib/realAsset.ts`→`../images/**/*.png`。机制不变(同步 import.meta.glob)。代价=10M 图 repo 内重复（换 assets 完全冻结）。
+- **④ 改 7 处 import**（非 8；3+1+3 行）：→ `logic/legacy/`。另清 2 处过时注释(main.tsx/jjbDoubles)。
+- **⑤ config 骨架**：`web/scripts/gen-config.mjs`(去 BOM+CRLF+引号感知 CSV 解析，TABLES 驱动) → `web/src/config/factors.ts`(71 因子，母表 docs/因子点数配置.csv) + index.ts + README。★**运行期未切换**(jjbSession 仍读 jjdata 副本)；cutover 留后续 phase(行为变更需单独回归)。
+- **⑥ 硬收尾**：★**`assets/resources/data` 死数据保留冻结不删**(同守 Cocos 冻结，原计划要删)。删 `random-enemy.css` .quick/.re-sw 死码(119→82 行)；散落截图/web/shot.mjs/web/tmp/web/.harness-pro-* 补 .gitignore 收编(未删盘，design/poster-r1 海报稿未碰)。
+- **附带修**：ui-smoke 2 个**过时断言**(难度 `/^·\s*\d+$/`→`/^\d+$/`)——d208aa6 select 重构把难度改 label+value「难度总分」去掉 `·`、断言未同步。非 P0 引入(铁证：SelectScreen 难度渲染行 HEAD≡working，我只改 import 行)。
+
+### 验证门（全绿）
+- 删 vite 两 alias 后 `npm run build` EXIT=0；`grep @logic|@jjb web/src`=0。
+- `run.mjs` 9 模式池=槽恒等式 ✓ / `ui-smoke` 7/0 ✓ / `r6-doubles-downstream` 7/0 ✓ / `random-enemy` 7/0 ✓。
+- hub 视觉终验：sc2-dark select+battle 真实地图/指挥官/因子图全渲染、无破图（③ 图片改址视觉确认）。
+- `assets/` `git status` 全程空（XP 遗产冻结）。
+
+### 下一步
+P1 入口分流+BP 规则（前端 Claude Design）/ P5 后端（/goal spoke）可并行起跑。config cutover（运行期切 `config/*.ts`、删 jjdata glob + CRLF 解析链）为独立后续 phase。

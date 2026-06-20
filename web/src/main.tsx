@@ -1,4 +1,4 @@
-import './cc-shim'; // MUST run before any @logic/@jjb import
+import './cc-shim'; // MUST run before any legacy/ engine import (JijieData/JJConfigData/JJBData)
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

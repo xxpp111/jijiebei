@@ -1,5 +1,5 @@
 /* 随机敌方样式 — 承接 Claude Design 项目 e956fe00 的 proposals/random-enemy/01,02。
-   .menemy 印花块(叠地图右上角，三档 lg/md/sm) + .bp-enemy(BP 设置面金棕分区) + .quick/.re-sw(select 顶部镜像开关)。
+   .menemy 印花块(叠地图右上角，三档 lg/md/sm) + .bp-enemy(BP 设置面金棕分区)。
    配色对齐 v4-r2：金棕 #B8893A / 钢蓝 #3E5871 / 浅 #DCE4ED。真印花 png 入库后 .menemy-em 自动替换 .menemy-glyph 文字徽章。 */
 
 /* 地图缩略图容器需 relative 以容纳印花绝对定位 */
@@ -54,46 +54,10 @@
 .bp-enemy .bp-enemy-nm { font-size: 16px; font-weight: 700; color: #dce4ed; line-height: 1.2; }
 .bp-enemy .bp-enemy-sub { font-size: 11.5px; color: var(--muted, #8a94a3); margin-top: 4px; }
 
-/* ===== select 顶部镜像开关 .quick + .re-sw 拨钮 ===== */
-.quick {
-  display: inline-flex; align-items: center; gap: 12px;
-  padding: 8px 14px; background: rgba(255, 255, 255, .04);
-  box-shadow: inset 0 0 0 1px rgba(199, 209, 222, .18);
-  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
-  align-self: center; margin-left: 8px;
-}
-.quick .quick-l { line-height: 1.25; }
-.quick .quick-l .quick-t { font-size: 13.5px; font-weight: 700; color: #dce4ed; display: block; }
-.quick .quick-l .quick-k { font-size: 9.5px; letter-spacing: 2px; color: var(--accent, #b8893a); display: block; }
-.re-sw {
-  position: relative; display: inline-flex; align-items: center;
-  width: 58px; height: 28px; flex: none;
-  background: rgba(255, 255, 255, .05);
-  box-shadow: inset 0 0 0 1px var(--panel-edge, #c9d1da), inset 0 2px 5px rgba(0, 0, 0, .4);
-  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
-  transition: background .18s, box-shadow .18s;
-}
-.re-sw .re-sw-state { position: absolute; right: 9px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted, #8a94a3); transition: color .18s, left .18s; }
-.re-sw .re-sw-track { position: absolute; inset: 0; }
-.re-sw .re-sw-knob {
-  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
-  background: linear-gradient(180deg, #6c819b, #3e5871);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .25);
-  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
-  transition: transform .2s cubic-bezier(.4, .8, .3, 1.2), background .18s;
-}
-.re-sw[data-on="1"] {
-  background: color-mix(in srgb, var(--accent, #b8893a) 22%, transparent);
-  box-shadow: inset 0 0 0 1px var(--accent, #b8893a), 0 0 12px color-mix(in srgb, var(--accent, #b8893a) 38%, transparent);
-}
-.re-sw[data-on="1"] .re-sw-knob { transform: translateX(30px); background: linear-gradient(180deg, color-mix(in srgb, var(--accent, #b8893a) 60%, #fff), var(--accent, #b8893a)); }
-.re-sw[data-on="1"] .re-sw-state { left: 9px; right: auto; color: var(--accent, #b8893a); }
-
 /* ===== select 操作区只读敌方状态条 .estat（设计稿 03 方案A）=====
    select 不放重复开关（总开关在 BP 设置面），操作区左端放只读提示：三族徽 + 「敌方 每场随机 ON」。
    纯展示、不可点；关闭时整条不渲染。移除原 .quick 镜像开关后 topbar 回 logo+meta 两元素，
-   space-between 自然不再把选手 meta 顶到中点漂浮（故此前的 .jjb-inner.sel .topbar 覆盖一并撤除）。
-   注：上方 .quick / .re-sw 样式块暂留作 BP「select 一键开关」方案B 储备，当前 select 不引用。 */
+   space-between 自然不再把选手 meta 顶到中点漂浮（故此前的 .jjb-inner.sel .topbar 覆盖一并撤除）。 */
 .estat {
   display: inline-flex; align-items: center; gap: 11px; margin-right: auto;
   padding: 9px 15px; background: rgba(255, 255, 255, .04);

@@ -10,7 +10,7 @@ import { BpConfigScreen } from './screens/BpConfigScreen';
 import { startSession, exposeStartSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
-import JijieData from '@logic/JijieData';
+import JijieData from './logic/legacy/JijieData';
 
 // 路由（query）：?screen=home|select|battle|obs|phase0|foundation；
 // ?style=metal|sc2|minimal & ?mode=dark|light 控视觉主题；?sessionMode=std8|std10|... 控赛事模式。

@@ -4,7 +4,7 @@
 // logo 是品牌 dM 字标、真实游戏图无独立件，沿用 design 金色 logo（对齐 JJBData.markFor 全皮肤统一金色）。
 import { dz } from './designAssets';
 
-const real = import.meta.glob('../../../assets/resources/images/**/*.png', {
+const real = import.meta.glob('../images/**/*.png', {
   eager: true,
   query: '?url',
   import: 'default',

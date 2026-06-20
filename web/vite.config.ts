@@ -5,17 +5,11 @@ import { dirname, resolve } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// @logic → jijie2 pure-logic engine (cc.*=0), @jjb → jjbDesign bridge (JJBData/JJBDoubles).
-// Single source of truth: NOT copied — imported in place so Cocos line and React line
-// read the same logic files.
+// P0 架构清场后 web/ 自包含：旧引擎逻辑已复制进 src/logic/legacy/（assets/Script Cocos 原件冻结只读），
+// 不再有 @logic/@jjb 跨界 alias。注：designAssets.ts 仍 glob ../design/v4-r2（设计真相源，合法外部依赖），
+// 故 server.fs.allow 保留仓库根以便 dev 服务 design/ 资源；build 期 glob 已编译捆绑、不依赖 fs.allow。
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@logic': resolve(__dirname, '../assets/Script/jijie2'),
-      '@jjb': resolve(__dirname, '../assets/Script/jjbDesign'),
-    },
-  },
   server: {
     port: 7788,
     fs: { allow: [resolve(__dirname, '..')] },
