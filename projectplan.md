@@ -2211,3 +2211,22 @@ players / matches(比赛+练习, `payload_code` 单字段存整局) / scores(del
 
 ### 下一步
 P1 入口分流+BP 规则（前端 Claude Design）/ P5 后端（/goal spoke）可并行起跑。config cutover（运行期切 `config/*.ts`、删 jjdata glob + CRLF 解析链）为独立后续 phase。
+
+---
+
+## P1 进度（2026-06-22，分支 jjb-platform）
+
+### P1a 入口分流·首页双模式 tab —— 完成（commit 6afbc69）
+- 走通 **Claude Design 闭环**：Product prototype「集结杯练习比赛切换」(`19b54387`) 绑「集结杯 Design System」出稿 → DesignSync `get_file` 读 `JJBHomeFrame.dc.html` + `home-match.css`/`enemy.css` → 实现 web/src。
+- `HomeScreen.tsx` 加 `homeMode`(practice/match) tab + `home-mode.css`(新)：练习态(选手+6模式+宣传卡+不计分提示) / 比赛态(主播登录占位+选手ID突出框+LIVE+积分天梯占位卡)，token 驱动三皮肤×明暗。
+- 修溢出：加 tab 后两态超 720 stage(练习774/比赛766)，双类 specificity 压间距 fit 回 720(不改 design/ 只读源)。
+- scope：UI 外壳 + 比赛侧 UI 占位(登录/积分未接后端)；6 模式保 repo 真实可用(未灰 06)；**行为分流(规则态下沉逻辑层)是 P1b**。验证：build OK + 两态实测 innerScrollH=720 + 4 套 e2e 全绿。
+
+### 沉淀（可复用经验）
+- `docs/claude-design-loop.md`(commit 5bf138c) Claude Design 闭环 SOP + jjb-dev-loop skill「设计轮」更新(tar.gz handoff → DesignSync prototype 闭环, 终验补量化溢出条) + memory `jjb-claude-design-loop`。**关键纠偏：DesignSync 能读 prototype 项目(type=PROJECT)**，不只 design-system；`list_projects` 列不出 prototype，故项目 URL 须人工给 hub。
+
+### P1b BP 规则完整化 —— 已派发 spoke（session `jjb-p1b-bp-rules`，进行中）
+- 契约 `tmp/dispatch-jjb-p1b-bp-rules.md`：落 jjbSession(规则状态机：规则面/练习面分流 + 违规提示不强拦 + 2A1B 自选指挥官 + 二选一互斥 + 双打4纯随机池) + bpConfig(补 `feiqiu-doubles` 键) + SelectScreen(违规提示UI)。红线 + harness phases≥3 + 不自行 commit。
+- **关键卡点(待 hub 拍)**：P1a `homeMode` 仅 HomeScreen 本地 state，规则态下沉 jjbSession 的接口 = 显式 `setRuleMode(mode)` vs 复用 JijieData 字段，spoke 会停下交 hub 二选一。
+- BP 违规提示 UI 视觉留待后续走 Claude Design 微调(先逻辑后视觉)。
+- spoke 完工停工作树 → hub 终验(**含巡检 light/minimal 皮肤，P1a 未补**) + 收口 commit。
