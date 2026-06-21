@@ -1,0 +1,133 @@
+/* 集结杯首页「练习 / 比赛」双模式 tab —— 承接 Claude Design 项目「集结杯练习比赛切换」(19b54387)
+   的 JJBHomeFrame + enemy.css(.hmode 段) + home-match.css。token 驱动(--accent/--panel-bg/--ink…)，
+   三皮肤(metal/sc2/minimal)×明暗自动适配；纯前端切换 + 比赛侧 UI 占位(后端未接)。
+   import 须在 index.css(v4-r2 theme/base) 之后。 */
+
+/* ===== 双模式 tab (.hmode) ===== */
+.hmode { display: inline-flex; gap: 6px; padding: 5px; background: var(--panel-bg); box-shadow: inset 0 0 0 1px var(--panel-edge); }
+.style-metal .hmode { clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px)); }
+.style-minimal .hmode { border-radius: 11px; }
+
+.hmode-tab {
+  position: relative; display: inline-flex; align-items: center; gap: 11px;
+  padding: 12px 26px; cursor: pointer; border: none; background: transparent;
+  font-family: inherit; color: var(--muted); transition: color .16s, background .16s, box-shadow .16s;
+}
+.style-metal .hmode-tab { clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+.style-minimal .hmode-tab { border-radius: 8px; }
+.hmode-tab .ht-ico { width: 19px; height: 19px; flex: none; display: block; opacity: .8; }
+.hmode-tab .ht-tx { line-height: 1.15; text-align: left; }
+.hmode-tab .ht-t { font-size: 17px; font-weight: 700; letter-spacing: 2px; display: block; }
+.hmode-tab .ht-s { font-family: var(--font-num); font-size: 9px; letter-spacing: 2px; opacity: .7; display: block; }
+.hmode-tab:hover { color: var(--ink); }
+/* 选中 — 练习：中性 lift；比赛：金/accent 赛事感 + glow */
+.hmode-tab.on { color: var(--ink); background: var(--surface-2, rgba(255, 255, 255, .06)); box-shadow: inset 0 0 0 1px var(--panel-edge); }
+.hmode-tab.on .ht-ico { opacity: 1; }
+.hmode-tab.match.on {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent), 0 0 14px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.hmode-tab.match.on .ht-ico { color: var(--accent); }
+.hmode-tab.match .ht-s { color: var(--accent); opacity: .85; }
+
+/* ===== tab row：tab(左) + 登录入口(右) ===== */
+.tabrow { display: flex; align-items: center; gap: 18px; margin-top: 22px; }
+.tabrow .hmode { margin-top: 0; }
+.login-entry { margin-left: auto; }
+
+/* ===== 主播登录 入口（占位 · 即将上线） ===== */
+.loginbtn {
+  position: relative; display: inline-flex; align-items: center; gap: 12px;
+  padding: 11px 18px 11px 14px; cursor: default;
+  background: var(--panel-bg); color: var(--ink);
+  border: 1px solid var(--panel-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+  transition: border-color .16s, box-shadow .16s;
+}
+.style-metal .loginbtn { clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px)); }
+.style-minimal .loginbtn { border-radius: 9px; }
+.style-sc2 .loginbtn::before {
+  content: ""; position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px;
+  border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none;
+}
+.loginbtn:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--panel-edge)); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 16%, transparent); }
+.lb-ico {
+  width: 38px; height: 38px; flex: none; display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.style-metal .lb-ico { clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px)); }
+.style-minimal .lb-ico { border-radius: 8px; }
+.lb-ico svg { width: 20px; height: 20px; display: block; }
+.lb-tx { display: flex; flex-direction: column; gap: 3px; line-height: 1.1; text-align: left; }
+.lb-t { font-size: 16px; font-weight: 700; letter-spacing: 1px; color: var(--ink); }
+.lb-s { font-family: var(--font-num); font-size: 9.5px; letter-spacing: 2px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.lb-s b { color: var(--accent); font-weight: 700; }
+
+/* ===== 模式提示行（练习 / 比赛） ===== */
+.practice-hint { display: inline-flex; align-items: center; gap: 9px; margin-top: 16px; font-size: 14px; color: var(--muted); }
+.practice-hint .ph-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); opacity: .6; flex: none; }
+.match-hint { display: inline-flex; align-items: center; gap: 9px; margin-top: 15px; font-size: 14px; color: var(--muted); }
+.match-hint b { color: var(--accent); font-weight: 700; }
+.match-hint .mh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); flex: none; }
+
+/* ===== 选手 ID 突出输入（比赛态 · 直播展示） ===== */
+.player-row.match { align-items: center; }
+.player-row.match .player-label { color: var(--accent); }
+.player-field.big {
+  height: 52px; max-width: 560px; padding: 0 22px;
+  box-shadow: inset 0 0 0 1px var(--accent), 0 0 16px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.style-metal .player-field.big { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.style-minimal .player-field.big { border-radius: 7px; }
+.player-field.big .caret { height: 26px; }
+.player-live {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: 2px;
+  font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent);
+}
+.player-live .pl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 7px var(--accent); animation: matchpulse 1.1s ease-in-out infinite; }
+
+/* ===== 积分天梯 占位卡（自包含，不依赖 .promo 容器；直接作 .jjb-inner.home flex item 沉底） ===== */
+.pcard.ladder {
+  margin-top: auto; display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; text-decoration: none; cursor: default;
+  background: var(--panel-bg); border: 1px solid var(--panel-edge); --brand: var(--accent);
+  transition: box-shadow .16s, border-color .16s, background .16s;
+}
+.style-metal .pcard.ladder { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.style-minimal .pcard.ladder { border-radius: 9px; }
+.pcard.ladder .pic {
+  width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center;
+  border-radius: 9px; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+.style-metal .pcard.ladder .pic { clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px)); border-radius: 0; }
+.pcard.ladder .pic svg { width: 24px; height: 24px; display: block; }
+.pcard.ladder .ptx { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; line-height: 1.15; }
+.pcard.ladder .pm { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: .3px; }
+.pcard.ladder .ps { font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+.pcard.ladder .ps .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 70%, transparent); }
+.pcard.ladder:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--panel-edge)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
+.pcard.ladder:hover .pic { background: color-mix(in srgb, var(--accent) 20%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+.soon-chip {
+  flex: none; margin-left: 4px; padding: 5px 13px; white-space: nowrap;
+  font-family: var(--font-num); font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  color: var(--on-accent); background: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.style-metal .soon-chip { clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+.style-minimal .soon-chip { border-radius: 6px; }
+
+/* ===== 加双模式 tab 后给 home 腾垂直空间 =====
+   v4-r2 的 home 布局原本已接近占满 1280×720，新增 tab 行(~122px) 会让练习/比赛两态都溢出 stage
+   (裁掉底部宣传条 / 积分卡)。这里压缩 home 各段间距(双类 specificity 取胜，覆盖 design/v4-r2 单类、
+   不改 design 只读源)，使两态都 fit 720。 */
+.jjb-inner.home { padding-top: 12px; padding-bottom: 12px; }
+.jjb-inner.home .tabrow { margin-top: 12px; }
+.jjb-inner.home .practice-hint,
+.jjb-inner.home .match-hint { margin-top: 8px; }
+.jjb-inner.home .mode-block { margin-top: 14px; }
+.jjb-inner.home .promo-head { margin-bottom: 4px; }
