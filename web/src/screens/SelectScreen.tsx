@@ -17,6 +17,7 @@ import {
   toggleGold,
   toggleBanFactor,
   getBanFor,
+  getSelectWarn,
   randomFillSelection,
   difficultyTotal,
   matchDifficulty,
@@ -182,6 +183,8 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
       onDrop: (slot, idx) => {
         if (kind === 'cmd') {
           setSelectedCmd(slot, name);
+          const w = getSelectWarn(); // P2 二选一即时提示（match 态选自选指挥官且已 ban）
+          if (w) setToast({ msg: w, count: 1 });
         } else {
           setSelectedFac(slot, idx, name);
         }
@@ -362,7 +365,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 >
                   <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
-                  {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); setTick((x) => x + 1); }} />}
+                  {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1 }); setTick((x) => x + 1); }} />}
                 </span>
               ))}
             </div>

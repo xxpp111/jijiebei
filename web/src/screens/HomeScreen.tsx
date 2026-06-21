@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { startSession, type SessionMode } from '../logic/jjbSession';
+import { startSession, setRuleMode, type SessionMode } from '../logic/jjbSession';
 import { BrandLockup } from '../components/BrandLockup';
 import { PromoBar } from '../components/PromoBar';
 import JijieData from '../logic/legacy/JijieData';
@@ -34,6 +34,8 @@ export function HomeScreen({ style, mode, onStart }: HomeScreenProps) {
   const start = (m: SessionMode | 'doubles', soon?: boolean) => {
     if (soon) return; // soon 占位项不启动（当前无 soon 项；doubles 已接通）
     const name = (playerName || '').trim() || '集结杯选手';
+    // P1b 规则态下沉：home 练习/比赛 tab → setRuleMode（hub 拍板方案A；startSession 不重置规则态，由此处决定）。
+    setRuleMode(isMatch ? 'match' : 'practice');
     // startSession 末尾 exposeSelectDebug 把 mode 写到 __jjbDebug.select.mode，
     // 这里 startSession 后再覆盖 JijieData.playerName（不破坏 9 模式 status/map/lock/pool 任何契约）。
     startSession(m as SessionMode);

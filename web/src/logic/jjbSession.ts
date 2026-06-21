@@ -385,6 +385,19 @@ export function exposeStartSession(): void {
   w.__jjb.setRandomEnemyEnabled = setRandomEnemyEnabled; // 随机敌方 e2e 钩子
   w.__jjb.getEnemyRoll = getEnemyRoll;
   w.__jjb.aiEnemyPool = AI_ENEMY_POOL;
+  // BP 规则钩子（P1b bp-rules e2e 用：规则态 + ban + 自选 + 校验）
+  w.__jjb.setRuleMode = setRuleMode;
+  w.__jjb.getRuleMode = getRuleMode;
+  w.__jjb.toggleBanFactor = toggleBanFactor;
+  w.__jjb.getBanFor = getBanFor;
+  w.__jjb.getBpState = getBpState;
+  w.__jjb.setSelectedCmd = setSelectedCmd;
+  w.__jjb.setSelectedFac = setSelectedFac;
+  w.__jjb.clearCmdSlot = clearCmdSlot;
+  w.__jjb.clearFacSlot = clearFacSlot;
+  w.__jjb.validate = validate;
+  w.__jjb.startFromSelection = startFromSelection;
+  w.__jjb.getBpExclusive = getBpExclusive;
 }
 
 function fillSelectionSlots(d: any): void {
@@ -513,6 +526,8 @@ export interface SelectState {
   jjbLive: boolean;
   selfPool: string[]; // 自选区真实全量池（ConfigData 全量 ban 后减已入 A/B 池；mode 门控）
   selfShow: boolean; // 是否显示自选区（拯救/随机/极难①/非酋 = false）
+  ruleMode: 'practice' | 'match'; // 规则态（P1b）：practice 随意不限制 / match 违规提示不强拦
+  bpExclusive: 'ban' | 'self' | 'conflict' | null; // 二选一互斥当前启用支（P2 done-when 4）
 }
 
 /** select 屏纯只读透出。React SelectScreen/HomeScreen 直接用本函数绑数据 + e2e 跑断言。
@@ -563,6 +578,8 @@ export function getSelectState(): SelectState {
     jjbLive: jjbLive(),
     selfPool,
     selfShow,
+    ruleMode,
+    bpExclusive: getBpExclusive(),
   };
 }
 
@@ -603,6 +620,44 @@ function isGroupB(name: string): boolean {
   } catch { return false; }
 }
 
+/** name → 是否 A 组（弱势组；对称 isGroupB，commadnerGroupList['A'] 查表，源指挥官配置.txt 第2列）。 */
+function isGroupA(name: string): boolean {
+  try {
+    const g = (ConfigData.commadnerGroupList as any) || {};
+    const arrA: string[] = g['A'] || [];
+    return arrA.includes(name);
+  } catch { return false; }
+}
+
+/** 标准单刷三模式（std8/std10/std12）：2A1B 自选指挥官约束仅在此三模式生效（定稿/done-when 3）。
+ *  排除极难(modeIsVeryHard)/拯救(modeIsZhengjiu)/单指(modeIsOnePick)/非酋(modeFeiqiu)/随机(modeSuiji)——
+ *  这些模式要么无自选区(selfShow=false)要么非标准单刷；双打不走本 validate（jjbDoubles 自管），无需在此排。 */
+function isStdSolo(d: any): boolean {
+  return !d.modeIsVeryHard && !d.modeIsZhengjiu && !d.modeIsOnePick && !d.modeFeiqiu && !d.modeSuiji
+    && (d.modelFactorCount === 2 || d.modelFactorCount === 3 || d.modelFactorCount === 4);
+}
+
+/** 是否使用了「自选指挥官」：selectedCommanderList 含不在本局 A/B 抽中池（randomCommanderPoorA/B 去 '自选'）的指挥官，
+ *  即玩家从自选区全量池挑了非抽中指挥官。二选一互斥（ban 因子 ⊕ 自选指挥官）据此判定。 */
+function usedSelfPick(d: any): boolean {
+  const pool = new Set<string>();
+  (d.randomCommanderPoorA || []).forEach((c: string) => { if (c && c !== '自选') pool.add(c); });
+  (d.randomCommanderPoorB || []).forEach((c: string) => { if (c) pool.add(c); });
+  return ((d.selectedCommanderList || []) as (string | null)[]).some((c) => !!c && !pool.has(c));
+}
+
+/** 二选一互斥当前启用哪支（match 态语义；done-when 4：__jjbDebug 可读当前启用哪支）。
+ *  'ban'=已禁因子 / 'self'=已用自选指挥官 / 'conflict'=两者都用(违规) / null=都未用。 */
+export function getBpExclusive(): 'ban' | 'self' | 'conflict' | null {
+  const d: any = JijieData;
+  const banned = bpBanRuntime.size > 0;
+  const selfUsed = jjbLive() ? usedSelfPick(d) : false;
+  if (banned && selfUsed) return 'conflict';
+  if (banned) return 'ban';
+  if (selfUsed) return 'self';
+  return null;
+}
+
 /** 写第 slot 场指挥官（idx=0 唯一；后续若接双打可扩 2）。jjbLive=false 时静默 noop（不破坏数据接缝）。 */
 export function setSelectedCmd(slot: number, name: string | null): void {
   const d: any = JijieData;
@@ -610,6 +665,10 @@ export function setSelectedCmd(slot: number, name: string | null): void {
   if (!Array.isArray(d.selectedCommanderList)) d.selectedCommanderList = [null, null, null];
   if (slot < 0 || slot > 2) return;
   d.selectedCommanderList[slot] = name;
+  // match 态二选一即时反馈：选了自选指挥官且已 ban 因子 → 提示二选一冲突（done-when 4，不强拦）。
+  if (ruleMode === 'match' && name && bpBanRuntime.size > 0 && usedSelfPick(d)) {
+    exposeSelectWarn('禁因子与自选指挥官二选一：已启用禁因子，自选指挥官不可用（超出比赛规则）');
+  }
 }
 
 /** 写第 slot 场第 k 槽因子（按 facFlatIdx(slot,k) 写扁平 9 格）。 */
@@ -633,35 +692,50 @@ export function clearFacSlot(slot: number, k: number): void { setSelectedFac(slo
  *  ② 按 manualSlots(i) 槽数逐格判因子未选→err（禁按 length/null 计数）
  *  ③ B 组指挥官 ≤1：仅 !modeIsOnePick && modelFactorCount > 2 生效；A 池混入的 B 组也计（commadnerGroupList['B'] 查表）
  *  返回 { ok, errors, firstError }：ok=true 校验通过；firstError 给 toast 用第一条。 */
-export interface ValidationResult { ok: boolean; errors: string[]; firstError: string; }
+export interface ValidationResult { ok: boolean; errors: string[]; firstError: string; warnings: string[]; firstWarning: string; }
 export function validate(): ValidationResult {
   const d: any = JijieData;
-  const errs: string[] = [];
+  const errs: string[] = [];   // 硬错误：决定能否开局（两态 enforce）
+  const warns: string[] = [];  // 软违规：仅 match 态计，违规但不强拦（startFromSelection 仍放行）
   if (!jjbLive()) {
-    return { ok: false, errors: ['本局未开局（请先 home 选模式）'], firstError: '本局未开局（请先 home 选模式）' };
+    const m = '本局未开局（请先 home 选模式）';
+    return { ok: false, errors: [m], firstError: m, warnings: [], firstWarning: '' };
   }
   const selCmd = (d.selectedCommanderList || []) as (string | null)[];
   const selFac = (d.selectedFactorList || []) as (string | null)[];
+  // 硬错误①：每场指挥官必选
   for (let i = 0; i < 3; i++) {
     if (!selCmd[i]) errs.push('第' + (i + 1) + '场指挥官未选择');
   }
+  // 硬错误②：每场因子槽必满（按 manualSlots 槽数逐格）。banned 落槽=软违规（match 态 warn，不阻断；practice 忽略）。
   for (let i = 0; i < 3; i++) {
     const cap = manualSlots(i);
     for (let k = 0; k < cap; k++) {
       const v = selFac[facFlatIdx(i, k)];
       if (!v) errs.push('第' + (i + 1) + '场因子' + (k + 1) + '未选择');
-      else if (getBanFor(v)) errs.push('第' + (i + 1) + '场因子' + (k + 1) + '已被 BP 禁用'); // BP ban 旁路规则
+      else if (getBanFor(v) && ruleMode === 'match') warns.push('第' + (i + 1) + '场因子' + (k + 1) + '已被禁用（超出比赛规则）');
     }
   }
-  if (!d.modeIsOnePick && d.modelFactorCount > 2) {
-    let b = 0;
-    for (let i = 0; i < 3; i++) {
-      const c = selCmd[i];
-      if (c && isGroupB(c)) b++;
+  // 软违规（仅 match 态）：自选指挥官 2A1B（单刷三模式 A≤2/B≤1）+ 二选一互斥（ban 因子 ⊕ 自选指挥官）。
+  if (ruleMode === 'match') {
+    // 2A1B：单刷三模式（std8/std10/std12）锁 A 弱势组累计≤2、B 强力组≤1（done-when 3；A 池混入的 B 组也按 B 计）。
+    if (isStdSolo(d)) {
+      let a = 0, b = 0;
+      for (let i = 0; i < 3; i++) {
+        const c = selCmd[i];
+        if (!c) continue;
+        if (isGroupB(c)) b++;
+        else if (isGroupA(c)) a++;
+      }
+      if (a > 2) warns.push('A组指挥官最多 2 个（超出比赛规则）');
+      if (b > 1) warns.push('B组指挥官最多 1 个（超出比赛规则）');
     }
-    if (b > 1) errs.push('B组指挥官只能选1个');
+    // 二选一互斥：同一局 ban 因子与自选指挥官择一启用（done-when 4，违规不强拦）。
+    if (bpBanRuntime.size > 0 && usedSelfPick(d)) {
+      warns.push('禁因子与自选指挥官二选一（超出比赛规则）');
+    }
   }
-  return { ok: errs.length === 0, errors: errs, firstError: errs[0] || '' };
+  return { ok: errs.length === 0, errors: errs, firstError: errs[0] || '', warnings: warns, firstWarning: warns[0] || '' };
 }
 
 /** 手选进 battle：校验通过→保留 selected*、status=3、exposeBattleDebug。
@@ -673,6 +747,8 @@ export function startFromSelection(): ValidationResult {
     exposeSelectError(r.firstError, r.errors.length);
     return r;
   }
+  // 硬错误通过即放行：match 态软违规(warnings)只提示不强拦（练习态 warnings 恒空）。
+  if (r.warnings.length > 0) exposeSelectWarn(r.firstWarning); else clearSelectWarn();
   const d: any = JijieData;
   d.winLoseList = [];
   d.status = 3;
@@ -689,6 +765,32 @@ export function exposeSelectError(msg: string, count: number): void {
     w.__jjbDebug.select.error = msg;
     w.__jjbDebug.select.errorCount = count;
   } catch { /* noop */ }
+}
+
+/** 软违规提示（P1b match 态 BP 规则违规：超 ban 上限 / 2A1B 超额 / 二选一冲突）写 __jjbDebug.select.warn，非阻断。 */
+export function exposeSelectWarn(msg: string): void {
+  try {
+    const w: any = window;
+    w.__jjbDebug = w.__jjbDebug || {};
+    w.__jjbDebug.select = w.__jjbDebug.select || {};
+    w.__jjbDebug.select.warn = msg;
+  } catch { /* noop */ }
+}
+
+/** 清软违规提示（解除 ban / 重新校验通过时调）。 */
+export function clearSelectWarn(): void {
+  try {
+    const w: any = window;
+    if (w.__jjbDebug && w.__jjbDebug.select) w.__jjbDebug.select.warn = '';
+  } catch { /* noop */ }
+}
+
+/** 读当前软违规提示（SelectScreen toggleBan 后取来 setToast）。 */
+export function getSelectWarn(): string {
+  try {
+    const w: any = window;
+    return (w.__jjbDebug && w.__jjbDebug.select && w.__jjbDebug.select.warn) || '';
+  } catch { return ''; }
 }
 
 // ===== 段3 点金（select 屏运行时 toggle 因子金/非金）=====
@@ -710,25 +812,44 @@ export function getGoldFor(name: string): boolean {
 /** 清运行时点金（开新局时调，避免跨局残留）。 */
 export function clearGoldRuntime(): void { goldRuntime.clear(); }
 
-// ===== 因子 BP（ban：select 屏运行时标记因子禁用；当前赛制 ban 1，单选语义；不改 9 格槽/池结构，validate 旁路叠加） =====
-// 双打真引擎硬前置：guantu/feiqiu 双打的「ban 拿钱类因子」复用同一 BP 状态机。镜像点金 goldRuntime 模式。
-const bpBanRuntime = new Set<string>();
-const BP_BAN_LIMIT = 1; // 二选一之「ban 1 因子」；未来可配（startSession opts.banN）
+// ===== 规则态（practice/match）：P1b 比赛/练习分流地基（hub 拍板「方案A·模块级」，镜像 bpBanRuntime/goldRuntime） =====
+// practice(默认)=permissive-silent：禁因子/自选指挥官随意，不限制不提示；
+// match=enforce-with-toast：违规弹提示但不强拦（禁因子上限1、2A1B、二选一互斥仅在此态生效）。
+// 由 HomeScreen.start() 经 setRuleMode 写入；getSelectState/getBpState 透出；BP 规则逻辑读它分流。
+// 不随 startSession 重置：规则态由 home 入口决定、跨开局保留；e2e/?screen=select 直跳不经 home 时取默认 practice。
+let ruleMode: 'practice' | 'match' = 'practice';
+export function setRuleMode(m: 'practice' | 'match'): void { ruleMode = m === 'match' ? 'match' : 'practice'; }
+export function getRuleMode(): 'practice' | 'match' { return ruleMode; }
 
-/** toggle 某因子 ban 态（单选：达上限再 ban 别的会替换旧 ban）。 */
+// ===== 因子 BP（ban：select 屏运行时标记因子禁用；不改 9 格槽/池结构，validate 旁路叠加） =====
+// 双打真引擎硬前置：guantu/feiqiu 双打的「ban 拿钱类因子」复用同一 BP 状态机。镜像点金 goldRuntime 模式。
+// 规则态分流（P1b）：practice 无上限累加、不提示；match 上限 BP_BAN_LIMIT，超出写软违规「超出比赛规则」(不强拦、不替换、第1个仍有效)。
+const bpBanRuntime = new Set<string>();
+const BP_BAN_LIMIT = 1; // 比赛态「禁因子」每局上限（二选一之「ban 1 因子」）；练习态不设上限。
+
+/** toggle 某因子 ban 态。
+ *  practice：无上限自由累加/解除，不提示；
+ *  match：已 ban 则解除；未 ban 且达上限 → 不落、写「超出比赛规则」软提示（不强拦、不替换、第1个仍有效）。 */
 export function toggleBanFactor(name: string): void {
   if (!name) return;
-  if (bpBanRuntime.has(name)) { bpBanRuntime.delete(name); return; }
-  if (bpBanRuntime.size >= BP_BAN_LIMIT) bpBanRuntime.clear(); // 单选替换
+  if (bpBanRuntime.has(name)) { bpBanRuntime.delete(name); clearSelectWarn(); return; }
+  if (ruleMode === 'match' && bpBanRuntime.size >= BP_BAN_LIMIT) {
+    exposeSelectWarn('超出比赛规则：禁用因子每局限 ' + BP_BAN_LIMIT + ' 个');
+    return; // 不替换、不落第 2 个；第 1 个 ban 仍有效（违规不强拦）
+  }
   bpBanRuntime.add(name);
+  // match 态二选一即时反馈：ban 后若已用自选指挥官 → 提示二选一冲突（done-when 4，不强拦）。
+  if (ruleMode === 'match' && jjbLive() && usedSelfPick(JijieData as any)) {
+    exposeSelectWarn('禁因子与自选指挥官二选一：已用自选指挥官，禁因子不可用（超出比赛规则）');
+  }
 }
 
 /** 该因子是否被 BP ban。 */
 export function getBanFor(name: string): boolean { return !!name && bpBanRuntime.has(name); }
 
-/** BP 当前态快照（给 UI / __jjbDebug / e2e）。 */
-export function getBpState(): { banned: string[]; banLimit: number } {
-  return { banned: [...bpBanRuntime], banLimit: BP_BAN_LIMIT };
+/** BP 当前态快照（给 UI / __jjbDebug / e2e）。ruleMode 透出供 UI 分流 enforce/permissive。 */
+export function getBpState(): { banned: string[]; banLimit: number; ruleMode: 'practice' | 'match' } {
+  return { banned: [...bpBanRuntime], banLimit: BP_BAN_LIMIT, ruleMode };
 }
 
 /** 清运行时 BP（开新局时调，避免跨局残留）。 */

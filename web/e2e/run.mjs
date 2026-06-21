@@ -92,6 +92,7 @@ try {
     setSelectedCmd, setSelectedFac, startFromSelection, getSessionMatches, exposeBattleDebug,
     factorScore, difficultyTotal, toggleGold, getGoldFor,
     toggleBanFactor, getBanFor, getBpState, randomFillSelection,
+    setRuleMode, getRuleMode, getSelectWarn, getBpExclusive,
   } = mod;
   const dmod = await server.ssrLoadModule('/src/logic/jjbDoubles.ts');
   const {
@@ -315,25 +316,36 @@ try {
         if (ss2.status === 3) fail(`${mode}: 池不足时 startFromSelection 不应切 JijieData.status=3`);
       }
 
-      // 3) B 组超额（仅 mfc>2 && !onePick 生效）
-      const mfc = ss.modelFactorCount;
-      if (!ss.modeIsOnePick && mfc > 2) {
-        // 从 cmdBPool 找 2 个 B 组（commadnerGroupList['B'] 已 ban 过滤）
-        if (cmdBPool.length >= 2) {
-          startSession(mode);
-          setSelectedCmd(0, cmdBPool[0]);
-          setSelectedCmd(1, cmdBPool[1]);
-          // 因子也填
-          let fi3 = 0;
-          for (let slot = 0; slot < 3; slot++) {
-            for (let k = 0; k < manualSlots[slot] && fi3 < facPool.length; k++) {
-              setSelectedFac(slot, k, facPool[fi3++]);
-            }
-          }
-          const v2 = validate();
-          if (v2.ok) fail(`${mode}: 2 B 组应触发 B 组 ≤1 规则`);
-          if (!v2.errors.some((e) => e.includes('B组'))) fail(`${mode}: 2 B 组应报「B组」类错误, got=${JSON.stringify(v2.errors)}`);
-        }
+      // 3) 自选指挥官 2A1B（P2：仅 match 态 + 单刷三模式 std8/std10/std12 软违规、不阻断；practice 不限制）。
+      const isStdSolo3 = (mode === 'std8' || mode === 'std10' || mode === 'std12');
+      if (isStdSolo3 && cmdBPool.length >= 2 && cmdAPool.length >= 3) {
+        const fillFac = () => { let fp = 0; for (let slot = 0; slot < 3; slot++) for (let k = 0; k < manualSlots[slot] && fp < facPool.length; k++) setSelectedFac(slot, k, facPool[fp++]); };
+        // practice：2B+1A 全填 → 无 A/B 软违规、不阻断（随意）
+        setRuleMode('practice');
+        startSession(mode);
+        setSelectedCmd(0, cmdBPool[0]); setSelectedCmd(1, cmdBPool[1]); setSelectedCmd(2, cmdAPool[0]);
+        fillFac();
+        const vP = validate();
+        if (vP.warnings.some((w) => w.includes('A组') || w.includes('B组'))) fail(`${mode}: practice 态 2A1B 不应报软违规, got=${JSON.stringify(vP.warnings)}`);
+        if (!vP.ok) fail(`${mode}: practice 态全填不应阻断, errors=${JSON.stringify(vP.errors)}`);
+        // match：2B(超 B≤1) → B组 warn、不进硬错误、不阻断(不强拦)
+        setRuleMode('match');
+        startSession(mode);
+        setSelectedCmd(0, cmdBPool[0]); setSelectedCmd(1, cmdBPool[1]); setSelectedCmd(2, cmdAPool[0]);
+        fillFac();
+        const vB = validate();
+        if (!vB.warnings.some((w) => w.includes('B组'))) fail(`${mode}: match 态 2B 应报 B组 软违规, got=${JSON.stringify(vB.warnings)}`);
+        if (vB.errors.some((e) => e.includes('B组'))) fail(`${mode}: match B组超额不应进硬错误, got=${JSON.stringify(vB.errors)}`);
+        if (!vB.ok) fail(`${mode}: match 2B 软违规不应阻断(不强拦), errors=${JSON.stringify(vB.errors)}`);
+        // match：3A(超 A≤2) → A组 warn、不阻断
+        setRuleMode('match');
+        startSession(mode);
+        setSelectedCmd(0, cmdAPool[0]); setSelectedCmd(1, cmdAPool[1]); setSelectedCmd(2, cmdAPool[2]);
+        fillFac();
+        const vA = validate();
+        if (!vA.warnings.some((w) => w.includes('A组'))) fail(`${mode}: match 态 3A 应报 A组 软违规, got=${JSON.stringify(vA.warnings)}`);
+        if (!vA.ok) fail(`${mode}: match 3A 软违规不应阻断, errors=${JSON.stringify(vA.errors)}`);
+        setRuleMode('practice'); // 复位默认态，不污染后续 mode 循环
       }
     } catch (e) {
       fail(`${mode}: 异常 ${e && e.message ? e.message : e}`);
@@ -441,40 +453,129 @@ try {
     fail(`doubles: 接缝异常 ${e && e.message ? e.message : e}`);
   }
 
-  // ===== BP ban 断言（单刷因子 BP，双打真引擎硬前置；ban 作为 validate 旁路 + setSelectedFac 防御）=====
+  // ===== BP ban 断言（P1b 规则态分流：practice 无上限不提示 / match 上限1超出软违规不强拦）=====
   try {
-    startSession('std10'); // 10 因子，有手选因子池
+    // —— practice 态（默认）：无上限自由累加/解除，不提示（done-when 1）——
+    setRuleMode('practice');
+    startSession('std10');
     if (getBpState().banned.length !== 0) fail('BP: 新局应无 banned（startSession 重置）');
+    if (getRuleMode() !== 'practice') fail('BP: 默认应 practice 态');
+    toggleBanFactor('核弹打击'); toggleBanFactor('暴风雪'); toggleBanFactor('丧尸大战');
+    if (getBpState().banned.length !== 3) fail(`BP practice: 无上限应累加 3 个, got=${getBpState().banned.length}`);
+    if (getSelectWarn()) fail(`BP practice: 不应有违规提示, got=${getSelectWarn()}`);
+    toggleBanFactor('暴风雪'); // 解除
+    if (getBanFor('暴风雪')) fail('BP practice: 解除后 getBanFor 应 false');
+    if (getBpState().banned.length !== 2) fail('BP practice: 解除后应剩 2 个');
+
+    // —— match 态：上限 1，禁第2个软违规不强拦、第1个仍有效不替换（done-when 1+2）——
+    setRuleMode('match');
+    startSession('std10');
+    if (getRuleMode() !== 'match') fail('BP: setRuleMode(match) 后 getRuleMode 应 match');
+    if (getBpState().ruleMode !== 'match') fail('BP: getBpState.ruleMode 应透出 match');
     toggleBanFactor('核弹打击');
-    if (!getBanFor('核弹打击')) fail('BP: toggleBanFactor 后 getBanFor 应 true');
-    if (getBpState().banned.length !== 1) fail('BP: banned 应有 1 个');
-    // 单选替换（BP_BAN_LIMIT=1）：再 ban 别的，旧 ban 恢复
-    toggleBanFactor('暴风雪');
-    if (getBanFor('核弹打击')) fail('BP: 单选替换，旧 ban(核弹打击) 应恢复');
-    if (!getBanFor('暴风雪')) fail('BP: 新 ban(暴风雪) 应生效');
-    // setSelectedFac 防御：banned 因子不可落槽（slot0 k0 = selectedFactorList[0]）
-    setSelectedFac(0, 0, '暴风雪');
-    if (getSelectState().selectedFactorList[0] === '暴风雪') fail('BP: banned 因子不应落槽（setSelectedFac 防御）');
-    // 非 banned 因子正常落槽
+    if (!getBanFor('核弹打击')) fail('BP match: 第1个 ban 应生效');
+    if (getBpState().banned.length !== 1) fail('BP match: banned 应有 1 个');
+    toggleBanFactor('暴风雪'); // 禁第2个
+    if (getBanFor('暴风雪')) fail('BP match: 第2个 ban 不应生效（上限1）');
+    if (!getBanFor('核弹打击')) fail('BP match: 第1个 ban 应仍有效（不替换、不强拦）');
+    if (getBpState().banned.length !== 1) fail('BP match: 仍应只 1 个 banned');
+    if (!getSelectWarn().includes('超出比赛规则')) fail(`BP match: 禁第2个应提示「超出比赛规则」, got=${getSelectWarn()}`);
+
+    // setSelectedFac 防御：banned 因子不可落槽（两态一致）
     setSelectedFac(0, 0, '核弹打击');
-    if (getSelectState().selectedFactorList[0] !== '核弹打击') fail('BP: 非 banned 因子应能落槽');
-    // validate 旁路：已落槽因子被 ban 后 validate 应报「BP 禁用」
-    toggleBanFactor('核弹打击'); // 单选替换暴风雪，ban 已落槽的核弹打击
-    if (!validate().errors.some((e) => e.includes('BP 禁用'))) fail('BP: 已落槽因子被 ban 后 validate 应报「BP 禁用」');
-    // 护栏：随机填充放弃 BP ban（防 ban+随机 死角，不破坏池=槽恒等式；完整 ban×随机集成留完整 BP 轮）
+    if (getSelectState().selectedFactorList[0] === '核弹打击') fail('BP: banned 因子不应落槽（setSelectedFac 防御）');
+    setSelectedFac(0, 0, '暴风雪');
+    if (getSelectState().selectedFactorList[0] !== '暴风雪') fail('BP: 非 banned 因子应能落槽');
+
+    // 已落槽因子被 ban → match 态软违规 warn（不阻断），不强拦
+    setRuleMode('match');
+    startSession('std10');
+    {
+      const sx = getSelectState();
+      const f0 = (sx.randomFactorPoor || [])[0];
+      setSelectedFac(0, 0, f0);
+      toggleBanFactor(f0);
+      const vx = validate();
+      if (!vx.warnings.some((w) => w.includes('禁用'))) fail(`BP match: 已落槽因子被 ban 应报软违规 warn, got=${JSON.stringify(vx.warnings)}`);
+      if (vx.errors.some((e) => e.includes('禁用'))) fail(`BP match: banned 落槽不应进硬错误 errors（不强拦，仅软违规 warn）, errors=${JSON.stringify(vx.errors)}`);
+    }
+
+    // 违规不强拦：match 态 ban 锁定因子(含锁定、不占手选池)后全填手选 → startFromSelection 通过（ban 不阻断开局 done-when 2）
+    {
+      setRuleMode('match');
+      startSession('std10');
+      const sm = getSelectState();
+      const lockFac = (sm.lockFactorList || [])[0]; // ban 锁定因子（定稿「禁因子含锁定」；不占手选池，避免池=槽缺位）
+      if (lockFac) toggleBanFactor(lockFac);
+      if (lockFac && !getBanFor(lockFac)) fail('BP match: 应能 ban 锁定因子（禁因子含锁定）');
+      const cmds = (sm.randomCommanderPoorA || []).filter((c) => c !== '自选')
+        .concat((sm.randomCommanderPoorB || []).filter((c) => c !== '自选'));
+      for (let i = 0; i < 3; i++) setSelectedCmd(i, cmds[i]);
+      const fp = (sm.randomFactorPoor || []).filter((f) => !getBanFor(f)); // 手选池（锁定 ban 不在此，fp 完整）
+      let fi = 0;
+      for (let slot = 0; slot < 3; slot++) for (let k = 0; k < sm.manualSlots[slot] && fi < fp.length; k++) setSelectedFac(slot, k, fp[fi++]);
+      const rm = startFromSelection();
+      if (!rm.ok) fail(`BP match: ban 锁定因子后全填应通过（ban 不阻断开局）, errors=${JSON.stringify(rm.errors)}`);
+    }
+
+    // 护栏：随机填充放弃 BP ban（防 ban+随机 死角，不破坏池=槽恒等式）
+    setRuleMode('match');
     startSession('std10');
     toggleBanFactor('核弹打击');
     if (getBpState().banned.length !== 1) fail('BP护栏前置: ban 应生效');
     randomFillSelection();
     if (getBpState().banned.length !== 0) fail('BP护栏: randomFillSelection 应清 ban（随机=弃ban）');
     if (!validate().ok) fail('BP护栏: 随机填充后应能开局（无 banned 卡槽）err=' + JSON.stringify(validate().errors));
-    // 新局重置
+
+    // 新局重置 + 复位 practice（不污染后续）
     startSession('std8');
     if (getBpState().banned.length !== 0) fail('BP: startSession 应 clearBpRuntime');
-    pass('BP ban: 状态机/单选替换/落槽防御/validate旁路/随机护栏/新局重置 全过');
-    console.log('  [BP] ban 状态机 ✓ 单选替换 ✓ setSelectedFac 防御 ✓ validate 旁路 ✓ 随机填充护栏 ✓ 新局重置 ✓');
+    setRuleMode('practice');
+    pass('BP ban: practice无上限不提示 / match上限1超出软违规不强拦 / 落槽防御 / banned落槽warn / 护栏 / 新局重置 全过');
+    console.log('  [BP] practice累加✓ match上限1✓ 「超出比赛规则」提示✓ 第1个不替换✓ 落槽防御✓ banned落槽warn✓ 不强拦开局✓ 随机护栏✓ 新局重置✓');
   } catch (e) {
     fail(`BP: 断言异常 ${e && e.message ? e.message : e}`);
+  }
+
+  // ===== P2 二选一互斥 + getBpExclusive 断言（done-when 4：ban 因子 ⊕ 自选指挥官，__jjbDebug 可读启用哪支）=====
+  try {
+    setRuleMode('match');
+    startSession('std10');
+    if (getBpExclusive() !== null) fail(`二选一: 初始(未ban未自选)应 null, got=${getBpExclusive()}`);
+    const sm = getSelectState();
+    const banFac = (sm.randomFactorPoor || [])[0];
+    const selfCmd = (sm.selfPool || [])[0];
+    // 仅 ban → 'ban'
+    toggleBanFactor(banFac);
+    if (getBpExclusive() !== 'ban') fail(`二选一: 仅 ban 应 'ban', got=${getBpExclusive()}`);
+    // ban 后再选自选指挥官 → 'conflict' + 即时 warn + validate 软违规(不进硬错误)
+    if (selfCmd) {
+      setSelectedCmd(0, selfCmd);
+      if (getBpExclusive() !== 'conflict') fail(`二选一: ban+自选应 'conflict', got=${getBpExclusive()}`);
+      if (!getSelectWarn().includes('二选一')) fail(`二选一: ban+自选即时提示应含「二选一」, got=${getSelectWarn()}`);
+      const vC = validate();
+      if (!vC.warnings.some((w) => w.includes('二选一'))) fail(`二选一: validate 应报二选一软违规, got=${JSON.stringify(vC.warnings)}`);
+      if (vC.errors.some((e) => e.includes('二选一'))) fail(`二选一: 不应进硬错误(不强拦), got=${JSON.stringify(vC.errors)}`);
+      // 反向：解除 ban → 仅自选 'self'
+      toggleBanFactor(banFac);
+      if (getBpExclusive() !== 'self') fail(`二选一: 解除 ban 后仅自选应 'self', got=${getBpExclusive()}`);
+    }
+    // practice 态：ban + 自选 不报二选一（随意）
+    setRuleMode('practice');
+    startSession('std10');
+    const sp = getSelectState();
+    toggleBanFactor((sp.randomFactorPoor || [])[0]);
+    const spSelf = (sp.selfPool || [])[0];
+    if (spSelf) {
+      setSelectedCmd(0, spSelf);
+      const vPr = validate();
+      if (vPr.warnings.some((w) => w.includes('二选一'))) fail(`二选一: practice 态不应报二选一, got=${JSON.stringify(vPr.warnings)}`);
+    }
+    setRuleMode('practice'); // 复位
+    pass('P2 二选一互斥: ban⊕自选(match) / bpExclusive null·ban·self·conflict / 即时提示 / practice 不限制 全过');
+    console.log('  [二选一] null→ban→conflict(warn)→self ✓ validate 软违规不强拦 ✓ practice 随意 ✓');
+  } catch (e) {
+    fail(`二选一: 断言异常 ${e && e.message ? e.message : e}`);
   }
 } finally {
   await server.close();
