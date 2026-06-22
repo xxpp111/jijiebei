@@ -24,7 +24,12 @@ func registerRoutes(app core.App) {
 	})
 }
 
-// rankingsHandler: 天梯聚合（SUM(delta) GROUP BY player）。
+// rankingsHandler: 天梯聚合。
+//
+// 件1 战绩真实化：除 total_delta（积分）外，加 total_wins=SUM(s.wins)/total_games=SUM(s.games)
+//   供前端 LadderScreen 显「胜/总」战绩（替代旧 match_count「赛季对局」占位）。
+//   wins/games 为件1 migration 新增字段；旧 score 记录该字段为 nil，COALESCE 兜底 0（旧选手战绩显 0/0 不报错）。
+//   match_count=COUNT(s.id) 保留返（兼容/调试，前端不再用作主战绩列）。
 func rankingsHandler(e *core.RequestEvent) error {
 	season := e.Request.URL.Query().Get("season")
 	if season == "" {
@@ -32,9 +37,10 @@ func rankingsHandler(e *core.RequestEvent) error {
 	}
 
 	// scores.player 存 player record id（字符串），JOIN s.player = p.id。
-	// COUNT(s.id) = 该选手本赛季已记分对局数（非总局数，因 scores 仅 match mode 派生）。
 	q := `SELECT p.id AS player_id, p.nickname, p.player_code, p.race_pref,
 			COALESCE(SUM(s.delta), 0) AS total_delta,
+			COALESCE(SUM(s.wins), 0) AS total_wins,
+			COALESCE(SUM(s.games), 0) AS total_games,
 			COUNT(s.id) AS match_count
 		FROM players p
 		LEFT JOIN scores s ON s.player = p.id AND s.season = {:season}
@@ -48,6 +54,8 @@ func rankingsHandler(e *core.RequestEvent) error {
 		PlayerCode string  `json:"player_code"`
 		RacePref   string  `json:"race_pref"`
 		TotalDelta float64 `json:"total_delta"`
+		TotalWins  int     `json:"total_wins"`
+		TotalGames int     `json:"total_games"`
 		MatchCount int     `json:"match_count"`
 	}
 	var rows []rankingRow

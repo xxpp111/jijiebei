@@ -4,9 +4,10 @@ import { getRankings } from '../logic/backend';
 import { currentPlayerName } from '../logic/jjbView';
 
 // LadderScreen — 积分天梯页（承接 Claude Design 19b54387 集结杯积分天梯.dc.html · Brief G）。
-// 接 P5 /api/rankings（SUM(delta) GROUP BY player）：nickname/total_delta(积分)/match_count(赛季对局)。
+// 接 P5 /api/rankings（SUM(delta) GROUP BY player）：nickname/total_delta(积分)/total_wins/total_games(胜/总战绩)。
 // 段位由 total_delta 映射（设计稿图例阈值，系数表定稿前为示例）。3 态：loading 骨架 / ranked 榜单 / empty 即将上线（含后端不可达兜底）。
-interface RankRow { player_id: string; nickname: string; player_code: string; total_delta: number; match_count: number }
+// 件1：战绩列改真实「胜/总」(total_wins/total_games) 替代旧 match_count「赛季对局」占位；件2：nickname 走后端稳定值（rankings 已返 nickname）。
+interface RankRow { player_id: string; nickname: string; player_code: string; total_delta: number; total_wins: number; total_games: number; match_count: number }
 
 // 段位映射（设计稿图例：王者1200+/钻石900+/铂金750+/黄金600+，<600 新锐占位）。积分系数表定稿后再校阈值。
 function tierOf(pts: number): { name: string; size: '' | 'd2' | 'd3'; muted: boolean } {
@@ -89,7 +90,7 @@ export function LadderScreen({ style, mode }: { style: string; mode: string }) {
                     <div className="lad-rank"><span className="lad-rank-hash">#</span><span className="lad-rank-no">{String(i + 1).padStart(2, '0')}</span></div>
                     <div className="lad-id"><span className="lad-id-name">{r.nickname}</span>{isMe && <span className="lad-me-chip">我</span>}</div>
                     <div className="lad-tier"><span className={'lad-tier-mark' + (t.size ? ' ' + t.size : '')}></span><span className={'lad-tier-name' + (t.muted ? ' muted' : '')}>{t.name}</span></div>
-                    <div className="lad-wl"><b>{r.match_count}</b><span className="lad-wl-k">赛季对局</span></div>
+                    <div className="lad-wl"><b>{r.total_wins}</b><span className="lad-wl-sep">/</span><b>{r.total_games}</b><span className="lad-wl-k">胜/总</span></div>
                     <div className="lad-pts"><b>{fmtPts(r.total_delta)}</b><span className="lad-pts-k">分</span></div>
                   </div>
                 );

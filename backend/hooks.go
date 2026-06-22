@@ -50,11 +50,13 @@ func registerHooks(app core.App) {
 // scoreMatch 解析 match.result 算获胜场 × 系数 = delta，为每个 player 写 scores + score.adjust logs。
 func scoreMatch(app core.App, match *core.Record) error {
 	gameMode := match.GetString("game_mode")
+	resultArr := parseWinLoseList(match.Get("result"))
 	wins := countWins(match.Get("result"))
+	games := len(resultArr) // 本局总局数 = len(winLoseList)（通常 BO3=3）
 	delta, coef := calcDelta(gameMode, wins)
 	season := currentSeason()
 	playerIDs := match.GetStringSlice("players")
-	reason := fmt.Sprintf("wins=%d × coef=%.2f (%s) season=%s", wins, coef, gameMode, season)
+	reason := fmt.Sprintf("wins=%d/games=%d × coef=%.2f (%s) season=%s", wins, games, coef, gameMode, season)
 
 	scoresCol, err := app.FindCollectionByNameOrId("scores")
 	if err != nil {
@@ -70,6 +72,8 @@ func scoreMatch(app core.App, match *core.Record) error {
 		s.Set("player", pid)
 		s.Set("match", match.Id)
 		s.Set("delta", delta)
+		s.Set("wins", wins)   // 件1：本局该选手获胜场（v==1||v==2 计数）
+		s.Set("games", games) // 件1：本局总局数（len winLoseList）
 		s.Set("reason", reason)
 		s.Set("season", season)
 		if err := app.Save(s); err != nil {
