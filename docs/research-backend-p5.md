@@ -33,7 +33,7 @@
 |---|---|---|---|
 | `mode` | select | `practice`/`match`, required | **入口分流落库点**，对齐 live `setRuleMode('practice'\|'match')`（`HomeScreen` 比赛/练习 tab）|
 | `game_mode` | text | required | 赛制模式标识，**直接存 live `SessionMode` 字符串**：`std8`/`std10`/`std12`/`rescue`/`one-a`/`hard1`/`hard2`/`feiqiu`/`suiji`/`doubles`/`feiqiu-doubles`（11 种，权威源 `jjbSession.ts:64`）|
-| `payload_code` | text | required, max ~512 | 整局选择的**索引化码**，与 P3 码方案同一编码器产出。单局完整可还原（指挥官/锁定因子/自选因子/地图/敌方种族AI/模式）|
+| `payload_code` | text | required, max 2048（联调修正：初稿 ~512 偏小，codec 实测自包含码≤858，见「P5↔前端联调」） | 整局选择的**索引化码**，与 P3 码方案同一编码器产出。单局完整可还原（指挥官/锁定因子/自选因子/地图/敌方种族AI/模式）|
 | `payload_ver` | number | required | 码 schema 版本号；池重排时解码侧校验（见研报开放问题 #2）|
 | `players` | relation→players | multi, optional | 参与选手；练习可空/匿名，双打 2 人 |
 | `host` | relation→accounts | single, optional | 主持该局的主播账号；练习模式可空 |
@@ -327,7 +327,7 @@ cd /Users/bytedance/项目/jijiebei && claude -n jjb-p5-backend
 
   schema 关键约束（对齐 live，禁自创字段语义）：
   - matches.game_mode = 直存 SessionMode 字符串（std8/std10/std12/rescue/one-a/hard1/hard2/feiqiu/suiji/doubles/feiqiu-doubles）
-  - matches.payload_code = 单字段存整局索引码（与 P3 码方案复用同一编码，本 round 仅定字段+长度上限~512，编码器实现属前端/P3）
+  - matches.payload_code = 单字段存整局索引码（与 P3 码方案复用同一编码，本 round 仅定字段+长度上限（初稿 ~512 → 联调修正 2048，codec 实测≤858），编码器实现属前端/P3）
   - matches.result = 直存 winLoseList JSON 数组
   - matches.mode = practice/match（练习 mode=practice，hook 跳过算分）
   - scores 不接受前端直接写（createRule admin-only，hook 用 superuser dao 写）
