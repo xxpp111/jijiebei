@@ -7,6 +7,7 @@ import './styles/bp-config.css';
 import './styles/random-enemy.css';
 import './styles/promo-bar.css';
 import './styles/home-mode.css';
+import './styles/bp.css';
 
 ReactDOM.createRoot(document.getElementById('react-root')!).render(
   <React.StrictMode>

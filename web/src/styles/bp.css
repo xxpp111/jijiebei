@@ -1,0 +1,70 @@
+/* 集结杯 select 屏 BP 违规提示视觉 — 承接 Claude Design 项目 19b54387 的 bp.css (Brief A)。
+   ① 因子 ban 角标 .bp-ban  ② 被禁池中态 .fx.fx-banned  ③ 软违规 banner .toastv.soft
+   全 token 驱动(.style-X × .mode-Y)，复用 repo 现有 .toastv/.fx 形状语言。import 须在 index.css(theme + v4 .toastv/.fx) 之后。 */
+
+/* --warn 软违规语义色（琥珀）：硬错误沿用 --lose，软违规用 --warn，两者分层、与各皮 accent 分离 */
+.jjb { --warn: #d8a23c; --on-warn: #1a1206; }
+.style-sc2.mode-dark    { --warn: #d8a23c; --on-warn: #1a1206; }
+.style-sc2.mode-light   { --warn: #b07512; --on-warn: #ffffff; }
+.style-metal.mode-dark  { --warn: #e0903c; --on-warn: #1a1206; }
+.style-metal.mode-light { --warn: #bd6314; --on-warn: #ffffff; }
+.style-minimal.mode-dark  { --warn: #e0a23c; --on-warn: #14140a; }
+.style-minimal.mode-light { --warn: #b9780f; --on-warn: #ffffff; }
+
+/* ===== §1 因子 ban 角标 .bp-ban（左上 · 与右上点金 GoldBadge 对称分置） =====
+   两态：可禁(中性 muted) / .on 已禁(--lose 实心红)。22px 圆 toggle。 */
+.bp-ban {
+  position: absolute; top: -8px; left: -8px; z-index: 6;
+  width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(7, 11, 19, .9); color: var(--muted);
+  box-shadow: inset 0 0 0 1.5px var(--muted), 0 2px 6px rgba(0, 0, 0, .5);
+  transition: transform .12s, box-shadow .12s, background .12s, color .12s;
+}
+.mode-light .bp-ban { background: rgba(255, 255, 255, .94); box-shadow: inset 0 0 0 1.5px var(--muted), 0 2px 6px rgba(21, 35, 58, .25); }
+.bp-ban svg { width: 13px; height: 13px; display: block; }
+.bp-ban:hover { color: var(--lose); box-shadow: inset 0 0 0 1.5px var(--lose), 0 2px 9px rgba(0, 0, 0, .55); }
+.bp-ban:active { transform: scale(.88); }
+.bp-ban.on {
+  background: var(--lose); color: #fff;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--lose) 55%, #000), 0 2px 9px color-mix(in srgb, var(--lose) 45%, transparent);
+}
+.bp-ban.on:hover { background: color-mix(in srgb, var(--lose) 88%, #fff); }
+
+/* ===== §2 被禁因子 · 池中态 .fx.fx-banned（斜纹罩 + 降饱和压暗 + 底部「已禁」红 chip） ===== */
+.fx.fx-banned { cursor: not-allowed; }
+.fx.fx-banned .fx-art { filter: saturate(.28) brightness(.62); }
+.fx.fx-banned .fx-frame { filter: saturate(.4) brightness(.8); opacity: .8; }
+.fx.fx-banned::after {
+  content: ""; position: absolute; left: 7%; top: 7%; width: 86%; height: 86%; z-index: 4; pointer-events: none;
+  background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--lose) 42%, transparent) 0 4px, transparent 4px 10px);
+}
+.fx-bantag {
+  position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); z-index: 5;
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  padding: 2px 7px 2px 5px; line-height: 1; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  background: var(--lose); color: #fff;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lose) 55%, #000), 0 1px 5px rgba(0, 0, 0, .5);
+}
+.fx-bantag svg { width: 9px; height: 9px; display: block; }
+
+/* ===== §3 违规 banner — 复用 .toastv 形状，软/硬分层 =====
+   硬错误 = .toastv.hard(阻断 · --lose) / 软违规 = .toastv.soft(放行 · --warn) */
+.toastv.soft { background: color-mix(in srgb, var(--warn) 15%, rgba(9, 13, 21, .9)); box-shadow: inset 0 0 0 1px var(--warn), 0 6px 18px rgba(0, 0, 0, .4); max-width: 760px; }
+.mode-light .toastv.soft { background: color-mix(in srgb, var(--warn) 12%, #ffffff); }
+.toastv.soft .toastv-ico { background: var(--warn); color: var(--on-warn); }
+.toastv.soft .toastv-tx { font-weight: 600; color: var(--ink); white-space: normal; }
+.toastv.soft .toastv-n { background: var(--warn); color: var(--on-warn); }
+.toastv-rule { flex: none; margin-left: auto; padding-left: 12px; white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--warn); }
+.toastv-rule::before { content: ""; display: inline-block; width: 1px; height: 12px; margin-right: 11px; vertical-align: -2px; background: color-mix(in srgb, var(--warn) 45%, transparent); }
+.toastv.hard { max-width: 760px; }
+.toastv.hard .toastv-tx { white-space: normal; }
+.toastv-block { flex: none; margin-left: auto; padding-left: 12px; white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--lose); }
+.toastv-block::before { content: ""; display: inline-block; width: 1px; height: 12px; margin-right: 11px; vertical-align: -2px; background: color-mix(in srgb, var(--lose) 45%, transparent); }
+.toastv-stack { position: relative; }
+.toastv-stack::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: -5px; height: 6px; z-index: -1; background: var(--panel-bg); border: 1px solid var(--panel-edge); border-top: 0; }
+.style-minimal .toastv-stack::after { border-radius: 0 0 7px 7px; }
+
+/* 开赛按钮：软违规 warned(金描边·仍可点) / 硬错误 blocked(置灰) */
+.startbtn.warned { box-shadow: inset 0 0 0 2px var(--warn), 0 0 18px color-mix(in srgb, var(--warn) 22%, transparent); }
+.startbtn.blocked { color: var(--muted); cursor: not-allowed; box-shadow: inset 0 0 0 1px var(--panel-edge); filter: saturate(.5) brightness(.85); }

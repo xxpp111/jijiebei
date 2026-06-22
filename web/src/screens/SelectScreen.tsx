@@ -94,20 +94,16 @@ function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle
 function BpBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
   return (
     <button
-      className="bp-ban-toggle"
+      className={'bp-ban' + (on ? ' on' : '')}
       data-bp-ban-toggle={name}
       data-bp-banned={on ? '1' : '0'}
       title="BP 禁用 / 取消禁用"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      style={{
-        position: 'absolute', top: -6, left: -6, width: 20, height: 20, borderRadius: 10,
-        border: '1px solid rgba(0,0,0,0.35)', cursor: 'pointer', fontSize: 11, lineHeight: '18px',
-        padding: 0, fontWeight: 700, zIndex: 3,
-        background: on ? 'var(--lose, #d9534f)' : 'rgba(20,20,20,0.7)', color: on ? '#fff' : '#ddd',
-      }}
     >
-      {on ? '⊘' : '禁'}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+        <circle cx="12" cy="12" r="8.5"></circle><line x1="6.2" y1="6.2" x2="17.8" y2="17.8"></line>
+      </svg>
     </button>
   );
 }
@@ -125,7 +121,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
     }
   }, []);
   // 校验失败 toast：开始按钮按下时塞
-  const [toast, setToast] = useState<{ msg: string; count: number } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; count: number; kind: 'hard' | 'soft' } | null>(null);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4000);
@@ -184,7 +180,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
         if (kind === 'cmd') {
           setSelectedCmd(slot, name);
           const w = getSelectWarn(); // P2 二选一即时提示（match 态选自选指挥官且已 ban）
-          if (w) setToast({ msg: w, count: 1 });
+          if (w) setToast({ msg: w, count: 1, kind: 'soft' });
         } else {
           setSelectedFac(slot, idx, name);
         }
@@ -202,7 +198,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
   const handleStart = () => {
     const r = startFromSelection();
     if (!r.ok) {
-      setToast({ msg: r.firstError, count: r.errors.length });
+      setToast({ msg: r.firstError, count: r.errors.length, kind: 'hard' });
       return;
     }
     onStart();
@@ -363,9 +359,9 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                   }}
                   style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block', opacity: getBanFor(f) ? 0.45 : 1 }}
                 >
-                  <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} />
+                  <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} banned={getBpModeEnabled(s.mode) && getBanFor(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
-                  {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1 }); setTick((x) => x + 1); }} />}
+                  {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1, kind: 'soft' }); setTick((x) => x + 1); }} />}
                 </span>
               ))}
             </div>
@@ -447,10 +443,11 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
             </div>
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
               {toast && (
-                <div className="toastv" data-toast-err>
+                <div className={'toastv ' + toast.kind + (toast.count > 1 ? ' toastv-stack' : '')} data-toast-err data-toast-kind={toast.kind}>
                   <span className="toastv-ico">!</span>
                   <span className="toastv-tx">{toast.msg}</span>
                   {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
+                  <span className={toast.kind === 'soft' ? 'toastv-rule' : 'toastv-block'}>{toast.kind === 'soft' ? '仍可开赛' : '阻断开赛'}</span>
                 </div>
               )}
               <EnemyStatusPill />
@@ -463,7 +460,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 随机填充
               </button>
               <button
-                className="startbtn"
+                className={'startbtn' + (toast?.kind === 'soft' ? ' warned' : '')}
                 data-start-btn
                 style={{ margin: 0 }}
                 onClick={handleStart}
@@ -501,7 +498,7 @@ function isPickedDoubles(slots: Array<{ cmds: (string | null)[]; factors: (strin
 
 function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
   const [, setTick] = useState(0);
-  const [toast, setToast] = useState<{ msg: string; count: number } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; count: number; kind: 'hard' | 'soft' } | null>(null);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4000);
@@ -545,7 +542,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
 
   const handleStart = () => {
     const r = validateDoubles();
-    if (!r.ok) { setToast({ msg: r.firstError, count: r.errors.length }); return; }
+    if (!r.ok) { setToast({ msg: r.firstError, count: r.errors.length, kind: 'hard' }); return; }
     onStart();
   };
   const handleRandomFill = () => { randomFillDoubles(); setTick((x) => x + 1); };
@@ -665,10 +662,11 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
             </div>
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
               {toast && (
-                <div className="toastv" data-toast-err>
+                <div className={'toastv ' + toast.kind + (toast.count > 1 ? ' toastv-stack' : '')} data-toast-err data-toast-kind={toast.kind}>
                   <span className="toastv-ico">!</span>
                   <span className="toastv-tx">{toast.msg}</span>
                   {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
+                  <span className={toast.kind === 'soft' ? 'toastv-rule' : 'toastv-block'}>{toast.kind === 'soft' ? '仍可开赛' : '阻断开赛'}</span>
                 </div>
               )}
               <EnemyStatusPill />
