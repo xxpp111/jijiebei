@@ -68,7 +68,7 @@ func createAllCollections(app core.App) error {
 	matches.Fields.Add(
 		&core.SelectField{Name: "mode", Required: true, Presentable: true, Values: []string{"practice", "match"}, MaxSelect: 1},
 		&core.TextField{Name: "game_mode", Required: true, Max: 32}, // 直存 live SessionMode 字符串（11 枚举）
-		&core.TextField{Name: "payload_code", Required: true, Max: 512}, // 整局索引码（与 P3 码方案同一编码器）
+		&core.TextField{Name: "payload_code", Required: true, Max: 2048}, // 整局索引码（与 P3 codec 同一编码器；max 2048 容纳 codec 自包含码实测≤858 + URL #hash 上限~2000 余量）
 		&core.NumberField{Name: "payload_ver", Required: true},          // 码 schema 版本号
 		&core.RelationField{Name: "players", CollectionId: players.Id, MaxSelect: 20}, // 参与选手（双打 2 人，留余量）
 		&core.RelationField{Name: "host", CollectionId: accounts.Id, MaxSelect: 1},    // 主持主播（practice 可空）

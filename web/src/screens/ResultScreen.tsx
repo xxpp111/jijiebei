@@ -3,9 +3,38 @@ import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { BrandLockup } from '../components/BrandLockup';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
-import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, ensureDoublesSessionFromUrl } from '../logic/jjbView';
+import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, currentSessionMode, ensureDoublesSessionFromUrl } from '../logic/jjbView';
+import { encodePayload, capturePayload, PAYLOAD_VER } from '../logic/codec';
+import { getRuleMode, getScore } from '../logic/jjbSession';
+import { postMatch, getToken, getAccount, getPlayerByCode } from '../logic/backend';
+import JijieData from '../logic/legacy/JijieData';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
+
+// P5 联调：比赛模式一局判定满 3 场 → 落库（codec 编码 + postMatch + 防重 + 选手关联尽力）。
+// 练习 / 未登录(无 host token) / 未判满 不落；选手 ID 匹配 player_code 则关联(hook 派生 scores)。落库失败不阻断结算。
+async function maybePostMatch(): Promise<void> {
+  try {
+    if (getRuleMode() !== 'match' || !getToken()) return;
+    const ms = currentMatches();
+    if (ms.length < 3 || ms.some((m) => !m.result)) return;
+    const code = encodePayload(capturePayload());
+    const key = 'jjb_posted_' + code.slice(0, 40);
+    if (sessionStorage.getItem(key)) return; // 防重：同局码不重复落
+    sessionStorage.setItem(key, '1');
+    const player = await getPlayerByCode(currentPlayerName());
+    await postMatch({
+      mode: 'match', game_mode: currentSessionMode(), payload_code: code, payload_ver: PAYLOAD_VER,
+      players: player ? [player.id] : [], host: getAccount()?.id,
+      result: (JijieData as unknown as { winLoseList?: number[] }).winLoseList || [], score_total: getScore(),
+    });
+    // eslint-disable-next-line no-console
+    console.log('[jjb] 比赛局已落库');
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[jjb] 落库失败（不阻断结算）:', (e as Error).message);
+  }
+}
 
 // ResultScreen — 结算屏（段3③）。承接后端 JJBResult.build：TopBar + 大比分 banner + 战绩卡列表 + 页脚。
 // 大比分 = getScore()（winCount，含带奖励不双计）；战绩卡 result 从 sessionMatches 反查。0 改 jijie2。
@@ -13,6 +42,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     if (ensureDoublesSessionFromUrl()) setTick((x) => x + 1);
+    void maybePostMatch(); // P5 联调：比赛局落库（仅 match 态 + 已登录 + 判满，幂等）
   }, []);
 
   const matches = currentMatches();

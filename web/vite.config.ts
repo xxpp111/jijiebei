@@ -14,10 +14,13 @@ export default defineConfig({
     port: 7788,
     fs: { allow: [resolve(__dirname, '..')] },
     allowedHosts: ['.trycloudflare.com'], // cloudflared quick tunnel 公网测试放行（jjb-run-broadcast）
+    // P5 联调：/api 反代到本地 PocketBase 8090（同源免 CORS，对齐生产 deploy/nginx-api.conf）
+    proxy: { '/api': 'http://127.0.0.1:8090' },
   },
   preview: {
     port: 7788,
     allowedHosts: ['.trycloudflare.com'],
+    proxy: { '/api': 'http://127.0.0.1:8090' },
   },
   build: { outDir: 'dist', target: 'es2020' },
 });
