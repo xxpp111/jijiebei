@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { BrandLockup } from '../components/BrandLockup';
+import { CaptureButtons } from '../components/CaptureButtons';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, currentSessionMode, ensureDoublesSessionFromUrl } from '../logic/jjbView';
 import { encodePayload, capturePayload, PAYLOAD_VER } from '../logic/codec';
@@ -51,7 +52,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
   const playerName = currentPlayerName();
 
   return (
-    <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`result-${style}-${mode}`}>
+    <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-capture="result" data-screen-label={`result-${style}-${mode}`}>
       <div className="jjb-bg">
         <div className="bg-grad"></div>
         <div className="bg-tex"></div>
@@ -145,6 +146,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
               <b>集结杯文档</b>飞书知识库
             </a>
           </span>
+          <CaptureButtons targetSelector='[data-capture="result"]' filename="jjb-result.png" />
         </div>
       </div>
     </div>

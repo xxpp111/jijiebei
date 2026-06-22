@@ -95,7 +95,7 @@ export function ObsBar({ style, mode, rows, wins, total, difficulty, playerId }:
     r.status === 'live' ? 'live' : r.status === 'wait' ? 'wait' : r.verdict === 'win' || r.verdict === 'bonus' ? 'win' : r.verdict === 'lose' ? 'lose' : 'wait',
   );
   return (
-    <div className={`obsbar style-${style} mode-${mode}` + (playerId ? ' with-name' : '')} data-screen-label={`obs-bar-${style}-${mode}`}>
+    <div className={`obsbar style-${style} mode-${mode}` + (playerId ? ' with-name' : '')} data-screen-label={`obs-bar-${style}-${mode}`} data-capture="obs">
       <div className="bg-tex"></div>
       <div className="obsbar-edge"></div>
       <div className="obsbar-inner">

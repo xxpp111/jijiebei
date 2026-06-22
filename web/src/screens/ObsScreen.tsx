@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ObsBar, type ObsRow } from '../components/ObsBar';
+import { CaptureButtons } from '../components/CaptureButtons';
 import { startRandomSession, exposeObsbarDebug, jjbLive } from '../logic/jjbSession';
 import { currentDifficultyTotal, currentEnemyAi, currentEnemyRace, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
 import { getPlayerByCode } from '../logic/backend';
@@ -86,6 +87,9 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
           ← 返回
         </button>
       )}
+
+      {/* 导出当前横条为 PNG（?bare=1 纯采集态时 CaptureButtons 自返回 null，不污染采集产物） */}
+      <CaptureButtons targetSelector='[data-capture="obs"]' filename="jjb-obs.png" scale={3} />
 
       {/* 采集线外：判定控制条（主播点胜负，横条实时更新；?bare=1 纯采集时隐藏） */}
       {!bare && (

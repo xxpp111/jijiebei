@@ -4,6 +4,7 @@ import { FactorFrame } from '../components/FactorFrame';
 import { DropCell } from '../components/DropCell';
 import { BrandLockup } from '../components/BrandLockup';
 import { EnemyBadge } from '../components/EnemyBadge';
+import { CaptureButtons } from '../components/CaptureButtons';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 import {
   getSelectState,
@@ -227,6 +228,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
       className={`jjb style-${style} mode-${mode}`}
       style={{ width: 1280, height: 720 }}
       data-screen-label={`select-${style}-${mode}-${s.mode}`}
+      data-capture="select"
     >
       <div className="jjb-bg">
         <div className="bg-grad"></div>
@@ -451,6 +453,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 </div>
               )}
               <EnemyStatusPill />
+              <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select.png" />
               <button
                 className="startbtn"
                 data-random-fill-btn
@@ -562,6 +565,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
       className={`jjb style-${style} mode-${mode}`}
       style={{ width: 1280, height: 720 }}
       data-screen-label={`select-${style}-${mode}-doubles`}
+      data-capture="select"
       data-doubles-select
     >
       <div className="jjb-bg"><div className="bg-grad"></div><div className="bg-tex"></div><div className="bg-vignette"></div></div>
@@ -670,6 +674,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                 </div>
               )}
               <EnemyStatusPill />
+              <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select-doubles.png" />
               <button className="startbtn" data-doubles-random-fill-btn style={{ margin: 0, padding: '14px 26px' }} onClick={handleRandomFill}>随机填充</button>
               <button className="startbtn" data-doubles-start-btn style={{ margin: 0 }} onClick={handleStart}>比赛开始 <span className="startbtn-arrow">▶</span></button>
             </div>
