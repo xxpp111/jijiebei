@@ -1,0 +1,60 @@
+/* ============================================================
+   集结杯 UI kit — ObsBar 选手 ID 强化展示（承接 Claude Design 19b54387 obs-name.css · Brief E）
+   左栏新增：选手 ID 名牌 (.obs-name) + LIVE 直播态 + 赛季/轮次小标
+   横条专属：总高 ≤232px、?bare=1 纯采集态成立、密度对齐 obs-fuller。
+   Token 驱动 (.style-X × .mode-Y)。import 须在 index.css(含 obs 样式) 之后。
+   ============================================================ */
+
+/* 左栏加宽以容纳名牌，仍不挤压 3 场列（hero 加宽逻辑在 .obs-matches 内部生效） */
+.obsbar.with-name .obs-score { flex: 0 0 226px; }
+
+/* ---------------- 选手 ID 名牌 .obs-name ---------------- */
+.obs-name {
+  display: flex; align-items: stretch; gap: 0; min-width: 0;
+  background: var(--panel-bg); border: 1px solid var(--panel-edge);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.style-metal .obs-name { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.style-minimal .obs-name { border-radius: 7px; }
+.style-sc2 .obs-name { position: relative; }
+.style-sc2 .obs-name::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none; }
+
+.obs-name-body { flex: 1; min-width: 0; padding: 8px 11px 9px 13px; display: flex; flex-direction: column; gap: 3px; justify-content: center; }
+.obs-name-kicker { display: flex; align-items: center; gap: 7px; }
+.obs-name-tag { font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
+/* LIVE 直播态点 */
+.obs-live { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent); white-space: nowrap; }
+.obs-live .lv-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 7px var(--accent); flex: none; animation: obspulse 1.1s ease-in-out infinite; }
+
+/* 选手 ID 主体 — OBS 远距可读，字号偏大 + 截断 (maxLength 24) */
+.obs-name-id {
+  font-family: var(--font-title); font-weight: 900; font-size: 27px; line-height: 1.04;
+  letter-spacing: 1px; color: var(--accent); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.style-metal .obs-name-id { font-family: "Noto Serif SC", "Noto Sans SC", serif; }
+.mode-light .obs-name-id { text-shadow: none; }
+.mode-dark .obs-name-id { text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 24%, transparent); }
+/* 长 ID 自动降一档（≥10 字时） */
+.obs-name-id.long { font-size: 22px; }
+.obs-name-id.xlong { font-size: 18px; letter-spacing: 0; }
+
+/* 名牌右侧赛季/轮次徽（可选小标，竖向，不抢主 ID） */
+.obs-name-side {
+  flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.obs-name-side .ns-k { font-family: var(--font-num); font-size: 8.5px; letter-spacing: 1.5px; color: var(--muted); }
+.obs-name-side .ns-v { font-family: var(--font-title); font-size: 19px; font-weight: 900; color: var(--accent); line-height: 1; }
+.style-metal .obs-name-side .ns-v { font-family: "Noto Serif SC", "Noto Sans SC", serif; }
+
+/* 左栏纵向重排：名牌 / 比分 / pips 三层，比分压缩让位名牌 */
+.obsbar.with-name .obs-score-win { font-size: 60px; }
+.obsbar.with-name .obs-score-of { font-size: 26px; }
+.obsbar.with-name .obs-score-main { gap: 8px; }
+/* 难度总分内联进比分行右侧 */
+.obs-diff-inline { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.obs-diff-inline .di-v { font-family: var(--font-title); font-size: 30px; font-weight: 900; color: var(--ink); letter-spacing: -1px; }
+.style-metal .obs-diff-inline .di-v { font-family: "Noto Serif SC", "Noto Sans SC", serif; }
+.obs-diff-inline .di-k { font-family: var(--font-num); font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-top: 3px; }

@@ -90,12 +90,12 @@ function ObsMatch({ row }: { row: ObsRow }) {
   );
 }
 
-export function ObsBar({ style, mode, rows, wins, total, difficulty }: { style: string; mode: string; rows: ObsRow[]; wins: number; total: number; difficulty?: number }) {
+export function ObsBar({ style, mode, rows, wins, total, difficulty, playerId }: { style: string; mode: string; rows: ObsRow[]; wins: number; total: number; difficulty?: number; playerId?: string }) {
   const pips = rows.map((r) =>
     r.status === 'live' ? 'live' : r.status === 'wait' ? 'wait' : r.verdict === 'win' || r.verdict === 'bonus' ? 'win' : r.verdict === 'lose' ? 'lose' : 'wait',
   );
   return (
-    <div className={`obsbar style-${style} mode-${mode}`} data-screen-label={`obs-bar-${style}-${mode}`}>
+    <div className={`obsbar style-${style} mode-${mode}` + (playerId ? ' with-name' : '')} data-screen-label={`obs-bar-${style}-${mode}`}>
       <div className="bg-tex"></div>
       <div className="obsbar-edge"></div>
       <div className="obsbar-inner">
@@ -103,6 +103,22 @@ export function ObsBar({ style, mode, rows, wins, total, difficulty }: { style: 
           <div className="obs-score-brand">
             <BrandLockup styleName={style} modeName={mode} size="obs" />
           </div>
+          {playerId && (() => {
+            // Brief E：选手 ID 名牌（截断 maxLength 24 + 长 ID 降档 long/xlong，对齐设计稿 DCLogic）
+            const id = playerId.length > 24 ? playerId.slice(0, 24) + '…' : playerId;
+            const idCls = 'obs-name-id' + (id.length >= 16 ? ' xlong' : id.length >= 10 ? ' long' : '');
+            return (
+              <div className="obs-name">
+                <div className="obs-name-body">
+                  <div className="obs-name-kicker">
+                    <span className="obs-live"><span className="lv-dot"></span>LIVE</span>
+                    <span className="obs-name-tag">当前选手</span>
+                  </div>
+                  <div className={idCls} title={playerId} data-obs-player>{id}</div>
+                </div>
+              </div>
+            );
+          })()}
           <div>
             <div className="obs-score-main">
               <span className="obs-score-win">{wins}</span>

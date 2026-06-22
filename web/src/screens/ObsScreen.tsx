@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ObsBar, type ObsRow } from '../components/ObsBar';
 import { startRandomSession, exposeObsbarDebug, jjbLive } from '../logic/jjbSession';
-import { currentDifficultyTotal, currentEnemyAi, currentEnemyRace, currentLockedFactors, currentLockTag, currentMatches, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
+import { currentDifficultyTotal, currentEnemyAi, currentEnemyRace, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
+import { getPlayerByCode } from '../logic/backend';
 
 // ObsScreen — 直播采集 OBS 横条（段3 真实化 + 横条判定）。
 // 布局策略（用户愿景②）：单窗口，上方横条进 OBS 采集区、下方判定控制条放采集线外
@@ -13,6 +14,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
   const bare = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bare') === '1';
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0); // 判定后强制重渲
+  const [playerId, setPlayerId] = useState(''); // Brief E：选手 ID 直播展示
 
   useEffect(() => {
     try {
@@ -26,6 +28,13 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
       setReady(true);
     }
   }, []);
+
+  // 联调步4①：选手 ID 直播展示。本地 currentPlayerName 先显示，匹配后端 player_code 则用稳定 nickname（直播一致），后端不可达/未匹配 fallback 本地。
+  useEffect(() => {
+    const local = currentPlayerName();
+    setPlayerId(local);
+    getPlayerByCode(local).then((p) => { if (p?.nickname) setPlayerId(p.nickname); }).catch(() => { /* 后端不可达 fallback 本地 */ });
+  }, [ready]);
 
   if (!ready) return null;
   void tick;
@@ -63,7 +72,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: bare ? 0 : '24px 0', gap: 14 }}
     >
       {/* 采集区：横条（OBS 浏览器源裁切到这块） */}
-      <ObsBar style={style} mode={mode} rows={rows} wins={wins} total={total} difficulty={currentDifficultyTotal()} />
+      <ObsBar style={style} mode={mode} rows={rows} wins={wins} total={total} difficulty={currentDifficultyTotal()} playerId={playerId || currentPlayerName()} />
 
       {/* 采集线外：返回入口（!bare 主播操作态可点；bare 纯采集隐藏，不干扰 OBS 固定采集） */}
       {!bare && (
