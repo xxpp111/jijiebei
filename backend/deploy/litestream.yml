@@ -1,0 +1,20 @@
+# Litestream 容灾配置模板 — 实时增量复制 SQLite WAL → 对象存储（S3 兼容）。
+# 服务器炸了从桶恢复最多丢几秒 — 补齐「数据自掌控 + 灾难恢复」最后一块（research-backend-p5 §2.5）。
+#
+# 【密钥红线】access-key-id / secret-access-key 仅走 env（LITESTREAM_*），不落盘不进 git。
+# 占位 endpoint/bucket/path 待 yb 拍板实际对象存储（国内 OSS / MinIO / COS S3 兼容）。
+#
+# 运行（裸进程 sidecar）: litestream replicate -config /opt/jjb-backend/litestream.yml
+# 灾难恢复:               litestream restore -o pb_data/data.db s3://jjb-backend-backup/pb_data
+
+dbs:
+  - path: /opt/jjb-backend/pb_data/data.db
+    replicas:
+      - type: s3
+        bucket: jjb-backend-backup
+        path: pb_data
+        endpoint: <S3 兼容 endpoint>   # OSS/MinIO/COS S3 兼容端点，待 yb 定
+        # 密钥走 env（litestream 支持 ${VAR} 扩展），不写本文件：
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        sync-interval: 1s

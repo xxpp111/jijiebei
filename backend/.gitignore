@@ -1,0 +1,23 @@
+# PocketBase 运行时数据（不进 git）
+pb_data/
+
+# 编译产物
+pocketbase
+jjb-backend
+*.exe
+*.test
+
+# 本地验证临时文件
+/tmp-export.db
+export.db
+
+# harness-pro round 一次性驱动脚本（本机 harness 环境专用，非后端产物）
+harness-verify.mjs
+harness-round.sh
+harness-finish.mjs
+
+# Go 工作区
+vendor/
+
+# OS
+.DS_Store

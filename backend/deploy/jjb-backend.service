@@ -1,0 +1,29 @@
+# systemd unit — 集结杯 P5 后端（PocketBase 裸进程，推荐形态）。
+# 裸进程优先于 docker：避免在 devbox（外网受限）拉 base image；PocketBase 是静态二进制，裸跑零依赖。
+# 持久卷直接挂宿主目录最简（research-backend-p5 §2.2）。
+#
+# 安装：scp jjb-backend.service → /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now jjb-backend
+
+[Unit]
+Description=JJB Backend (PocketBase, 集结杯比赛平台)
+After=network.target
+
+[Service]
+Type=simple
+User=jjb
+WorkingDirectory=/opt/jjb-backend
+ExecStart=/opt/jjb-backend/pocketbase serve --http 127.0.0.1:8090 --dir /opt/jjb-backend/pb_data
+Restart=on-failure
+RestartSec=5
+
+# 系数表路径（可被 env 覆盖；默认 /opt/jjb-backend/config/scoring.json）
+Environment=JJB_SCORING_CONFIG=/opt/jjb-backend/config/scoring.json
+
+# 环境隔离（轻量加固）
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
