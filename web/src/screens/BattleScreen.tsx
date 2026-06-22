@@ -9,7 +9,7 @@ const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one
 // React 版 Battle 屏（段1 PoC + 段2 Phase 1 真实局接缝）：优先读 jjbLive() 当前 select 局（不重开 startRandomSession），
 // 仅在 jjbLive=false 时兜底开一局 std8（PoC 直访 ?screen=battle 不需先走 home 选模式）。
 // 整屏布局承接 design/v4-r2/components/battle-screen.jsx。
-export function BattleScreen({ style, mode }: { style: string; mode: string }) {
+export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: string; onGenCode: () => void }) {
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0); // 判定后强制重渲
 
@@ -120,6 +120,7 @@ export function BattleScreen({ style, mode }: { style: string; mode: string }) {
               <b>直播判定</b>胜利 / 带奖励 / 失败
             </span>
           </span>
+          <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode} style={{ marginLeft: 'auto' }}>生成对局码 →</button>
         </div>
       </div>
     </div>

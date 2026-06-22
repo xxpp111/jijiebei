@@ -39,7 +39,7 @@ async function maybePostMatch(): Promise<void> {
 
 // ResultScreen — 结算屏（段3③）。承接后端 JJBResult.build：TopBar + 大比分 banner + 战绩卡列表 + 页脚。
 // 大比分 = getScore()（winCount，含带奖励不双计）；战绩卡 result 从 sessionMatches 反查。0 改 jijie2。
-export function ResultScreen({ style, mode }: { style: string; mode: string }) {
+export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: string; onGenCode: () => void }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     if (ensureDoublesSessionFromUrl()) setTick((x) => x + 1);
@@ -146,6 +146,7 @@ export function ResultScreen({ style, mode }: { style: string; mode: string }) {
               <b>集结杯文档</b>飞书知识库
             </a>
           </span>
+          <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode} style={{ marginLeft: 'auto' }}>生成对局码 →</button>
           <CaptureButtons targetSelector='[data-capture="result"]' filename="jjb-result.png" />
         </div>
       </div>

@@ -67,6 +67,7 @@ export interface SelectScreenProps {
   style: string;
   mode: string;
   onStart: () => void; // 校验通过 → 手选进 battle → 切屏
+  onGenCode: () => void; // 生成对局码：固化当前局 → CodeScreen gen
 }
 
 /** 点金角标按钮（每个因子右上角，toggle 金/非金；stopPropagation 不触发拖拽/清槽）。 */
@@ -109,7 +110,7 @@ function BpBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: 
   );
 }
 
-export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
+export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenProps) {
   // 兜底：?screen=select 直跳时若 jjbLive=false 在本屏内开一局 std8 后 setState 强制重渲。
   // URL ?sessionMode=std8|std10|... 覆盖默认 std8；旧 ?mode=std10 仍兼容。
   const [, setTick] = useState(0);
@@ -212,7 +213,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
 
   // 双打：JJBDoubles 自管局已开 → 渲双打选择面板（2 指挥官/场 + 官突锁定 + 3 随机因子槽），与单打 9 模式 UI 分流。
   if (doublesLive()) {
-    return <DoublesSelect style={style} mode={mode} onStart={onStart} />;
+    return <DoublesSelect style={style} mode={mode} onStart={onStart} onGenCode={onGenCode} />;
   }
 
   if (!live) {
@@ -453,6 +454,7 @@ export function SelectScreen({ style, mode, onStart }: SelectScreenProps) {
                 </div>
               )}
               <EnemyStatusPill />
+              <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode}>生成对局码 →</button>
               <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select.png" />
               <button
                 className="startbtn"
@@ -499,7 +501,7 @@ function isPickedDoubles(slots: Array<{ cmds: (string | null)[]; factors: (strin
   return slots.some((s) => (kind === 'cmd' ? s.cmds : s.factors).some((x) => x === name));
 }
 
-function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
+function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
   const [, setTick] = useState(0);
   const [toast, setToast] = useState<{ msg: string; count: number; kind: 'hard' | 'soft' } | null>(null);
   useEffect(() => {
@@ -674,6 +676,7 @@ function DoublesSelect({ style, mode, onStart }: SelectScreenProps) {
                 </div>
               )}
               <EnemyStatusPill />
+              <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode}>生成对局码 →</button>
               <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select-doubles.png" />
               <button className="startbtn" data-doubles-random-fill-btn style={{ margin: 0, padding: '14px 26px' }} onClick={handleRandomFill}>随机填充</button>
               <button className="startbtn" data-doubles-start-btn style={{ margin: 0 }} onClick={handleStart}>比赛开始 <span className="startbtn-arrow">▶</span></button>

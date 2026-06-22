@@ -192,6 +192,7 @@ export default function App() {
           mode={mode}
           onStart={(_m: SessionMode, _name: string) => navigate('select')}
           onLadder={() => navigate('ladder')}
+          onPasteCode={() => goCode('paste')}
         />
         {!bare && switcher}
       </>
@@ -206,6 +207,7 @@ export default function App() {
           style={style}
           mode={mode}
           onStart={() => navigate('battle')}
+          onGenCode={() => goCode('gen')}
         />
         {!bare && switcher}
       </>
@@ -215,7 +217,7 @@ export default function App() {
   if (screen === 'battle') {
     return (
       <>
-        <BattleScreen key={`battle-${rerenderTick}`} style={style} mode={mode} />
+        <BattleScreen key={`battle-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />
         {!bare && switcher}
       </>
     );
@@ -249,7 +251,7 @@ export default function App() {
   if (screen === 'result') {
     return (
       <>
-        <ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} />
+        <ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />
         {!bare && switcher}
       </>
     );

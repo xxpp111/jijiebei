@@ -24,9 +24,10 @@ export interface HomeScreenProps {
   mode: string;
   onStart: (m: SessionMode, playerName: string) => void;
   onLadder: () => void;
+  onPasteCode: () => void; // 贴码开局：CodeScreen paste
 }
 
-export function HomeScreen({ style, mode, onStart, onLadder }: HomeScreenProps) {
+export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode }: HomeScreenProps) {
   const [playerName, setPlayerName] = useState('集结杯选手');
   // 练习/比赛双模式（纯前端首页态；比赛侧登录/积分为占位，后端 P5 才接）。切 tab 不丢选手名（同一 state）。
   const [homeMode, setHomeMode] = useState<'practice' | 'match'>('practice');
@@ -131,6 +132,7 @@ export function HomeScreen({ style, mode, onStart, onLadder }: HomeScreenProps) 
           <div className="block-head">
             <span className="block-kicker">SELECT MODE</span>
             <span className="block-title">比赛模式</span>
+            <button type="button" className="btn-ghost" data-nav-pastecode onClick={onPasteCode} style={{ marginLeft: 'auto', alignSelf: 'center' }}>贴码开局 →</button>
           </div>
           <div className="mode-grid">
             {MODES.map((m) => (
