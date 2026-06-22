@@ -23,9 +23,10 @@ export interface HomeScreenProps {
   style: string;
   mode: string;
   onStart: (m: SessionMode, playerName: string) => void;
+  onLadder: () => void;
 }
 
-export function HomeScreen({ style, mode, onStart }: HomeScreenProps) {
+export function HomeScreen({ style, mode, onStart, onLadder }: HomeScreenProps) {
   const [playerName, setPlayerName] = useState('集结杯选手');
   // 练习/比赛双模式（纯前端首页态；比赛侧登录/积分为占位，后端 P5 才接）。切 tab 不丢选手名（同一 state）。
   const [homeMode, setHomeMode] = useState<'practice' | 'match'>('practice');
@@ -150,14 +151,14 @@ export function HomeScreen({ style, mode, onStart }: HomeScreenProps) {
 
         {/* 入口区随态切换：练习=三入口宣传条 / 比赛=积分天梯占位卡 */}
         {isMatch ? (
-          <a className="pcard ladder soon" data-ladder-placeholder>
+          <a className="pcard ladder" data-ladder-placeholder data-nav-ladder onClick={onLadder} style={{ cursor: 'pointer' }}>
             <span className="pic">
               <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 5 H23 V11 A7 7 0 0 1 9 11 Z"></path><path d="M9 6 H5 V8 A4 4 0 0 0 9 12"></path><path d="M23 6 H27 V8 A4 4 0 0 1 23 12"></path><path d="M16 18 V22"></path><path d="M11 27 H21"></path><path d="M13 22 H19 V27 H13 Z"></path>
               </svg>
             </span>
             <span className="ptx"><span className="pm">积分天梯</span><span className="ps"><i className="dot"></i>赛季积分 · 全国排名 · 段位结算</span></span>
-            <span className="soon-chip">即将上线</span>
+            <span className="soon-chip">查看榜单 →</span>
           </a>
         ) : (
           <div className="foot foot-promo">

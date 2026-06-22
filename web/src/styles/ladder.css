@@ -1,0 +1,110 @@
+/* ============================================================
+   集结杯 UI kit — 积分天梯页（展示层 · 可投直播）承接 Claude Design 19b54387 ladder.css · Brief G
+   接 PocketBase /api/rankings（选手 / 总积分 / 对局数）
+   行卡复用 .rcard 语言（左 edge 条 + no + main + 右值），不另造表格。
+   Token 驱动 (.style-X × .mode-Y)。import 须在 index.css + bp.css 之后。
+   前三名强调用 token：金=--accent / 银 / 铜（银铜在 token 层各皮定义一次）。
+   ============================================================ */
+
+/* 名次梯度色：金沿用 --accent；银 / 铜按皮各定义一次，组件一律 var() */
+.lad { --tier1: var(--accent); --tier2: #c2ccd6; --tier3: #cf9356; }
+.style-sc2.mode-light  .lad, .style-minimal.mode-light .lad { --tier2: #8c97a3; --tier3: #a9701f; }
+.style-metal.mode-light .lad { --tier2: #8c8470; --tier3: #a9701f; }
+
+.lad { display: flex; flex-direction: column; gap: 9px; }
+
+/* ---------------- 赛季头（沿用 topbar / topbar-meta） ---------------- */
+.lad-season { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.lad-season-l { display: flex; flex-direction: column; gap: 7px; }
+.lad-sub { font-size: 16px; letter-spacing: 2px; color: var(--muted); }
+.lad-season-tag { display: inline-flex; align-items: center; gap: 11px; }
+.lad-season-id { font-family: var(--font-num); font-size: 22px; font-weight: 700; letter-spacing: 3px; color: var(--accent); }
+.lad-cycle { font-size: 14px; color: var(--muted); letter-spacing: 1px; white-space: nowrap; }
+/* 我的排名高亮（沿用 .topbar-meta 右对齐栈） */
+.lad-mine { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; padding: 9px 16px; background: var(--panel-bg); border: 1px solid var(--panel-edge); box-shadow: inset 3px 0 0 var(--accent); }
+.lad-mine-k { font-size: 12px; letter-spacing: 2px; color: var(--muted); }
+.lad-mine-v { display: flex; align-items: baseline; gap: 8px; }
+.lad-mine-rank { font-family: var(--font-num); font-size: 26px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+.lad-mine-id { font-size: 15px; font-weight: 700; color: var(--ink); }
+
+/* ---------------- 天梯榜列表（复用 .rcard 行卡） ---------------- */
+.lad-list { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.lad-row {
+  position: relative; display: flex; align-items: center; gap: 22px;
+  min-height: 0; padding: 5px 24px 5px 30px;
+  background: var(--panel-bg); border: 1px solid var(--panel-edge); overflow: hidden;
+}
+.style-metal .lad-row { clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px)); }
+.style-minimal .lad-row { border-radius: 7px; }
+/* 左 edge 条（同 .rcard::before） */
+.lad-row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--muted); opacity: .5; }
+.lad-row.t1::before { background: var(--tier1); opacity: 1; }
+.lad-row.t2::before { background: var(--tier2); opacity: 1; }
+.lad-row.t3::before { background: var(--tier3); opacity: 1; }
+/* 前三名整行强调 */
+.lad-row.t1 { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tier1) 55%, var(--panel-edge)); }
+/* 我的行 */
+.lad-row.me { box-shadow: 0 0 0 2px var(--accent); }
+
+/* 名次 */
+.lad-rank { flex: 0 0 84px; display: flex; align-items: baseline; gap: 3px; }
+.lad-rank-no { font-family: var(--font-num); font-size: 27px; font-weight: 700; color: var(--ink); line-height: 1; letter-spacing: 0; }
+.lad-row.t1 .lad-rank-no { color: var(--tier1); }
+.lad-row.t2 .lad-rank-no { color: var(--tier2); }
+.lad-row.t3 .lad-rank-no { color: var(--tier3); }
+.lad-rank-hash { font-family: var(--font-num); font-size: 15px; color: var(--muted); }
+
+/* 选手 ID（main · 远距可读） */
+.lad-id { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+.lad-id-name { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lad-row.me .lad-id-name { color: var(--accent); }
+.lad-me-chip { flex: none; font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--on-accent); background: var(--accent); padding: 2px 8px; white-space: nowrap; }
+.style-metal .lad-me-chip { clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px)); }
+.style-minimal .lad-me-chip { border-radius: 5px; }
+
+/* 段位（几何菱形 + 文字，无 emoji） */
+.lad-tier { flex: 0 0 132px; display: flex; align-items: center; gap: 10px; }
+.lad-tier-mark { width: 14px; height: 14px; flex: none; transform: rotate(45deg); background: var(--accent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 50%, #000); }
+.lad-tier-mark.d2 { width: 11px; height: 11px; }
+.lad-tier-mark.d3 { width: 9px; height: 9px; }
+.lad-tier-name { font-size: 17px; font-weight: 700; letter-spacing: 1px; color: var(--ink); white-space: nowrap; }
+.lad-tier-name.muted { color: var(--muted); }
+
+/* 战绩 胜/总 */
+.lad-wl { flex: 0 0 96px; text-align: center; }
+.lad-wl b { font-family: var(--font-num); font-size: 19px; font-weight: 700; color: var(--ink); letter-spacing: 1px; }
+.lad-wl i { font-family: var(--font-num); font-size: 15px; font-style: normal; color: var(--muted); }
+.lad-wl .lad-wl-k { display: block; font-size: 10px; letter-spacing: 2px; color: var(--muted); margin-top: 2px; }
+
+/* 积分（右值 · 强调） */
+.lad-pts { flex: 0 0 128px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.lad-pts b { font-family: var(--font-title); font-size: 27px; font-weight: 900; color: var(--accent); line-height: 1; letter-spacing: -1px; }
+.style-metal .lad-pts b { font-family: "Noto Serif SC", "Noto Sans SC", serif; }
+.lad-pts .lad-pts-k { font-family: var(--font-num); font-size: 10px; letter-spacing: 2px; color: var(--muted); }
+
+/* ---------------- 段位 / 积分图例（沿用底部 legend 横排） ---------------- */
+.lad-legend { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding-top: 11px; border-top: 1px solid var(--panel-edge); }
+.lad-legend-k { font-family: var(--font-num); font-size: 11px; letter-spacing: 3px; color: var(--muted); }
+.lad-leg { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.lad-leg .lg-mark { width: 11px; height: 11px; transform: rotate(45deg); flex: none; }
+.lad-leg .lg-mark.king { background: var(--accent); }
+.lad-leg .lg-mark.dia { background: var(--tier2); }
+.lad-leg .lg-mark.plat { background: var(--tier3); }
+.lad-leg .lg-mark.gold { background: var(--muted); }
+.lad-legend-src { margin-left: auto; font-family: var(--font-num); font-size: 11px; letter-spacing: 2px; color: var(--muted); }
+.lad-legend-src b { color: var(--accent); }
+
+/* ---------------- 空态 / 加载态（对齐 soon-chip） ---------------- */
+.lad-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+.lad-empty-mark { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent); }
+.style-metal .lad-empty-mark { clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px)); }
+.style-minimal .lad-empty-mark { border-radius: 10px; }
+.lad-empty-mark svg { width: 30px; height: 30px; display: block; }
+.lad-empty-t { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--ink); }
+.lad-empty-s { font-size: 14px; color: var(--muted); letter-spacing: 1px; }
+.lad-empty .soon-chip { margin: 0; }
+/* 加载骨架行 */
+.lad-skel { position: relative; min-height: 56px; background: var(--panel-bg); border: 1px solid var(--panel-edge); overflow: hidden; }
+.style-minimal .lad-skel { border-radius: 7px; }
+.lad-skel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 9%, transparent), transparent); transform: translateX(-100%); animation: ladshim 1.3s ease-in-out infinite; }
+@keyframes ladshim { 100% { transform: translateX(100%); } }
