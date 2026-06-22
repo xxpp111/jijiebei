@@ -7,6 +7,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { BpConfigScreen } from './screens/BpConfigScreen';
+import { CodeScreen } from './screens/CodeScreen';
 import { startSession, exposeStartSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
@@ -18,7 +19,7 @@ import JijieData from './logic/legacy/JijieData';
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
-const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'phase0', 'foundation'] as const;
+const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'code', 'phase0', 'foundation'] as const;
 const SCREEN_LABELS: Record<string, string> = {
   home: '主界面',
   select: '选择',
@@ -26,6 +27,7 @@ const SCREEN_LABELS: Record<string, string> = {
   obs: '直播条',
   result: '结算',
   bpconfig: 'BP设置',
+  code: '码方案',
 };
 const STYLE_LABELS: Record<(typeof STYLES)[number], string> = {
   metal: '金属',
@@ -36,7 +38,7 @@ const MODE_LABELS: Record<(typeof MODES)[number], string> = {
   dark: '深色',
   light: '浅色',
 };
-type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'phase0' | 'foundation';
+type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'code' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -61,6 +63,7 @@ export default function App() {
   const [style, setStyle] = useState<(typeof STYLES)[number]>(validStyle(q('style', 'sc2')));
   const [mode, setMode] = useState<(typeof MODES)[number]>(validThemeMode(q('mode', 'dark')));
   const [screen, setScreen] = useState<Screen>(initialScreen);
+  const [codeVariant, setCodeVariant] = useState<'gen' | 'paste'>(q('code', 'gen') === 'paste' ? 'paste' : 'gen');
   const [rerenderTick, setRerenderTick] = useState(0);
 
   const writeUrlParam = (key: string, value: string) => {
@@ -74,6 +77,16 @@ export default function App() {
     setScreen(next);
     writeUrlParam('screen', next);
     // 会话级模式持久：当前局模式（含 doubles/feiqiu-doubles）写入 URL，防刷新丢状态
+    const currentMode = currentSessionMode();
+    if (currentMode) writeUrlParam('sessionMode', currentMode);
+  };
+
+  // 码方案入口：?screen=code + ?code=gen|paste（刷新可保持 variant）
+  const goCode = (variant: 'gen' | 'paste') => {
+    setCodeVariant(variant);
+    setScreen('code');
+    writeUrlParam('screen', 'code');
+    writeUrlParam('code', variant);
     const currentMode = currentSessionMode();
     if (currentMode) writeUrlParam('sessionMode', currentMode);
   };
@@ -155,6 +168,8 @@ export default function App() {
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       <button className={'ctrl-btn' + (screen === 'bpconfig' ? ' on' : '')} type="button" onClick={() => navigate('bpconfig')} data-nav-bpconfig>BP设置</button>
+      <button className={'ctrl-btn' + (screen === 'code' && codeVariant === 'gen' ? ' on' : '')} type="button" onClick={() => goCode('gen')} data-nav-code-gen>生成码</button>
+      <button className={'ctrl-btn' + (screen === 'code' && codeVariant === 'paste' ? ' on' : '')} type="button" onClick={() => goCode('paste')} data-nav-code-paste>贴码开局</button>
       <button className="ctrl-btn" type="button" onClick={restartCurrentMode} data-rerandom-btn>重新随机</button>
       <button className="ctrl-btn" type="button" onClick={() => navigate('home')} data-back-home-btn>回主界面</button>
     </div>
@@ -235,6 +250,26 @@ export default function App() {
     return (
       <>
         <BpConfigScreen key={`bpconfig-${rerenderTick}`} style={style} mode={mode} />
+        {!bare && switcher}
+      </>
+    );
+  }
+
+  if (screen === 'code') {
+    return (
+      <>
+        <CodeScreen
+          key={`code-${rerenderTick}-${codeVariant}`}
+          style={style}
+          mode={mode}
+          variant={codeVariant}
+          onBack={() => navigate('home')}
+          onStart={() => {
+            // 按此码开局：把码留 URL #hash + 导航 select（applySnapshot 还原同盘留后续 round，
+            // 双打需 applyDoublesSnapshot 直写 jjbDoubles 闭包，超本 round scope）。
+            navigate('select');
+          }}
+        />
         {!bare && switcher}
       </>
     );

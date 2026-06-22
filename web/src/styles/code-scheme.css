@@ -1,0 +1,124 @@
+/* ============================================================
+   集结杯 UI kit — 「码方案」一对屏（承接 Claude Design 项目 19b54387 的 code-scheme.css）
+   屏C 生成码面板 · 屏D 贴码开局入口
+   共享：对局摘要卡 (.csum) — 复用 select/obs 卡片语言 (.fx/.cc)
+   Token 驱动 (.style-X × .mode-Y)。import 须在 index.css + bp.css 之后。
+   码展示/输入用 --font-num；复制成功用 --win。
+   ============================================================ */
+
+/* token 对齐：--vbtn-bg 在 repo token 体系缺失，补为 panel-bg（btn-ghost 幽灵按钮底色）。 */
+.jjb { --vbtn-bg: var(--panel-bg); }
+
+/* 布局：.jjb-inner.code-screen 锁 1280×720 容器（镜像 .jjb-inner.sel 的 flex 列填满约束）。
+   flex 列 + height:100% + overflow:hidden 防内容自然流撑破 720；.code-actions 钉底。 */
+.jjb > .jjb-inner.code-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 14px;
+  overflow: hidden;
+}
+.code-screen .code-actions { margin-top: auto; }
+
+/* ---------------- 对局摘要卡 .csum (3 场 · 密度对齐 obs 横条) ---------------- */
+.csum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.csum-card { display: flex; flex-direction: column; gap: 9px; padding: 12px 13px 13px; }
+.csum-head { display: flex; align-items: center; gap: 8px; }
+.csum-no { font-family: var(--font-title); font-size: 17px; font-weight: 700; color: var(--accent); white-space: nowrap; letter-spacing: 0; }
+.style-metal .csum-no { font-family: "Noto Serif SC", "Noto Sans SC", serif; }
+.csum-diff { font-family: var(--font-num); font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+.csum-dbl { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--accent); border: 1px solid var(--accent); padding: 1px 7px; white-space: nowrap; }
+.csum-map { position: relative; width: 100%; }
+.csum-map-name { position: absolute; left: 8px; bottom: 6px; z-index: 2; font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.92); white-space: nowrap; }
+.csum-line { display: flex; align-items: center; gap: 11px; margin-top: 1px; }
+.csum-cmds { display: flex; gap: 7px; flex: 0 0 auto; }
+.csum-facs { display: flex; flex-wrap: wrap; gap: 9px; flex: 1; align-content: center; }
+
+/* ---------------- 码展示区 .code-box (屏C) ---------------- */
+.code-box {
+  display: flex; align-items: center; gap: 18px; padding: 20px 16px 20px 24px;
+  background: var(--panel-bg); border: 1px solid var(--panel-edge);
+}
+.style-metal .code-box { clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px)); }
+.style-minimal .code-box { border-radius: 8px; }
+.style-sc2 .code-box { position: relative; }
+.style-sc2 .code-box::before { content: ""; position: absolute; left: -1px; top: -1px; width: 14px; height: 14px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); pointer-events: none; }
+.style-sc2 .code-box::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 14px; height: 14px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none; }
+.code-box-lbl { font-family: var(--font-num); font-size: 11px; letter-spacing: 3px; color: var(--muted); white-space: nowrap; }
+.code-val {
+  flex: 1; min-width: 0; font-family: var(--font-num); font-weight: 700;
+  font-size: 44px; letter-spacing: 5px; line-height: 1; color: var(--accent);
+  white-space: nowrap; text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.mode-light .code-val { text-shadow: none; }
+.code-val .seg-dash { color: var(--muted); opacity: .55; margin: 0 2px; }
+
+/* 复制按钮 + 成功反馈 */
+.code-copy {
+  flex: none; display: inline-flex; align-items: center; gap: 9px; height: 52px; padding: 0 22px;
+  font-size: 16px; font-weight: 700; letter-spacing: 2px; white-space: nowrap;
+  background: var(--accent); color: var(--on-accent);
+  transition: filter .12s, transform .1s;
+}
+.style-metal .code-copy { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.style-minimal .code-copy { border-radius: 6px; }
+.code-copy:hover { filter: brightness(1.06); }
+.code-copy:active { transform: translateY(1px); }
+.code-copy svg { width: 17px; height: 17px; display: block; }
+.code-copy.done { background: var(--win); color: var(--on-state); }
+.code-copied { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--win); white-space: nowrap; }
+.code-copied svg { width: 14px; height: 14px; display: block; }
+
+/* ---------------- 元信息行 (复用 meta-k/meta-v) ---------------- */
+.code-meta { display: flex; align-items: center; gap: 34px; flex-wrap: wrap; }
+.code-meta .meta-cell { display: flex; align-items: baseline; gap: 9px; }
+.code-meta .meta-k { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.code-meta .meta-v { font-size: 16px; color: var(--ink); font-weight: 700; font-family: var(--font-num); letter-spacing: 1px; white-space: nowrap; }
+.code-meta .meta-v.big { font-size: 22px; color: var(--accent); }
+
+/* ---------------- 贴码输入 .code-field (屏D · 复用 r-field 体系) ---------------- */
+.code-field { height: 54px; flex: 1; display: flex; align-items: center; padding: 0 20px; background: var(--panel-bg); border: 1px solid var(--panel-edge); }
+.style-metal .code-field { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.style-minimal .code-field { border-radius: 7px; }
+.code-field.focus { box-shadow: inset 0 0 0 1px var(--accent), 0 0 14px color-mix(in srgb, var(--accent) 14%, transparent); border-color: var(--accent); }
+.code-field input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none; padding: 0;
+  font-family: var(--font-num); font-size: 24px; font-weight: 700; letter-spacing: 4px; color: var(--ink);
+}
+.code-field input::placeholder { color: var(--muted); opacity: .7; letter-spacing: 2px; font-weight: 400; }
+.code-field .caret { height: 26px; }
+
+.code-parse {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; height: 54px; padding: 0 26px;
+  font-size: 17px; font-weight: 700; letter-spacing: 3px; white-space: nowrap;
+  background: var(--panel-bg); color: var(--ink); box-shadow: inset 0 0 0 1px var(--panel-edge);
+  transition: background .12s, box-shadow .12s;
+}
+.style-metal .code-parse { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.style-minimal .code-parse { border-radius: 6px; }
+.code-parse:hover { box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
+
+/* 解析成功 / 等待 提示尾 */
+.parse-ok { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--win); white-space: nowrap; }
+.parse-ok svg { width: 15px; height: 15px; display: block; }
+.parse-wait { font-size: 13px; color: var(--muted); letter-spacing: 1px; }
+
+/* ---------------- 底部操作行 ---------------- */
+.code-actions { display: flex; align-items: center; gap: 16px; }
+.code-actions .startbtn { margin-top: 0; align-self: auto; }
+/* 次级按钮（重新生成 / 返回 / 解析）：描边幽灵 */
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 9px; padding: 14px 28px;
+  font-size: 18px; font-weight: 700; letter-spacing: 2px; white-space: nowrap;
+  color: var(--muted); background: var(--vbtn-bg); box-shadow: inset 0 0 0 1px var(--panel-edge);
+  transition: color .12s, box-shadow .12s;
+}
+.style-metal .btn-ghost { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.style-minimal .btn-ghost { border-radius: 6px; }
+.btn-ghost:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+.btn-ghost svg { width: 16px; height: 16px; display: block; }
+.code-actions .spacer { flex: 1; }
+
+/* 屏内 section 头 */
+.code-screen .block-note { font-family: var(--font-num); letter-spacing: 2px; font-size: 12px; }
