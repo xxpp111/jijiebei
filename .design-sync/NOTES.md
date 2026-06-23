@@ -48,3 +48,17 @@
   - e2e `web/e2e/random-enemy.mjs`（6 项 PASS）；tsc/build/三套回归全绿
 - **race 印花真图待入库**：云端 `e956fe00` 的 `assets/races/race-{protoss,terran,zerg}.png`（各 ~6KB）需落 `web/src/assets/races/`。**base64 无法经模型手抄落盘（会损坏，实测截断过）**，须走 handoff tar.gz（curl 落盘不经模型）或 yb 直接给文件。落盘后 `realAsset.raceUrl` 的 glob 自动命中替换文字徽章兜底，零改代码。
 - 云端 `e956fe00` 设计稿已提炼到 repo `design/random-enemy/SPEC.md`（完整 html 留云端可 get_file 重读）。
+
+## 2026-06-23 账号迁移 + e956fe00 404（重要）
+- **旧 Claude 账号被封**，新账号 maura.woodellis（`/design-login` 授权）。`DesignSync get_project e956fe00` = **404 not found**——旧设计系统项目随旧账号丢失，19b54387 Prototype 同丢（`list_projects` 返空 `[]`）。
+- 账号数据导出（`~/Downloads/data-91b6999d-…batch-0000`）只有 1 个 starter 项目「How to use Claude」+ 20 个 design_chats 对话历史，**无 e956fe00/19b54387 完整项目结构**，从对话重建不值（产物已在 repo）。
+- **再次确认不跑 /design-sync 自动转换器**（NOTES 上文判定 + 本次探测：`web/src/components` 9 组件虽 0 耦合 logic，但 jjb 整体仍是应用非组件库、无 storybook、`package-build.mjs` 不满足）。yb 本次手动 `/design-sync`，hub 据 NOTES + 404 判定不盲跑。
+- **设计真相在 repo**：A–G 七屏（除 F 登录）的 css(bp/obs-name/ladder/code-scheme/random-enemy + 三皮肤 token) + React 实现完整，不依赖丢失的云端 DS。F 登录走轻量（新账号 Prototype 手工 off-script，或 hub 直接按 repo 设计语言实现），不重建旧 DS。
+
+## 2026-06-23 design-sync 在新账号重建成功（fd3ab5f6 · 5-agent workflow 调研 + spoke off-script + hub 亲验）
+- **converter 不可行的精确根因**（workflow 实锤，更正上文「形态判断」表述）：converter esbuild **不认 import.meta.glob**(Vite-only 语法)。jjb 9 组件 6 个(CommanderCard/BrandLockup/EnemyBadge/FactorFrame/MatchRow/ObsBar)经 realAsset.ts/designAssets.ts 用 glob → esbuild bundle 后浏览器 `import.meta.glob is not a function` 崩。synth-entry fallback 存在(web/package.json main/module/exports 全 undefined → 合成 .pkg-entry.mjs)但被 glob 崩断；要跑 converter 须自写 Vite-glob esbuild plugin(数小时)。→ NOTES 旧判断"不跑转换器"**结论对**，真根因是 glob 非 window-global。
+- **本轮 off-script 手工增量**(spoke jjb-dsbundle·GLM-5.2·harness round 真 native review)：同步 3 个有真实变更的组件 —— controls/ModeButton(双打5/6号位非酋之轮·官突双打)、game/EnemyBadge(随机敌方三族印花，race 真图**已在** web/src/assets/races/ 非待入库)、game/ObsBar(横条三修)。CommanderCard/FactorFrame/MatchRow/BrandLockup 不动(已最新)。
+- **glob props 化**绕 esbuild 崩：raceUrl/cmdUrl/facUrl/mapUrl 改传预解析 URL，race png 复制进 ds-bundle/assets/races/；grep import.meta.glob ds-bundle/_ds_bundle.js = **0**。
+- **CSS 闭包** styles.css @import 次序(Google Fonts 置顶→design/v4-r2 theme/styles/v4/obs→本地 brand-gold/obs-fuller/jjb-select→功能层)，design/v4-r2 css 复制进 ds-bundle/css/(平铺无相互 @import)；token 26 defined，accent #D8B15A 生效。
+- **hub 亲验**：package-validate 格式全过(唯一 [RENDER_SKIPPED] 因 .ds-sync 缺 playwright，非产物问题) + hub web playwright 验 3 组件×三皮肤渲染(root非空+无glob error+token生效) + **抓修 ModeButton [GRID_OVERFLOW]**(.ds-grid 360px 并排→改单列三皮肤纵向全宽)。32 文件 DesignSync 上传 fd3ab5f6，list_files 确认。
+- **pin 更新** config.json projectId e956fe00(404)→fd3ab5f6；ds-bundle/.ds-sync/ 已 gitignore。**下次同步**：list_files fd3ab5f6 已有 3 组件，增量补 CommanderCard/FactorFrame/MatchRow/BrandLockup 或新组件；converter 仍不可用(glob)，继续 off-script + hub Playwright 验。

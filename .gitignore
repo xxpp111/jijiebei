@@ -97,3 +97,9 @@ Thumbs.db
 /diagrams/2026-*/diagram.png
 /diagrams/2026-*/diagram.json
 /diagrams/2026-*/preview.png
+
+# design-sync converter（产物+stage脚本+缓存，不进 git）
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/node_modules
