@@ -9,6 +9,7 @@ import { ResultScreen } from './screens/ResultScreen';
 import { BpConfigScreen } from './screens/BpConfigScreen';
 import { CodeScreen } from './screens/CodeScreen';
 import { LadderScreen } from './screens/LadderScreen';
+import { LoginScreen } from './screens/LoginScreen';
 import { startSession, exposeStartSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
@@ -21,7 +22,7 @@ import { pbAuth, getAccount } from './logic/backend';
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
-const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'code', 'ladder', 'phase0', 'foundation'] as const;
+const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'code', 'ladder', 'login', 'phase0', 'foundation'] as const;
 const SCREEN_LABELS: Record<string, string> = {
   home: '主界面',
   select: '选择',
@@ -41,7 +42,7 @@ const MODE_LABELS: Record<(typeof MODES)[number], string> = {
   dark: '深色',
   light: '浅色',
 };
-type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'code' | 'ladder' | 'phase0' | 'foundation';
+type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'code' | 'ladder' | 'login' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -193,6 +194,7 @@ export default function App() {
           onStart={(_m: SessionMode, _name: string) => navigate('select')}
           onLadder={() => navigate('ladder')}
           onPasteCode={() => goCode('paste')}
+          onLogin={() => navigate('login')}
         />
         {!bare && switcher}
       </>
@@ -261,6 +263,21 @@ export default function App() {
     return (
       <>
         <LadderScreen key={`ladder-${rerenderTick}`} style={style} mode={mode} />
+        {!bare && switcher}
+      </>
+    );
+  }
+
+  if (screen === 'login') {
+    return (
+      <>
+        <LoginScreen
+          key={`login-${rerenderTick}`}
+          style={style}
+          mode={mode}
+          onBack={() => navigate('home')}
+          onSuccess={() => navigate('home')}
+        />
         {!bare && switcher}
       </>
     );

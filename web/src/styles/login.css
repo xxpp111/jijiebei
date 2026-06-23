@@ -1,0 +1,57 @@
+/* ============================================================
+   集结杯 UI kit — 主播登录界面 F（承接 Claude Design fa6fc5cf 主播登录.dc.html）
+   左品牌 hero(集结杯字标 + 星际2 三族印花) / 右登录卡(主播账号·密码 + 4态 idle/loading/error/success)。
+   Token 驱动三皮肤(.style-X × .mode-Y)。import 须在 index.css 之后。
+   ============================================================ */
+
+/* --warn / --warn-bg / --warn-edge — 琥珀失败态 token（login 局部，bp.css 已有 --warn 主值，这里补 bg/edge） */
+.login-stage { --warn: #e0a93e; --warn-bg: rgba(224,169,62,.12); --warn-edge: rgba(224,169,62,.44); }
+.login-stage.mode-light { --warn: #a9760f; --warn-bg: rgba(224,169,62,.18); --warn-edge: rgba(169,118,15,.42); }
+
+.login-inner { flex-direction: row; align-items: stretch; justify-content: space-between; padding: 54px 60px; }
+
+/* ── 左：品牌 hero（集结杯字标 + 星际2 三族素材） ── */
+.login-hero { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 4px 0; }
+.hero-kicker { margin-top: 24px; font-family: var(--font-num); font-size: 14px; font-weight: 700; letter-spacing: 6px; color: var(--accent); }
+.hero-sub { margin-top: 14px; font-size: 17px; letter-spacing: 5px; color: var(--muted); }
+.hero-racesblock { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--panel-edge); }
+.hero-racescap { font-family: var(--font-num); font-size: 11px; letter-spacing: 4px; color: var(--muted); margin-bottom: 18px; }
+.hero-races { display: flex; gap: 34px; align-items: flex-end; }
+.race-emblem { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.race-emblem img { height: 84px; width: auto; filter: drop-shadow(0 6px 15px rgba(0,0,0,.55)); }
+.race-name { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.race-name b { font-size: 13px; font-weight: 700; letter-spacing: 3px; color: var(--ink); }
+.race-name span { font-family: var(--font-num); font-size: 10px; letter-spacing: 3px; color: var(--muted); }
+
+/* 分隔 */
+.hero-div { flex: 0 0 1px; align-self: stretch; margin: 14px 54px; background: linear-gradient(180deg, transparent, var(--panel-edge) 16%, var(--panel-edge) 84%, transparent); }
+
+/* ── 右：登录卡 ── */
+.login-card { flex: 0 0 432px; align-self: center; padding: 40px 40px 30px; display: flex; flex-direction: column; }
+.login-titleblock { display: flex; flex-direction: column; gap: 9px; margin-bottom: 24px; }
+.login-kicker { font-family: var(--font-num); font-size: 13px; font-weight: 700; letter-spacing: 5px; color: var(--accent); }
+.login-title { font-family: var(--font-title); font-size: 31px; font-weight: 700; letter-spacing: 3px; color: var(--ink); line-height: 1; }
+.login-cardsub { font-size: 13px; line-height: 1.6; letter-spacing: .5px; color: var(--muted); }
+
+.login-fields { display: flex; flex-direction: column; gap: 17px; }
+.lf { display: flex; flex-direction: column; gap: 8px; }
+.lf-label { font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--muted); }
+.lf-field.active { border-color: var(--accent); }
+.lf-val { font-family: var(--font-mono, var(--font-num)); font-size: 17px; letter-spacing: 1px; color: var(--ink); }
+
+/* 软提示 banner */
+.login-banner { display: flex; align-items: center; gap: 11px; padding: 12px 15px; margin-top: 18px; font-size: 14px; letter-spacing: .5px; }
+.login-banner.warn { color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-edge); }
+.login-banner.ok { color: var(--win); background: var(--panel-bg); border: 1px solid var(--win); }
+.banner-mark { flex: 0 0 auto; width: 19px; height: 19px; display: flex; align-items: center; justify-content: center; font-family: var(--font-num); font-weight: 700; font-size: 13px; border: 1px solid currentColor; }
+
+.login-btn { align-self: stretch; width: 100%; justify-content: center; gap: 14px; margin-top: 24px; font-size: 20px; letter-spacing: 8px; }
+.login-btn[disabled], .login-btn:disabled { cursor: default; opacity: .9; }
+.login-btn .startbtn-arrow { letter-spacing: 0; }
+.spin { width: 16px; height: 16px; border: 2px solid var(--on-accent); border-right-color: transparent; border-radius: 50%; animation: lspin .7s linear infinite; }
+@keyframes lspin { to { transform: rotate(360deg); } }
+
+.login-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+.login-link { font-size: 13px; letter-spacing: 1px; color: var(--muted); background: none; border: none; padding: 0; cursor: pointer; transition: color .12s; }
+.login-link:hover { color: var(--accent); }
+.login-link .lk-en { font-family: var(--font-num); margin-left: 7px; opacity: .7; letter-spacing: 1.5px; }

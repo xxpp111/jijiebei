@@ -25,9 +25,10 @@ export interface HomeScreenProps {
   onStart: (m: SessionMode, playerName: string) => void;
   onLadder: () => void;
   onPasteCode: () => void; // 贴码开局：CodeScreen paste
+  onLogin: () => void; // 主播登录：LoginScreen
 }
 
-export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode }: HomeScreenProps) {
+export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogin }: HomeScreenProps) {
   const [playerName, setPlayerName] = useState('集结杯选手');
   // 练习/比赛双模式（纯前端首页态；比赛侧登录/积分为占位，后端 P5 才接）。切 tab 不丢选手名（同一 state）。
   const [homeMode, setHomeMode] = useState<'practice' | 'match'>('practice');
@@ -89,13 +90,13 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode }: Home
           </div>
           {isMatch && (
             <div className="login-entry">
-              <button className="loginbtn" type="button" data-login-placeholder>
+              <button className="loginbtn" type="button" data-login-placeholder data-nav-login onClick={onLogin}>
                 <span className="lb-ico">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"></path><circle cx="12" cy="11" r="2.4"></circle><path d="M12 13.4 V16"></path>
                   </svg>
                 </span>
-                <span className="lb-tx"><span className="lb-t">主播登录</span><span className="lb-s">ADMIN · <b>即将上线</b></span></span>
+                <span className="lb-tx"><span className="lb-t">主播登录</span><span className="lb-s">ADMIN · <b>比赛后台</b></span></span>
               </button>
             </div>
           )}

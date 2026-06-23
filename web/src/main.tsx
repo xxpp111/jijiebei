@@ -11,6 +11,7 @@ import './styles/bp.css';
 import './styles/code-scheme.css';
 import './styles/obs-name.css';
 import './styles/ladder.css';
+import './styles/login.css';
 
 ReactDOM.createRoot(document.getElementById('react-root')!).render(
   <React.StrictMode>
