@@ -7,33 +7,39 @@ import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
 import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, currentSessionMode, ensureDoublesSessionFromUrl } from '../logic/jjbView';
 import { encodePayload, capturePayload, PAYLOAD_VER } from '../logic/codec';
 import { getRuleMode, getScore } from '../logic/jjbSession';
-import { postMatch, getToken, getAccount, getPlayerByCode } from '../logic/backend';
+import { postMatch, getToken, getAccount, ensurePlayer } from '../logic/backend';
 import JijieData from '../logic/legacy/JijieData';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
 
-// P5 联调：比赛模式一局判定满 3 场 → 落库（codec 编码 + postMatch + 防重 + 选手关联尽力）。
-// 练习 / 未登录(无 host token) / 未判满 不落；选手 ID 匹配 player_code 则关联(hook 派生 scores)。落库失败不阻断结算。
-async function maybePostMatch(): Promise<void> {
+type RecordOutcome = 'posted' | 'duplicate' | 'skipped';
+let posting = false; // 模块级 in-flight 锁：防 useEffect 双触 / 自动落库与手点按钮并发重复落
+
+// P5 联调：比赛模式一局判定满 3 场 → ensurePlayer 兜底关联选手 + postMatch（codec 编码 + 防重幂等）。
+// 练习 / 未登录(无 host token) / 未判满 → 'skipped' 不落。ensurePlayer：选手不存在则以输入名兜底建/关联(hook 派生 scores)。
+// 返回 outcome 供按钮反馈；失败抛错由调用方 catch（不阻断结算）。防重 key 成功后才置（失败可重试）。
+async function postMatchResult(): Promise<RecordOutcome> {
+  if (getRuleMode() !== 'match' || !getToken()) return 'skipped';
+  const ms = currentMatches();
+  if (ms.length < 3 || ms.some((m) => !m.result)) return 'skipped';
+  const code = encodePayload(capturePayload());
+  const key = 'jjb_posted_' + code.slice(0, 40);
+  if (sessionStorage.getItem(key)) return 'duplicate'; // 防重：同局码已落
+  if (posting) return 'duplicate';                      // in-flight：避免并发双落
+  posting = true;
   try {
-    if (getRuleMode() !== 'match' || !getToken()) return;
-    const ms = currentMatches();
-    if (ms.length < 3 || ms.some((m) => !m.result)) return;
-    const code = encodePayload(capturePayload());
-    const key = 'jjb_posted_' + code.slice(0, 40);
-    if (sessionStorage.getItem(key)) return; // 防重：同局码不重复落
-    sessionStorage.setItem(key, '1');
-    const player = await getPlayerByCode(currentPlayerName());
+    const player = await ensurePlayer(currentPlayerName()); // 兜底：找不到则建/关联，让现场选手随便输名上天梯
     await postMatch({
       mode: 'match', game_mode: currentSessionMode(), payload_code: code, payload_ver: PAYLOAD_VER,
       players: player ? [player.id] : [], host: getAccount()?.id,
       result: (JijieData as unknown as { winLoseList?: number[] }).winLoseList || [], score_total: getScore(),
     });
+    sessionStorage.setItem(key, '1'); // 成功后才置防重（失败可重试）
     // eslint-disable-next-line no-console
-    console.log('[jjb] 比赛局已落库');
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('[jjb] 落库失败（不阻断结算）:', (e as Error).message);
+    console.log('[jjb] 比赛局已落库（含选手兜底关联）');
+    return 'posted';
+  } finally {
+    posting = false;
   }
 }
 
@@ -41,9 +47,25 @@ async function maybePostMatch(): Promise<void> {
 // 大比分 = getScore()（winCount，含带奖励不双计）；战绩卡 result 从 sessionMatches 反查。0 改 jijie2。
 export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: string; onGenCode: () => void }) {
   const [, setTick] = useState(0);
+  const [recordState, setRecordState] = useState<'idle' | 'posting' | 'done' | 'error'>('idle');
+  const canRecord = getRuleMode() === 'match' && !!getToken(); // 练习/未登录不显示录入按钮（沿用落库门控）
+
+  async function runRecord() {
+    setRecordState('posting');
+    try {
+      const outcome = await postMatchResult();
+      setRecordState(outcome === 'skipped' ? 'idle' : 'done'); // posted/duplicate 均视为已录入
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[jjb] 落库失败（不阻断结算）:', (e as Error).message);
+      setRecordState('error');
+    }
+  }
+
   useEffect(() => {
     if (ensureDoublesSessionFromUrl()) setTick((x) => x + 1);
-    void maybePostMatch(); // P5 联调：比赛局落库（仅 match 态 + 已登录 + 判满，幂等）
+    if (canRecord) void runRecord(); // 比赛局自动落库（沿用原自动落库；按钮给主播显式反馈/失败重试）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const matches = currentMatches();
@@ -147,6 +169,25 @@ export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: 
             </a>
           </span>
           <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode} style={{ marginLeft: 'auto' }}>生成对局码 →</button>
+          {canRecord && (
+            <button
+              type="button"
+              className="btn-ghost"
+              data-record-confirm
+              data-record-state={recordState}
+              disabled={recordState === 'posting' || recordState === 'done'}
+              onClick={() => void runRecord()}
+              title="把本局战绩录入天梯（练习态不显示）"
+            >
+              {recordState === 'done'
+                ? '✓ 已录入天梯'
+                : recordState === 'posting'
+                  ? '录入中…'
+                  : recordState === 'error'
+                    ? '录入失败 · 重试'
+                    : '比赛结束 · 确认录入'}
+            </button>
+          )}
           <CaptureButtons targetSelector='[data-capture="result"]' filename="jjb-result.png" />
         </div>
       </div>

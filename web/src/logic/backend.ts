@@ -73,6 +73,39 @@ export async function getPlayerByCode(code: string): Promise<PlayerRecord | null
   return ((await r.json()).items?.[0] as PlayerRecord) || null;
 }
 
+/** 建一个新选手（需先 pbAuth host/admin）。player_code=name 作稳定锚；active=true 才入天梯。回 PlayerRecord。 */
+export async function createPlayer(name: string): Promise<PlayerRecord> {
+  const r = await fetch(`${API}/collections/players/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: authToken } : {}) },
+    body: JSON.stringify({ nickname: name, player_code: name, active: true }),
+  });
+  if (!r.ok) throw new Error(`[backend] createPlayer 失败 ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return r.json();
+}
+
+/**
+ * 兜底取/建选手 — 让现场选手随便输名就能上天梯。
+ *  ① 先按 player_code 精确匹配（已注册选手优先，不重复建 — 沿用 getPlayerByCode 的稳定锚语义）。
+ *  ② 找不到则以 name 为 player_code 建一个 active:true 选手（入天梯）。
+ *  幂等：同名多局命中①返回同一 player（player_code unique），自然累加到同一选手，不每局新建。
+ *  并发：unique 索引冲突（另一端已建同名）时回查精确匹配返回，不抛错。
+ *  注：兜底以"输入名"为身份锚 — 同名不同人会归并到同一选手（yb 拍板放宽，已知取舍，详见交付 caveat）。
+ *  无 host token 时 createPlayer 会 4xx 抛错，由调用方 catch（练习/未登录本就不该走到这）。
+ */
+export async function ensurePlayer(name: string): Promise<PlayerRecord | null> {
+  if (!name) return null;
+  const existing = await getPlayerByCode(name);
+  if (existing) return existing;
+  try {
+    return await createPlayer(name);
+  } catch (e) {
+    const retry = await getPlayerByCode(name); // unique 冲突 → 并发建成功的那条
+    if (retry) return retry;
+    throw e;
+  }
+}
+
 /** 天梯（公开读）。 */
 export async function getRankings(): Promise<{ rankings: Array<Record<string, unknown>>; season: string; count: number }> {
   const r = await fetch(`${API}/rankings`);
