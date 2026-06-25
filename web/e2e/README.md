@@ -31,6 +31,10 @@ node e2e/flows/<name>.flow.mjs        # 自带 preview/浏览器生命周期
 | `login.flow` | login-stage + 三族×3 + 账号/密码/登录按钮 + 登录歪比 success | login | 登录段需 |
 | `single-match.flow` | home 比赛 tab 登录入口 + select 3 槽 + battle 判定改 `__jjbDebug.score` | single-* | 否 |
 | `ladder.flow` | 分榜 3 tab + 切换 on + ranked/empty 稳定态 | ladder-* | 否 |
+| `doubles-match.flow` | 官突 factorPool=9 抽 CSV + 非酋 factorPool=3 + commanderPool=6（落库链路见下）| doubles-* | 否 |
+| `doubles-sync.flow` | 两主播同时落库各成功 + 后端各落一条不串不丢（双打多端独立性探测）| — | **需** |
+
+> **双打落库**：前端 `maybePostMatch` 是 mode-agnostic，比赛 tab 进双打（5/6 号位）即 match 态落库 `game_mode=doubles/feiqiu-doubles`，hook 派生 scores 进双打榜。`doubles-sync` 探测结论：双打是单端闭包态，UI 层无多端同步合流——「两主播判同一局」须服务端合流，当前架构不支持（产品决策项）。
 
 **断言纪律**：不许只看 HTTP200/无 error，每条必有 `__jjbDebug`/DOM count 硬断言 + 截图目检；落库类必 curl 后端基线对比 Δ。
 
