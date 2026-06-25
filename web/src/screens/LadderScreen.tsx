@@ -21,14 +21,22 @@ function tierOf(pts: number): { name: string; size: '' | 'd2' | 'd3'; muted: boo
 const fmtPts = (p: number) => (Number.isInteger(p) ? String(p) : p.toFixed(1));
 
 type LadState = 'loading' | 'ranked' | 'empty';
+type BoardKey = 'all' | 'single' | 'double';
+const BOARD_TABS: { key: BoardKey; label: string }[] = [
+  { key: 'all', label: '总榜' },
+  { key: 'single', label: '单刷' },
+  { key: 'double', label: '双打' },
+];
 
 export function LadderScreen({ style, mode }: { style: string; mode: string }) {
   const [state, setState] = useState<LadState>('loading');
   const [rows, setRows] = useState<RankRow[]>([]);
   const [season, setSeason] = useState('');
+  const [board, setBoard] = useState<BoardKey>('all'); // 分榜：总/单刷/双打
 
   useEffect(() => {
-    getRankings()
+    setState('loading');
+    getRankings(board)
       .then((d) => {
         const rk = (d.rankings || []) as unknown as RankRow[];
         setSeason(d.season || '');
@@ -36,7 +44,7 @@ export function LadderScreen({ style, mode }: { style: string; mode: string }) {
         setState(rk.length > 0 ? 'ranked' : 'empty');
       })
       .catch(() => setState('empty')); // 后端不可达/未启动 → 空态（即将上线占位）
-  }, []);
+  }, [board]);
 
   const me = currentPlayerName();
   const myIdx = rows.findIndex((r) => r.nickname === me);
@@ -59,6 +67,19 @@ export function LadderScreen({ style, mode }: { style: string; mode: string }) {
           <div className="lad-season-l">
             <div className="block-head"><span className="block-kicker">SEASON LADDER</span><span className="block-title">积分天梯</span></div>
             <span className="lad-sub">赛季积分 · 全国排名 · 段位结算</span>
+            <div className="lad-tabs" data-lad-tabs>
+              {BOARD_TABS.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={'lad-tab' + (board === t.key ? ' on' : '')}
+                  data-lad-tab={t.key}
+                  onClick={() => setBoard(t.key)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
             <span className="lad-season-tag"><span className="lad-season-id">{season || '—'}</span><span className="lad-cycle">PocketBase · SUM(delta) GROUP BY player</span></span>
           </div>
           {myIdx >= 0 && (

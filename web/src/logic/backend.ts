@@ -106,9 +106,10 @@ export async function ensurePlayer(name: string): Promise<PlayerRecord | null> {
   }
 }
 
-/** 天梯（公开读）。 */
-export async function getRankings(): Promise<{ rankings: Array<Record<string, unknown>>; season: string; count: number }> {
-  const r = await fetch(`${API}/rankings`);
+/** 天梯（公开读）。board: all(全模式) / single(单刷) / double(双打)。 */
+export async function getRankings(board: 'all' | 'single' | 'double' = 'all'): Promise<{ rankings: Array<Record<string, unknown>>; season: string; count: number; board?: string }> {
+  const q = board && board !== 'all' ? `?board=${board}` : '';
+  const r = await fetch(`${API}/rankings${q}`);
   if (!r.ok) throw new Error(`[backend] rankings ${r.status}`);
   return r.json();
 }

@@ -11,6 +11,12 @@
 .style-sc2.mode-light  .lad, .style-minimal.mode-light .lad { --tier2: #8c97a3; --tier3: #a9701f; }
 .style-metal.mode-light .lad { --tier2: #8c8470; --tier3: #a9701f; }
 
+/* 分榜 tab（总榜/单刷/双打）—— 赛季头内切换，token 驱动三皮肤 */
+.lad-tabs { display: flex; gap: 6px; margin-top: 12px; }
+.lad-tab { font-family: var(--font-num); font-size: 13px; font-weight: 700; letter-spacing: 1px; padding: 5px 16px; color: var(--muted); background: var(--panel-bg); border: 1px solid var(--panel-edge); cursor: pointer; transition: color .12s, background .12s, border-color .12s; }
+.lad-tab:hover { color: var(--ink); border-color: var(--accent); }
+.lad-tab.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+
 .lad { display: flex; flex-direction: column; gap: 9px; }
 
 /* ---------------- 赛季头（沿用 topbar / topbar-meta） ---------------- */
