@@ -6,6 +6,8 @@ import { RESULT_VAL, VAL_RESULT, type MatchVM } from './legacy/JJBData';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
 import { weightedSampleNoReplace } from './commanderWeight';
 import { rollEnemiesForSession, clearEnemyRolls } from './aiEnemySelector';
+import { FACTORS } from '../config/factors';
+import type { DoublesSnapshot } from './codec';
 
 // 额外随机因子来源（官方24因子子集，按开局时过滤当场官突锁定因子后随机抽取）。
 const FACTOR_SOURCE = [
@@ -258,4 +260,24 @@ export function randomFillDoubles(): void {
       if (name) setDoublesFac(slot, k, name);
     }
   }
+}
+
+/** 从 DoublesSnapshot 还原 jjbDoubles 闭包（按此码开局），直写闭包不改引擎逻辑（Cocos 红线）。 */
+export function applyDoublesState(snap: DoublesSnapshot): void {
+  _variant = snap.variant;
+  _mutEntries = snap.mutEntries.map((e) => ({ name: e.name, map: e.map, factors: e.factors.slice() }));
+  _factorPool = snap.facPool
+    .map((idx) => (idx >= 0 && idx < FACTORS.length ? FACTORS[idx].name : null))
+    .filter((n): n is string => n !== null);
+  _commanderPool = snap.cmdPool.slice();
+  _slots = snap.slots.map((s) => ({
+    cmds: s.cmds.slice(),
+    factors: s.facs.map((idx) => (idx < 0 || idx >= FACTORS.length ? null : FACTORS[idx].name)),
+  }));
+  _winLoseList = Array.from({ length: snap.wl.length }, (_, i) => {
+    const v = snap.wl[i];
+    return v === -1 ? undefined : v;
+  });
+  _live = true;
+  exposeDebug();
 }

@@ -13,6 +13,7 @@ import { LoginScreen } from './screens/LoginScreen';
 import { startSession, exposeStartSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
+import { applySnapshot } from './logic/codec';
 import JijieData from './logic/legacy/JijieData';
 import { pbAuth, getAccount } from './logic/backend';
 
@@ -301,9 +302,8 @@ export default function App() {
           mode={mode}
           variant={codeVariant}
           onBack={() => navigate('home')}
-          onStart={() => {
-            // 按此码开局：把码留 URL #hash + 导航 select（applySnapshot 还原同盘留后续 round，
-            // 双打需 applyDoublesSnapshot 直写 jjbDoubles 闭包，超本 round scope）。
+          onStart={(snap) => {
+            applySnapshot(snap);
             navigate('select');
           }}
         />

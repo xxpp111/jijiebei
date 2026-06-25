@@ -19,13 +19,13 @@
 // 指纹基于内容（FACTORS 名串 + 模式码集 FNV-32a），非纯 length——抓「同长重排」（§B4 风险）。
 //
 // 本 round 冻结 schema v1（文档化见 docs/codec-schema.md，P5 后端复用契约）。
-// applySnapshot 还原进 select/battle 留后续 round（双打需 applyDoublesSnapshot，超本 round scope）。
+// applySnapshot 还原 select/battle 态（单打→JijieData，双打→jjbDoubles 闭包）。
 
 import { FACTORS } from '../config/factors';
 import type { SessionMode, SelectState } from './jjbSession';
-import { getSelectState, getWinLoseList, getBpState, getGoldFor } from './jjbSession';
+import { getSelectState, getWinLoseList, getBpState, getGoldFor, applySelectState } from './jjbSession';
 import type { DoublesState } from './jjbDoubles';
-import { doublesLive, getDoublesState } from './jjbDoubles';
+import { doublesLive, getDoublesState, applyDoublesState } from './jjbDoubles';
 import { getEnemyRoll } from './aiEnemySelector';
 import { getRandomEnemyEnabled } from './randomConfig';
 import type { RaceCode } from '../data/aiEnemyPool';
@@ -290,4 +290,12 @@ function captureDoubles(): DoublesSnapshot {
     // 双打点金不编入：双打点金是纯视觉态（GOLD_FACTORS 空 + 运行时 toggle 未接双打 UI），
     // 恒空 → 编不编往返等价；省字段省空间。单打点金编 gold[]（见 captureSingle）。
   };
+}
+
+// ===== applySnapshot 还原 =====
+
+/** snapshot 还原 select/battle 态：单打→applySelectState 写 JijieData；双打→applyDoublesState 写 jjbDoubles 闭包。 */
+export function applySnapshot(snap: PayloadSnapshot): void {
+  if (snap.kind === 's') applySelectState(snap);
+  else applyDoublesState(snap);
 }

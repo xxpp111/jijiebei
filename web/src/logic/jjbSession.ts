@@ -16,6 +16,8 @@ import { doublesStart, doublesReset } from './jjbDoubles';
 import { rollEnemiesForSession, getEnemyRoll } from './aiEnemySelector';
 import { setRandomEnemyEnabled } from './randomConfig';
 import { AI_ENEMY_POOL } from '../data/aiEnemyPool';
+import { FACTORS } from '../config/factors';
+import type { SingleSnapshot } from './codec';
 
 // jjbLive re-export（段2 Phase 1 BattleScreen/e2e 读当前局是否开局用；非 9 模式逻辑，仅透出）
 export { jjbLive };
@@ -935,4 +937,30 @@ export function getTotalCount(): number {
 export function getWinLoseList(): number[] {
   const d: any = JijieData;
   return (d.winLoseList || []).slice();
+}
+
+/** 从 SingleSnapshot 还原 JijieData select 态（按此码开局），直写数据字段，不改引擎逻辑（Cocos 红线）。 */
+export function applySelectState(snap: SingleSnapshot): void {
+  const d: any = JijieData;
+  d.status = 2;
+  d.mapList = snap.maps.slice();
+  d.lockFactorList = snap.locks.slice();
+  d.randomFactorPoor = snap.pool
+    .map((idx) => (idx >= 0 && idx < FACTORS.length ? FACTORS[idx].name : null))
+    .filter((n): n is string => n !== null);
+  d.randomCommanderPoorA = snap.cmdA.slice();
+  d.randomCommanderPoorB = snap.cmdB.slice();
+  d.selectedCommanderList = snap.selCmd.slice();
+  d.selectedFactorList = snap.selFac.map((idx) => (idx < 0 || idx >= FACTORS.length ? null : FACTORS[idx].name));
+  d.winLoseList = snap.wl.slice();
+  d.modeIsRandom = snap.flags.rand;
+  d.modeIsVeryHard = snap.flags.vh;
+  d.modeIsVeryHard2 = snap.flags.vh2;
+  d.modeIsZhengjiu = snap.flags.zj;
+  d.modeIsOnePick = snap.flags.op;
+  d.modeFeiqiu = snap.flags.fq;
+  d.modeSuiji = snap.flags.sj;
+  d.modelFactorCount = snap.mfc;
+  setRuleMode(snap.rm);
+  exposeSelectDebug(snap.mode);
 }

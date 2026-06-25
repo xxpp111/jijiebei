@@ -23,7 +23,7 @@ export interface CodeScreenProps {
   mode: string;
   variant: 'gen' | 'paste';
   onBack: () => void;
-  onStart: () => void; // 按此码开局：写 URL #hash + 导航 select（applySnapshot 还原留后续 round）
+  onStart: (snap: PayloadSnapshot) => void; // 按此码开局：写 URL #hash + 导航 select（applySnapshot 还原同盘）
 }
 
 interface MatchSummary {
@@ -213,7 +213,7 @@ const BAD_MSG: Record<'invalid' | 'version' | 'pool', { tx: string; rule: string
   pool: { tx: '对局码版本不符 · 池已更新，请用新工具重新生成', rule: '需更新工具' },
 };
 
-function PastePanel({ onBack, onStart }: { onBack: () => void; onStart: () => void }) {
+function PastePanel({ onBack, onStart }: { onBack: () => void; onStart: (snap: PayloadSnapshot) => void }) {
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<PasteStatus>(null);
   const [snap, setSnap] = useState<PayloadSnapshot | null>(null);
@@ -283,7 +283,7 @@ function PastePanel({ onBack, onStart }: { onBack: () => void; onStart: () => vo
           className={'startbtn' + (ok ? '' : ' blocked')}
           data-code-start
           disabled={!ok}
-          onClick={onStart}
+          onClick={() => snap && onStart(snap)}
         >
           按此码开局 <span className="startbtn-arrow">▶</span>
         </button>
