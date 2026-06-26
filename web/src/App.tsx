@@ -176,11 +176,13 @@ export default function App() {
       <button className={'ctrl-btn' + (screen === 'code' && codeVariant === 'gen' ? ' on' : '')} type="button" onClick={() => goCode('gen')} data-nav-code-gen>生成码</button>
       <button className={'ctrl-btn' + (screen === 'code' && codeVariant === 'paste' ? ' on' : '')} type="button" onClick={() => goCode('paste')} data-nav-code-paste>贴码开局</button>
       <button className="ctrl-btn" type="button" onClick={restartCurrentMode} data-rerandom-btn>重新随机</button>
-      <button className="ctrl-btn" type="button" data-dev-login onClick={async () => {
-        const id = prompt('dev 登录 · 账号（P5 联调用，F 登录界面待出稿）', 'host@jjb.test'); if (!id) return;
-        const pw = prompt('密码'); if (!pw) return;
-        try { const a = await pbAuth(id, pw); setRerenderTick((x) => x + 1); alert('登录成功: ' + a.role); } catch (e) { alert('登录失败: ' + (e as Error).message); }
-      }}>{getAccount() ? `dev:${getAccount()?.role}` : 'dev登录'}</button>
+      {q('dev') === '1' && (
+        <button className="ctrl-btn" type="button" data-dev-login onClick={async () => {
+          const id = prompt('dev 登录 · 账号（P5 联调用，正式登录走 F 登录界面）', 'host@jjb.test'); if (!id) return;
+          const pw = prompt('密码'); if (!pw) return;
+          try { const a = await pbAuth(id, pw); setRerenderTick((x) => x + 1); alert('登录成功: ' + a.role); } catch (e) { alert('登录失败: ' + (e as Error).message); }
+        }}>{getAccount() ? `dev:${getAccount()?.role}` : 'dev登录'}</button>
+      )}
       <button className="ctrl-btn" type="button" onClick={() => navigate('home')} data-back-home-btn>回主界面</button>
     </div>
   );
