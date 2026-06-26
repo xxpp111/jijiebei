@@ -61,7 +61,7 @@ export function EventRulesScreen({ style, mode }: { style: string; mode: string 
         <div className="evr-cols">
           {/* ① 禁用地图 */}
           <div className="evr-col">
-            <div className="evr-col-head"><span className="evr-col-t">① 禁用地图</span><span className="evr-col-n">{banMaps.size}/{ALL_MAPS.length}</span></div>
+            <div className="evr-col-head"><span className="evr-col-t">① 禁用地图<small style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}>仅单刷</small></span><span className="evr-col-n">{banMaps.size}/{ALL_MAPS.length}</span></div>
             <div className="evr-chips">
               {ALL_MAPS.map((m) => (
                 <button key={m} type="button" className={'evr-chip' + (banMaps.has(m) ? ' on' : '')} data-evr-map={m} onClick={() => toggle(banMaps, setBanMaps, m)}>{m}</button>
