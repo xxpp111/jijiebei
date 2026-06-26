@@ -18,6 +18,7 @@ import { setRandomEnemyEnabled } from './randomConfig';
 import { AI_ENEMY_POOL } from '../data/aiEnemyPool';
 import { FACTORS } from '../config/factors';
 import type { SingleSnapshot } from './codec';
+import { getBanMaps, getBanFactors } from './eventBan';
 
 // jjbLive re-export（段2 Phase 1 BattleScreen/e2e 读当前局是否开局用；非 9 模式逻辑，仅透出）
 export { jjbLive };
@@ -134,6 +135,7 @@ function toStartCore(): void {
       const ri = rand((ConfigData.mapGrid as any[]).length);
       map = (ConfigData.mapGrid as any[])[ri][0];
       const group = Number((ConfigData.mapGrid as any[])[ri][1]);
+      if (getBanMaps().has(map)) continue; // event ban: skip banned map; guard prevents infinite loop
       if (mfc === 4 || group === 2 || Math.random() < 0.33) break;
     }
     ConfigData.popMap(map);
@@ -145,6 +147,13 @@ function toStartCore(): void {
     ConfigData.popFactor('风暴英雄');
     ConfigData.popFactor('虚空裂隙');
     ConfigData.popFactor('进攻部署');
+  }
+
+  // event ban: pre-pop 被 ban 的非豁免因子（同 mfc==2 预删范式）
+  // 豁免 XP 锁定项（非酋固定因子）：hardcoded 选取不经随机池，ban 无需影响
+  const _evtBanFactorExempt = new Set(['混乱工作室', '礼尚往来', '风暴英雄', '虚空裂隙']);
+  for (const f of getBanFactors()) {
+    if (!_evtBanFactorExempt.has(f)) ConfigData.popFactor(f);
   }
 
   // 3 锁定因子（JijieContro.toStart 第 92-105 行）
@@ -358,6 +367,8 @@ export function exposeSelectDebug(mode: SessionMode): void {
       status: d.status,
       mapCount: (d.mapList || []).length,
       lockCount: (d.lockFactorList || []).length,
+      mapList: (d.mapList || []).slice(),
+      lockFactorList: (d.lockFactorList || []).slice(),
       randomFactorPoorLen: poolLen,
       randomCommanderPoorALen: (d.randomCommanderPoorA || []).length,
       randomCommanderPoorBLen: (d.randomCommanderPoorB || []).length,

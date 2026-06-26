@@ -45,6 +45,37 @@ func registerHooks(app core.App) {
 		}
 		return e.Next()
 	})
+
+	// event_rules 单活跃 hook：存 active=true 时把其它行 active 置 false + 写 logs 审计。
+	ensureSingleActive := func(e *core.RecordEvent) error {
+		rec := e.Record
+		if !rec.GetBool("active") {
+			return e.Next()
+		}
+		// 把其它 active=true 的记录置 false（record ID 为 nanoid 字母数字，拼接安全）
+		others, err := e.App.FindRecordsByFilter("event_rules", "active=true && id!='"+rec.Id+"'", "", 0, 0)
+		if err != nil {
+			log.Printf("[jjb] event_rules find others failed: %v", err)
+			return e.Next()
+		}
+		for _, other := range others {
+			other.Set("active", false)
+			if saveErr := e.App.Save(other); saveErr != nil {
+				log.Printf("[jjb] event_rules deactivate %s failed: %v", other.Id, saveErr)
+			}
+		}
+		// 审计
+		if logErr := writeLog(e.App, nil, "event_rules.activate", "event_rules", rec.Id, map[string]any{
+			"season":      rec.GetString("season"),
+			"deactivated": len(others),
+			"updated_by":  rec.GetString("updated_by"),
+		}); logErr != nil {
+			log.Printf("[jjb] event_rules.activate audit log failed: %v", logErr)
+		}
+		return e.Next()
+	}
+	app.OnRecordAfterCreateSuccess("event_rules").BindFunc(ensureSingleActive)
+	app.OnRecordAfterUpdateSuccess("event_rules").BindFunc(ensureSingleActive)
 }
 
 // scoreMatch 解析 match.result 算获胜场 × 系数 = delta，为每个 player 写 scores + score.adjust logs。

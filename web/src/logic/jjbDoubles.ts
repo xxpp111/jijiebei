@@ -8,6 +8,7 @@ import { weightedSampleNoReplace } from './commanderWeight';
 import { rollEnemiesForSession, clearEnemyRolls } from './aiEnemySelector';
 import { FACTORS } from '../config/factors';
 import type { DoublesSnapshot } from './codec';
+import { getBanFactors, getBanMutators } from './eventBan';
 
 // 额外随机因子来源（官方24因子子集，按开局时过滤当场官突锁定因子后随机抽取）。
 const FACTOR_SOURCE = [
@@ -88,8 +89,11 @@ export function doublesStart(variant: 'guantu' | 'feiqiu' = 'guantu'): void {
     _factorPool = FEIQIU_ASSIGN_POOL.slice();
   } else {
     _mutEntries = TIER_ORDER.map((t) => {
-      const pool = MUTATOR_POOL[t];
-      return pool[Math.floor(Math.random() * pool.length)];
+      const pool = MUTATOR_POOL[t].filter(
+        (e) => !getBanMutators().has(e.name) && !e.factors.some((f) => getBanFactors().has(f))
+      );
+      const usable = pool.length > 0 ? pool : MUTATOR_POOL[t]; // 守卫：全 ban 时回退原池
+      return usable[Math.floor(Math.random() * usable.length)];
     });
     const lockedFacs = new Set(_mutEntries.flatMap((e) => e.factors));
     _factorPool = shuffle(FACTOR_SOURCE.filter((f) => !lockedFacs.has(f))).slice(0, FACTOR_POOL_SIZE);

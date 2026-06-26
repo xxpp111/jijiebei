@@ -7,11 +7,13 @@ import { HomeScreen } from './screens/HomeScreen';
 import { SelectScreen } from './screens/SelectScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { BpConfigScreen } from './screens/BpConfigScreen';
+import { EventRulesScreen } from './screens/EventRulesScreen';
 import { CodeScreen } from './screens/CodeScreen';
 import { LadderScreen } from './screens/LadderScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { startSession, exposeStartSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
+import { fetchAndLoadEventBan } from './logic/eventBan';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
 import { applySnapshot } from './logic/codec';
 import JijieData from './logic/legacy/JijieData';
@@ -23,7 +25,7 @@ import { pbAuth, getAccount } from './logic/backend';
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
-const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'code', 'ladder', 'login', 'phase0', 'foundation'] as const;
+const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'eventrules', 'code', 'ladder', 'login', 'phase0', 'foundation'] as const;
 const SCREEN_LABELS: Record<string, string> = {
   home: '主界面',
   select: '选择',
@@ -33,6 +35,7 @@ const SCREEN_LABELS: Record<string, string> = {
   bpconfig: 'BP设置',
   code: '码方案',
   ladder: '天梯',
+  eventrules: '赛事规则',
 };
 const STYLE_LABELS: Record<(typeof STYLES)[number], string> = {
   metal: '金属',
@@ -43,7 +46,7 @@ const MODE_LABELS: Record<(typeof MODES)[number], string> = {
   dark: '深色',
   light: '浅色',
 };
-type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'code' | 'ladder' | 'login' | 'phase0' | 'foundation';
+type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'eventrules' | 'code' | 'ladder' | 'login' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -105,6 +108,9 @@ export default function App() {
     setMode(next);
     writeUrlParam('mode', next);
   };
+
+  // 赛事 ban：App 启动拉一次 /api/event-rules → loadEventBan，让三引擎开局时拿到本周 ban（生效下一局）。后端不可达=无 ban、不阻断。
+  useEffect(() => { void fetchAndLoadEventBan(); }, []);
 
   // select 屏兜底（?screen=select 直跳）：JijieData 还没开局就开一局 std8（按 stop_when 第 5 条）。
   useEffect(() => {
@@ -173,6 +179,7 @@ export default function App() {
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
       <button className={'ctrl-btn' + (screen === 'bpconfig' ? ' on' : '')} type="button" onClick={() => navigate('bpconfig')} data-nav-bpconfig>BP设置</button>
+      <button className={'ctrl-btn' + (screen === 'eventrules' ? ' on' : '')} type="button" onClick={() => navigate('eventrules')} data-nav-eventrules>赛事规则</button>
       <button className={'ctrl-btn' + (screen === 'code' && codeVariant === 'gen' ? ' on' : '')} type="button" onClick={() => goCode('gen')} data-nav-code-gen>生成码</button>
       <button className={'ctrl-btn' + (screen === 'code' && codeVariant === 'paste' ? ' on' : '')} type="button" onClick={() => goCode('paste')} data-nav-code-paste>贴码开局</button>
       <button className="ctrl-btn" type="button" onClick={restartCurrentMode} data-rerandom-btn>重新随机</button>
@@ -290,6 +297,15 @@ export default function App() {
     return (
       <>
         <BpConfigScreen key={`bpconfig-${rerenderTick}`} style={style} mode={mode} />
+        {!bare && switcher}
+      </>
+    );
+  }
+
+  if (screen === 'eventrules') {
+    return (
+      <>
+        <EventRulesScreen key={`eventrules-${rerenderTick}`} style={style} mode={mode} />
         {!bare && switcher}
       </>
     );

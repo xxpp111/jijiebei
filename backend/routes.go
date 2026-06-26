@@ -10,6 +10,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/pocketbase/dbx"
@@ -20,6 +21,7 @@ func registerRoutes(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/rankings", rankingsHandler)
 		se.Router.GET("/api/scoring", scoringHandler)
+		se.Router.GET("/api/event-rules", eventRulesHandler)
 		return se.Next()
 	})
 }
@@ -110,4 +112,61 @@ func scoringHandler(e *core.RequestEvent) error {
 		"default_coefficient": cfg.DefaultCoefficient,
 		"formula":             "delta = wins × coefficient[game_mode]",
 	})
+}
+
+// eventRulesHandler: 返回 event_rules 集合中 active=true 的赛事 ban 规则。
+// GET /api/event-rules → {season, ban_maps:[], ban_factors:[], ban_mutators:[]}
+// 无 active 行时返回空 ruleset（前端正常开局，无 ban）。
+func eventRulesHandler(e *core.RequestEvent) error {
+	empty := map[string]any{
+		"season":       "",
+		"ban_maps":     []string{},
+		"ban_factors":  []string{},
+		"ban_mutators": []string{},
+	}
+	records, err := e.App.FindRecordsByFilter("event_rules", "active=true", "-id", 1, 0)
+	if err != nil || len(records) == 0 {
+		return e.JSON(http.StatusOK, empty)
+	}
+	rec := records[0]
+	return e.JSON(http.StatusOK, map[string]any{
+		"season":       rec.GetString("season"),
+		"ban_maps":     parseJSONStringSlice(rec.Get("ban_maps")),
+		"ban_factors":  parseJSONStringSlice(rec.Get("ban_factors")),
+		"ban_mutators": parseJSONStringSlice(rec.Get("ban_mutators")),
+	})
+}
+
+// parseJSONStringSlice 把 PocketBase JSONField 值（types.JsonRaw / []byte / string / []any）解为 []string。
+func parseJSONStringSlice(v interface{}) []string {
+	if v == nil {
+		return []string{}
+	}
+	if arr, ok := v.([]any); ok {
+		s := make([]string, 0, len(arr))
+		for _, x := range arr {
+			if str, ok := x.(string); ok {
+				s = append(s, str)
+			}
+		}
+		return s
+	}
+	var b []byte
+	switch val := v.(type) {
+	case []byte:
+		b = val
+	case string:
+		b = []byte(val)
+	default:
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return []string{}
+		}
+		b = raw
+	}
+	var result []string
+	if err := json.Unmarshal(b, &result); err != nil {
+		return []string{}
+	}
+	return result
 }
