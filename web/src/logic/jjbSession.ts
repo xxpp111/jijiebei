@@ -818,9 +818,18 @@ export function clearGoldRuntime(): void { goldRuntime.clear(); }
 // practice(默认)=permissive-silent：禁因子/自选指挥官随意，不限制不提示；
 // match=enforce-with-toast：违规弹提示但不强拦（禁因子上限1、2A1B、二选一互斥仅在此态生效）。
 // 由 HomeScreen.start() 经 setRuleMode 写入；getSelectState/getBpState 透出；BP 规则逻辑读它分流。
-// 不随 startSession 重置：规则态由 home 入口决定、跨开局保留；e2e/?screen=select 直跳不经 home 时取默认 practice。
-let ruleMode: 'practice' | 'match' = 'practice';
-export function setRuleMode(m: 'practice' | 'match'): void { ruleMode = m === 'match' ? 'match' : 'practice'; }
+// 不随 startSession 重置：规则态由 home 入口决定、跨开局保留。
+// sessionStorage 持久化：刷新 / 直接访问 result|select 不丢 match 态（否则 canRecord/BP enforce 被重置成 practice，
+// 比赛结束按钮消失、规则提示失效）。同标签会话内保留，关标签 / 新会话回默认 practice；
+// node(window undefined) 与 Playwright 新 page 取默认 practice，e2e 不被污染。
+function loadRuleMode(): 'practice' | 'match' {
+  try { return window.sessionStorage?.getItem('jjb_rule_mode') === 'match' ? 'match' : 'practice'; } catch { return 'practice'; }
+}
+let ruleMode: 'practice' | 'match' = typeof window !== 'undefined' ? loadRuleMode() : 'practice';
+export function setRuleMode(m: 'practice' | 'match'): void {
+  ruleMode = m === 'match' ? 'match' : 'practice';
+  try { window.sessionStorage?.setItem('jjb_rule_mode', ruleMode); } catch { /* noop */ }
+}
 export function getRuleMode(): 'practice' | 'match' { return ruleMode; }
 
 // ===== 因子 BP（ban：select 屏运行时标记因子禁用；不改 9 格槽/池结构，validate 旁路叠加） =====

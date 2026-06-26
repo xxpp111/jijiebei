@@ -1,7 +1,7 @@
 // web/src/logic/backend.ts
 // P5 联调：前端 fetch /api 对接 PocketBase（同源 — dev 走 vite proxy、生产走 nginx /api 反代，免 CORS）。
 // 与 codec.ts 配合：payload_code = encodePayload(当前局)。练习模式默认不落库（mode=practice 由调用方决定）。
-// auth：host/admin 登录拿 token（登录界面 F 出稿前，联调用测试账号）；token 仅内存、不落盘。
+// auth：host/admin 登录拿 token；token + account 持久化到 sessionStorage（刷新 / 直接访问不掉线；关标签即清）。
 
 const API = '/api';
 
@@ -19,13 +19,25 @@ export interface MatchPayload {
 
 export interface PlayerRecord { id: string; nickname: string; player_code: string; race_pref?: string; avatar?: string }
 
-let authToken: string | null = null;
-let authAccount: { id: string; role: string; display_name?: string } | null = null;
+// 登录态持久化到 sessionStorage：主播刷新 / 直接访问 result 不掉线（否则 token 丢 → canRecord false、比赛结束按钮消失、整页退登录）。
+// sessionStorage（非 localStorage）：关标签即清，比长期落盘安全；host 角色非超管，会话内保留是可接受的权衡。
+const AUTH_KEY = 'jjb_auth';
+type AuthAccount = { id: string; role: string; display_name?: string };
+function loadAuth(): { token: string | null; account: AuthAccount | null } {
+  try { const raw = window.sessionStorage?.getItem(AUTH_KEY); if (raw) { const d = JSON.parse(raw); return { token: d.token || null, account: d.account || null }; } } catch { /* noop */ }
+  return { token: null, account: null };
+}
+const _initAuth = typeof window !== 'undefined' ? loadAuth() : { token: null, account: null };
+let authToken: string | null = _initAuth.token;
+let authAccount: AuthAccount | null = _initAuth.account;
+function persistAuth() {
+  try { if (authToken) window.sessionStorage?.setItem(AUTH_KEY, JSON.stringify({ token: authToken, account: authAccount })); else window.sessionStorage?.removeItem(AUTH_KEY); } catch { /* noop */ }
+}
 
 export function getToken(): string | null { return authToken; }
 export function getAccount() { return authAccount; }
-export function setToken(t: string | null) { authToken = t; }
-export function clearAuth() { authToken = null; authAccount = null; }
+export function setToken(t: string | null) { authToken = t; persistAuth(); }
+export function clearAuth() { authToken = null; authAccount = null; persistAuth(); }
 
 /** host/admin 登录 → token（内存态）。失败抛错。 */
 export async function pbAuth(identity: string, password: string): Promise<{ id: string; role: string }> {
@@ -37,6 +49,7 @@ export async function pbAuth(identity: string, password: string): Promise<{ id: 
   const d = await r.json();
   authToken = d.token;
   authAccount = { id: d.record?.id, role: d.record?.role, display_name: d.record?.display_name };
+  persistAuth();
   return { id: authAccount.id, role: authAccount.role };
 }
 
