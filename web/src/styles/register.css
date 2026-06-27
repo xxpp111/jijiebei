@@ -1,0 +1,26 @@
+/* RegisterScreen — 选手注册增量样式。复用 login.css 的 login-stage/hero/card/lf/login-banner/startbtn；
+   此处只加 reg 专属类。全部 token-driven，三皮肤（metal/sc2/minimal × dark/light）通用。 */
+.reg-card { max-height: 664px; overflow-y: auto; }
+.reg-fields { gap: 10px; }
+.lf-req { color: var(--warn); margin-left: 3px; font-style: normal; }
+.lf-optn { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 4px; }
+
+/* 选填分隔线 */
+.reg-optdiv { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
+.reg-optdiv::before, .reg-optdiv::after { content: ''; flex: 1; height: 1px; background: var(--panel-edge); }
+.reg-optdiv span { font-size: 12px; color: var(--muted); letter-spacing: 2px; }
+
+/* 擅长指挥官 chip 网格 */
+.reg-cmds-row { align-items: flex-start; }
+.reg-cmds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; max-height: 162px; overflow-y: auto; padding: 2px 2px 4px; }
+.reg-cmd-chip { font: inherit; font-size: 12px; line-height: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--panel-edge); background: var(--panel-bg); color: var(--ink); cursor: pointer; transition: background .12s, border-color .12s, color .12s; white-space: nowrap; }
+.reg-cmd-chip:hover { border-color: var(--accent); }
+.reg-cmd-chip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+/* 官方指挥官左色条按种族 */
+.reg-cmd-chip.race-p { border-left: 3px solid #6c8cff; }
+.reg-cmd-chip.race-t { border-left: 3px solid #d8b24a; }
+.reg-cmd-chip.race-z { border-left: 3px solid #b46cd8; }
+/* CM 自定义虚线框 + 分隔标 */
+.reg-cmd-chip.reg-cmd-cm { border-style: dashed; }
+.reg-cmd-cmdiv { width: 100%; font-size: 11px; color: var(--muted); letter-spacing: 3px; margin-top: 4px; }
+.reg-foot-note { font-size: 11px; color: var(--muted); }

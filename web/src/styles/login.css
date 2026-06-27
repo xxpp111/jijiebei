@@ -55,3 +55,13 @@
 .login-link { font-size: 13px; letter-spacing: 1px; color: var(--muted); background: none; border: none; padding: 0; cursor: pointer; transition: color .12s; }
 .login-link:hover { color: var(--accent); }
 .login-link .lk-en { font-family: var(--font-num); margin-left: 7px; opacity: .7; letter-spacing: 1.5px; }
+
+/* ── 选手/主播 tab（需求1 登录权限） ── */
+.login-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.login-tab { flex: 1; font: inherit; font-size: 14px; padding: 9px 0; border-radius: 7px; border: 1px solid var(--panel-edge); background: var(--panel-bg); color: var(--muted); cursor: pointer; transition: background .14s, color .14s, border-color .14s; }
+.login-tab:hover { color: var(--ink); }
+.login-tab.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+
+/* 记住我 checkbox */
+.lf-remember { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; letter-spacing: .5px; color: var(--muted); cursor: pointer; user-select: none; }
+.lf-remember input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }

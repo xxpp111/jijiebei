@@ -11,13 +11,14 @@ import { EventRulesScreen } from './screens/EventRulesScreen';
 import { CodeScreen } from './screens/CodeScreen';
 import { LadderScreen } from './screens/LadderScreen';
 import { LoginScreen } from './screens/LoginScreen';
+import { RegisterScreen } from './screens/RegisterScreen';
 import { startSession, exposeStartSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
 import { fetchAndLoadEventBan } from './logic/eventBan';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
 import { applySnapshot } from './logic/codec';
 import JijieData from './logic/legacy/JijieData';
-import { pbAuth, getAccount } from './logic/backend';
+import { pbAuth, pbRefresh, getAccount } from './logic/backend';
 
 // 路由（query）：?screen=home|select|battle|obs|phase0|foundation；
 // ?style=metal|sc2|minimal & ?mode=dark|light 控视觉主题；?sessionMode=std8|std10|... 控赛事模式。
@@ -25,7 +26,7 @@ import { pbAuth, getAccount } from './logic/backend';
 // 状态机：screen 默认 home；URL ?screen= 决定初屏；startSession 模式可由 startSession(mode) 重新开局。
 const STYLES = ['metal', 'sc2', 'minimal'] as const;
 const MODES = ['dark', 'light'] as const;
-const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'eventrules', 'code', 'ladder', 'login', 'phase0', 'foundation'] as const;
+const SCREENS = ['home', 'select', 'battle', 'obs', 'result', 'bpconfig', 'eventrules', 'code', 'ladder', 'login', 'register', 'phase0', 'foundation'] as const;
 const SCREEN_LABELS: Record<string, string> = {
   home: '主界面',
   select: '选择',
@@ -46,7 +47,7 @@ const MODE_LABELS: Record<(typeof MODES)[number], string> = {
   dark: '深色',
   light: '浅色',
 };
-type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'eventrules' | 'code' | 'ladder' | 'login' | 'phase0' | 'foundation';
+type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'eventrules' | 'code' | 'ladder' | 'login' | 'register' | 'phase0' | 'foundation';
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -111,6 +112,14 @@ export default function App() {
 
   // 赛事 ban：App 启动拉一次 /api/event-rules → loadEventBan，让三引擎开局时拿到本周 ban（生效下一局）。后端不可达=无 ban、不阻断。
   useEffect(() => { void fetchAndLoadEventBan(); }, []);
+
+  // 需求1 自动登录：App 启动静默 refresh。loadAuth 已从 storage（localStorage 记住我 / sessionStorage 会话）恢复内存态，
+  // 此处用恢复的 token 调 pbRefresh 续期：成功更新 token（account 基本不变，无需重渲染）；401/失效 → clearAuth 并触发重渲染退登录。
+  // 未登录（无 account）直接跳过，不 refresh。refresh 异步，期间组件首渲染已显示 storage 恢复的登录态 → 不闪未登录。
+  useEffect(() => {
+    if (!getAccount()) return; // 未登录不 refresh（pbRefresh 无 account 也返 false，提前 short-circuit 省一次请求）
+    void pbRefresh().then((ok) => { if (!ok) setRerenderTick((x) => x + 1); }); // 401 已 clearAuth → 重渲染退登录
+  }, []);
 
   // select 屏兜底（?screen=select 直跳）：JijieData 还没开局就开一局 std8（按 stop_when 第 5 条）。
   useEffect(() => {
@@ -286,6 +295,22 @@ export default function App() {
           style={style}
           mode={mode}
           onBack={() => navigate('home')}
+          onSuccess={() => navigate('home')}
+          onRegister={() => navigate('register')}
+        />
+        {!bare && switcher}
+      </>
+    );
+  }
+
+  if (screen === 'register') {
+    return (
+      <>
+        <RegisterScreen
+          key={`register-${rerenderTick}`}
+          style={style}
+          mode={mode}
+          onBack={() => navigate('login')}
           onSuccess={() => navigate('home')}
         />
         {!bare && switcher}
