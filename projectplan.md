@@ -2613,3 +2613,69 @@ e2e/applysnapshot.mjs   → PASS（单打 std10 + 双打 doubles 往返全绿）
 
 ### 已知 audit caveat
 - 所有 reviewer 走 direct-dubhe fallback（`real_spawn_not_authorized`），无 Read 工具，rubrics WARNING 率高；gate 无 BLOCK，partial_compliance 为预期状态。
+
+---
+
+## 需求1 登录权限后端+auth链路（login round · 2026-06-27 · spoke 交付）
+
+**harness session**：harness-2026-06-27T05-48-27 / runtime `.harness-pro-login` / 3 phase 全 completed / gate-chain 三环 hmac 链完整。
+
+### 交付物（停工作树，未 commit，交 hub 收口）
+- `backend/pb_migrations/1782000005_player_accounts.go`（新增）— player_accounts auth 集合（NewAuthCollection + nickname/phone(unique idx_pa_phone)/social/fav_commanders/player relation→players MaxSelect1 + **created/updated AutodateField** 显式加 · 教训 B1）。权限矩阵：list/view/update=`@request.auth.id=id`、create=`""`(自助注册)、delete=`@request.auth.role='admin'`(跨集合 admin)。
+- `web/src/logic/backend.ts`（改）— auth 链路改造：`pbAuthHost`(accounts,email)/`pbAuthPlayer`(player_accounts,phone→`{phone}@phone.jjb` identity 兜底)/`registerPlayer`(createRule="" 无需 auth)/`pbRefresh`(按 kind 选集合+401 clearAuth)/`getAccount` 加 `kind:'host'|'player'`/记住我分流(localStorage跨会话 / sessionStorage关标签清，双 storage 同 key 各持一份，clearAuth 双清，loadAuth 优先 localStorage)。`pbAuth` 保留为 pbAuthHost 别名不破坏 LoginScreen/App 现有调用。
+- `web/src/screens/ResultScreen.tsx`（改）— canRecord 按 kind 收紧：match 只 host(kind=host)落库进正式天梯(mode=match)、practice 选手(kind=player)可落(mode=practice，scores hook 按 mode!=match 跳过算分)。防选手登录误触发正式天梯。
+- `web/src/App.tsx`（改）— mount 静默 refresh useEffect（loadAuth 已从 storage 恢复内存态 → pbRefresh 续期，401 clearAuth + 重渲染退登录）。
+
+### gate 结果（3 phase × PASS_WITH_WARNINGS，4 reviewer 真 dispatch）
+- verify 4/4 全 PASS（go build / tsc 0 / vite build / e2e run.mjs 9模式恒等式）每 phase
+- phase1 5 rubric（migration 权限/autodate/phone unique）· phase2 7 rubric（**R2-R7 unanimous PASS**，4 reviewer 看到内联 diff）· phase3 8 rubric（R7/R8 unanimous PASS）
+- kimi-reviewer 3 phase 均 HTTP400（账号无 AgentPlan 订阅，环境问题非代码）→ 其余 4 reviewer(gpt5.5/qwen3.7-max/deepseek/gemini) 满 min_external，gate full
+
+### contract proof 端到端真跑（B 降级口径，全 PASS）
+起隔离 PB（`--dir` 同步 superuser）真跑：registerPlayer 注册→pbAuthPlayer 登录(token221)→pbRefresh 续期(200)→**host 落 match(200)+scores 派生 delta=3 进正式天梯**→选手落 practice(400 被 CreateRule 挡)→**匿名读 players/matches/rankings 全 200**（登录门红线守住，最大产品风险未触发）。
+
+### ⚠️ 已知 gap：选手 practice 落库 = 阶段4（用户拍板 B，不在本契约）
+contract validation「练习模式选手可落库」与 `matches.CreateRule=host||admin`（init_collections:83 scope 红线）冲突——选手 token（player_accounts 无 role）必然被 matches 挡 400。用户选 **B**：前端 canRecord/kind 逻辑保留就绪（hub UI 依赖签名），后端落库身份联动（CreateRule 放开 practice 态 + player_accounts.player→players relation + 既有数据迁移）= **蓝图阶段4 独立高风险轮**。ResultScreen 已加注释标注此 gap（practice+选手 现阶段 postMatch 静默失败不阻断结算）。
+
+### 接口契约（hub UI 四屏对接锚，签名已冻结）
+```
+pbAuthHost(identity,pwd,remember=false)→{id,role}  | pbAuth(phone)→pbAuthHost 别名(remember=false)
+pbAuthPlayer(phone,pwd,remember=false)→{id,nickname}  | registerPlayer({nickname,phone,password,social?,fav_commanders?})→{id}
+pbRefresh()→boolean(true=续期/false=401已clearAuth)  | getAccount()→{id,kind:'host'|'player',role?,nickname?}|null
+```
+
+### 红线守卫
+assets/Script/jijie2 + design/v4-r2 零改动 ✓ / 现网 backend/pb_data 未碰（全程隔离 DB /tmp）✓ / 未自行 git commit（停工作树交 hub）✓
+
+---
+
+## 测试体系建设 + 功能做全 · 全方位整理与分步计划（2026-06-27 · hub 整理）
+
+电脑重启后整理。代码里程碑 `1672260`（需求1+2 全 commit+push、本地远端同步、零损失）。比赛进行中 → 线上冻结不部署，重心转本地测试体系。
+
+### 测试现状（6 层雏形，已较成熟）
+- ① 单元 vitest×4（jjbSession/mutatorPool/codec/commanderWeight + setup.ts）
+- ② drift-check 配置漂移守护（scripts/drift-check.mjs：重跑 gen-config 比对 committed 无 diff）
+- ③ e2e flow×5（login / single-match / doubles-match / doubles-sync / ladder.flow.mjs）
+- ④ e2e 断言×11（run.mjs 主回归 + event-ban / match-flow / record-to-score / codec / applysnapshot / ...）
+- ⑤ backend go test×2（scoring_test / hooks_test）+ verify-all.sh
+- ⑥ harness reviewer×11（config/harness-pro-reviewers-*.json）
+- 聚合：`npm test` = test:unit + test:drift + test:back
+
+### 缺口矩阵（功能 × 测试层）
+- **需求1 auth**：① 单元 ❌ 零（backend.ts auth 纯逻辑：记住我分流/phone→email 兜底/getAccount kind）· ③ flow ⚠️ 只主播渲染（选手/注册/双tab/记住我 无）· ⑤ backend ⚠️ player_accounts 权限未固化 go test
+- **需求2 ban**：① eventBan 状态机 ⚠️ 未单测 · ③ event-ban.mjs ✅
+- **Agent 测试层**：❌ 完全空白
+
+### 分步计划（一步一步，每步独立验收）
+- **Step 0 整理收口**（hub now）：提交本 round 记录 + 本整理节；poster-r1 过程稿 stop-check 噪音待清（gitignore/移走，用户定）。
+- **Step 1 需求1 单元测试**：backend.ts auth（记住我分流/phone→email/getAccount kind）+ eventBan.ts 状态机 → vitest。
+- **Step 2 需求1 e2e flow**：选手登录/注册/双tab/记住我跨会话 → flows/auth.flow.mjs（固化已手跑 Playwright）。
+- **Step 3 backend 测试**：player_accounts 权限矩阵/createRule/phone unique → go test。
+- **Step 4 Agent 测试层（新建）**：claude-in-chrome 真人模拟关键流程，捕捉脚本断言覆盖不到的交互问题 → 基建 + 关键 flow。
+- **Step 5 功能·登录门**：HomeScreen 开局前 getAccount 检查、未登录引导（练习+比赛挡 / 公开读不挡，scope B）。
+- **Step 6 功能·practice 落库**：阶段4 matches.CreateRule 放开 + player→players relation（高风险独立 harness round）。
+
+### 派发策略
+Step 1-3 同构补测试 → 并行派 2-3 spoke（claude+glm5.2 via Dubhe / Codex，各一层）。Step 4 Agent 层 hub 先探工具再派。Step 5-6 功能走 jjb-dev-loop。顺序：Step 0(now) → Step 1-3 并行 → Step 4 → Step 5 → Step 6。
+
