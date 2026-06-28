@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { startSession, setRuleMode, type SessionMode } from '../logic/jjbSession';
+import { getAccount } from '../logic/backend';
 import { BrandLockup } from '../components/BrandLockup';
 import { PromoBar } from '../components/PromoBar';
 import JijieData from '../logic/legacy/JijieData';
@@ -36,6 +37,9 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
 
   const start = (m: SessionMode | 'doubles', soon?: boolean) => {
     if (soon) return; // soon 占位项不启动（当前无 soon 项；doubles 已接通）
+    // 登录门（需求1·全模式）：未登录点开局 → 引导登录、不开局、不污染 XP 状态。
+    // 公开读（天梯/OBS横条/观众）不经此路径，零影响。
+    if (!getAccount()) { onLogin(); return; }
     const name = (playerName || '').trim() || '集结杯选手';
     // P1b 规则态下沉：home 练习/比赛 tab → setRuleMode（hub 拍板方案A；startSession 不重置规则态，由此处决定）。
     setRuleMode(isMatch ? 'match' : 'practice');
@@ -88,18 +92,19 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
               <span className="ht-tx"><span className="ht-t">比赛</span><span className="ht-s">TOURNAMENT</span></span>
             </button>
           </div>
-          {isMatch && (
-            <div className="login-entry">
-              <button className="loginbtn" type="button" data-login-placeholder data-nav-login onClick={onLogin}>
-                <span className="lb-ico">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"></path><circle cx="12" cy="11" r="2.4"></circle><path d="M12 13.4 V16"></path>
-                  </svg>
-                </span>
-                <span className="lb-tx"><span className="lb-t">主播登录</span><span className="lb-s">ADMIN · <b>比赛后台</b></span></span>
-              </button>
-            </div>
-          )}
+          {/* 登录入口：练习态=选手登录 / 比赛态=主播登录（全模式登录门，两态都显示） */}
+          <div className="login-entry">
+            <button className="loginbtn" type="button" data-login-placeholder data-nav-login onClick={onLogin}>
+              <span className="lb-ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"></path><circle cx="12" cy="11" r="2.4"></circle><path d="M12 13.4 V16"></path>
+                </svg>
+              </span>
+              <span className="lb-tx">{isMatch
+                ? <><span className="lb-t">主播登录</span><span className="lb-s">ADMIN · <b>比赛后台</b></span></>
+                : <><span className="lb-t">选手登录</span><span className="lb-s">PLAYER · <b>参赛选手</b></span></>}</span>
+            </button>
+          </div>
         </div>
 
         {/* 模式提示行 */}

@@ -121,9 +121,16 @@ export default function App() {
     void pbRefresh().then((ok) => { if (!ok) setRerenderTick((x) => x + 1); }); // 401 已 clearAuth → 重渲染退登录
   }, []);
 
-  // select 屏兜底（?screen=select 直跳）：JijieData 还没开局就开一局 std8（按 stop_when 第 5 条）。
+  // 登录门兜底（需求1）：防 ?screen=select/battle 直接 URL 绕过 HomeScreen.start() 门。未登录踢回 home。
+  // 仅这两屏挡；公开读屏（home/obs/ladder/result/eventrules/code/...）不在此列，匿名读零影响（守住最大产品风险）。
   useEffect(() => {
-    if (screen === 'select') {
+    if ((screen === 'select' || screen === 'battle') && !getAccount()) navigate('home');
+  }, [screen]);
+
+  // select 屏兜底（?screen=select 直跳）：JijieData 还没开局就开一局 std8（按 stop_when 第 5 条）。
+  // 加 getAccount 门：未登录不兜底开局（上面登录门 useEffect 同周期踢回 home，此处防同周期误开局污染 XP 状态）。
+  useEffect(() => {
+    if (screen === 'select' && getAccount()) {
       try {
         if (doublesLive()) return; // 双打局已开（JJBDoubles 自管，JijieData.mapList 恒空）：不被单打 startSession 兜底覆盖
         const d: any = JijieData;

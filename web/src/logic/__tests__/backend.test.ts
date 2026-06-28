@@ -19,7 +19,7 @@ function mockStorage(): Storage {
   } as Storage;
 }
 function okFetch(record: unknown, token = 'tok') {
-  return vi.fn(async () => ({ ok: true, json: async () => ({ token, record }) }));
+  return vi.fn(async (_u: string, _o: any) => ({ ok: true, json: async () => ({ token, record }) }));
 }
 
 beforeEach(() => {
@@ -115,7 +115,7 @@ describe('backend auth · 静默续期 pbRefresh', () => {
 
 describe('backend auth · 选手注册 registerPlayer', () => {
   it('body 含 email 兜底 + phone 真值 + nickname + fav_commanders + passwordConfirm', async () => {
-    const f = vi.fn(async () => ({ ok: true, json: async () => ({ id: 'np1' }) }));
+    const f = vi.fn(async (_u: string, _o: any) => ({ ok: true, json: async () => ({ id: 'np1' }) }));
     g.fetch = f;
     const r = await registerPlayer({ nickname: '小红', phone: '13900139000', password: 'pwd12345', fav_commanders: ['雷诺', '诺温'] });
     const body = JSON.parse(f.mock.calls[0][1].body);
@@ -128,7 +128,7 @@ describe('backend auth · 选手注册 registerPlayer', () => {
   });
 
   it('选填缺省 → social/fav_commanders 落 null', async () => {
-    const f = vi.fn(async () => ({ ok: true, json: async () => ({ id: 'np2' }) }));
+    const f = vi.fn(async (_u: string, _o: any) => ({ ok: true, json: async () => ({ id: 'np2' }) }));
     g.fetch = f;
     await registerPlayer({ nickname: '无选填', phone: '13700137000', password: 'pwd12345' });
     const body = JSON.parse(f.mock.calls[0][1].body);
