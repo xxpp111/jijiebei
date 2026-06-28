@@ -109,3 +109,6 @@ ds-bundle/
 harness-*.mjs
 screen*.png
 backend/pb_data.bak/
+
+# 海报设计过程稿（脚本+素材，不入代码仓；触发 check-no-debug 噪音的根因）
+design/poster-r1/
