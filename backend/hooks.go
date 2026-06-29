@@ -144,8 +144,23 @@ func countWins(v interface{}) int {
 
 // parseWinLoseList 把 result 字段值规整为 []any。
 // PocketBase JSON 字段经 DB 读出后存为 types.JsonRaw（命名类型，底层 []byte），
-// Go type switch 的 `case []byte:` 不匹配命名类型 → 旧实现漏匹配返回 nil → countWins=0 → delta=0 被拒。
-// 故用 marshal→unmarshal 统一规整，覆盖 []any / []byte / string / types.JsonRaw 全形态。
+// jsonFieldBytes 把 PocketBase JSONField 值（[]byte / string / types.JsonRaw 等命名类型）规整成原始 JSON bytes。
+// 命名类型走 json.Marshal 调其 MarshalJSON（Go type switch 的 `case []byte:` 不匹配命名类型会漏匹配 → nil）。失败返 nil。
+func jsonFieldBytes(v interface{}) []byte {
+	switch val := v.(type) {
+	case []byte:
+		return val
+	case string:
+		return []byte(val)
+	default:
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return nil
+		}
+		return raw
+	}
+}
+
 func parseWinLoseList(v interface{}) []any {
 	if v == nil {
 		return nil
@@ -153,19 +168,9 @@ func parseWinLoseList(v interface{}) []any {
 	if arr, ok := v.([]any); ok {
 		return arr
 	}
-	var b []byte
-	switch val := v.(type) {
-	case []byte:
-		b = val
-	case string:
-		b = []byte(val)
-	default:
-		// types.JsonRaw 等命名类型走这里：json.Marshal 调其 MarshalJSON 拿到原始 JSON bytes。
-		raw, err := json.Marshal(v)
-		if err != nil {
-			return nil
-		}
-		b = raw
+	b := jsonFieldBytes(v)
+	if b == nil {
+		return nil
 	}
 	var arr []any
 	if err := json.Unmarshal(b, &arr); err != nil {

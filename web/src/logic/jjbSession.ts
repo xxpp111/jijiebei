@@ -35,9 +35,8 @@ function csvText(name: string): string {
 }
 
 let configInited = false;
-function initConfigOnce(): void {
-  if (configInited) return;
-  // ConfigData.init(rule, map, commander, factor, ban) —— 参数顺序见 JJConfigData.init 签名。
+// ConfigData.init(rule, map, commander, factor, ban) —— 参数顺序见 JJConfigData.init 签名。
+function doInit(): void {
   ConfigData.init(
     csvText('规则参数配置.txt'),
     csvText('地图配置.txt'),
@@ -45,6 +44,10 @@ function initConfigOnce(): void {
     csvText('因子配置.txt'),
     csvText('ban指挥官.txt'),
   );
+}
+function initConfigOnce(): void {
+  if (configInited) return;
+  doInit();
   configInited = true;
 }
 
@@ -52,13 +55,7 @@ function initConfigOnce(): void {
  *  镜像 JJBDesignBoot.restoreConfigData：每局必调，防 factorList 枯竭 + 地图累积。 */
 function restoreConfig(): void {
   initConfigOnce();
-  ConfigData.init(
-    csvText('规则参数配置.txt'),
-    csvText('地图配置.txt'),
-    csvText('指挥官配置.txt'),
-    csvText('因子配置.txt'),
-    csvText('ban指挥官.txt'),
-  );
+  doInit();
 }
 
 const rand = (n: number) => Math.floor(Math.random() * n);

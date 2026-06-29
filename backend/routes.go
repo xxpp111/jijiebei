@@ -146,18 +146,9 @@ func parseJSONStringSlice(v interface{}) []string {
 		}
 		return s
 	}
-	var b []byte
-	switch val := v.(type) {
-	case []byte:
-		b = val
-	case string:
-		b = []byte(val)
-	default:
-		raw, err := json.Marshal(v)
-		if err != nil {
-			return []string{}
-		}
-		b = raw
+	b := jsonFieldBytes(v)
+	if b == nil {
+		return []string{}
 	}
 	var result []string
 	if err := json.Unmarshal(b, &result); err != nil {

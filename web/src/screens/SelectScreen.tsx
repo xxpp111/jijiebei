@@ -32,7 +32,7 @@ import {
   validateDoubles, randomFillDoubles,
 } from '../logic/jjbDoubles';
 import { getBpModeEnabled } from '../logic/bpConfig';
-import { currentEnemyRace, currentEnemyAi } from '../logic/jjbView';
+import { currentEnemyRace, currentEnemyAi, currentModeLabel } from '../logic/jjbView';
 import { getRandomEnemyEnabled } from '../logic/randomConfig';
 import { raceUrl } from '../lib/realAsset';
 
@@ -141,7 +141,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
   // 替换 spoke 本地 computeSelfPool（修两 bug：showSelfPool 误传 window 致门控恒真 + randomCommanderPoorC 读错 ConfigData）。
   const selfPool = s.selfPool;
 
-  const modeLabel = modeMeta(s);
+  const modeLabel = currentModeLabel();
 
   // ===== Drop target refs（用 ref 注册到 dragdrop 模块） =====
   // 槽位总表：3 场 × 1 cmd + manualSlots(i) factor = 3 + Σ manualSlots 个 target
@@ -478,21 +478,6 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
       </div>
     </div>
   );
-}
-
-function modeMeta(s: ReturnType<typeof getSelectState>): string {
-  if (s.modelFactorCount === 4) return '极难模式';
-  const factorLabel = s.modelFactorCount === 0 ? '随机'
-    : s.modelFactorCount === 2 ? '8 因子'
-    : s.modelFactorCount === 3 ? '10 因子'
-    : `${s.modelFactorCount} 因子`;
-  const modeLabel = s.modeIsZhengjiu ? '拯救'
-    : s.modeIsOnePick ? '单指'
-    : s.modeIsVeryHard2 || s.modeIsVeryHard ? '极难'
-    : s.modeFeiqiu ? '非酋'
-    : s.modeSuiji ? '随机'
-    : '手选';
-  return `${factorLabel} · ${modeLabel}`;
 }
 
 // ===== 双打选择面板（JJBDoubles 自管引擎接通；复用单打 CSS 类 + 组件，数据走 jjbDoubles 适配层） =====
