@@ -76,6 +76,57 @@ func registerHooks(app core.App) {
 	}
 	app.OnRecordAfterCreateSuccess("event_rules").BindFunc(ensureSingleActive)
 	app.OnRecordAfterUpdateSuccess("event_rules").BindFunc(ensureSingleActive)
+
+	// player_accounts 注册后：自动建 players 实体 + 回设 player relation。
+	// 选手自助注册（player_accounts.CreateRule=""）无 host/admin token，建不了 players
+	// （players.CreateRule=host||admin）；model-level hook 用 app.Save 绕过 API rules 代建。
+	app.OnRecordAfterCreateSuccess("player_accounts").BindFunc(func(e *core.RecordEvent) error {
+		acc := e.Record
+		// 幂等：已绑 player 则跳过（不重复建）。重复同 phone 由 idx_pa_phone unique 在 DB 层挡掉，hook 不触发。
+		if len(acc.GetStringSlice("player")) > 0 {
+			return e.Next()
+		}
+		if err := ensurePlayerForAccount(e.App, acc); err != nil {
+			// player_accounts 已 persist；建 players/回填失败不回滚账号 — 暴露错误供排查。
+			log.Printf("[jjb] ensurePlayerForAccount failed for player_account %s: %v", acc.Id, err)
+			return err
+		}
+		return e.Next()
+	})
+}
+
+// ensurePlayerForAccount 为 player_accounts 自动建一个 players 实体并回设 player relation。
+// nickname 取自账号；player_code 用 "pa-"+账号ID（账号ID 唯一不可变 + 一账号一 player 由幂等保证 → player_code 必唯一，无需碰撞重试）。
+// 全程 app.Save 绕过 API rules（选手注册时无 host/admin 授权）。回设 acc.player 是同记录 update，
+// 无 player_accounts update hook → 不递归。
+func ensurePlayerForAccount(app core.App, acc *core.Record) error {
+	playersCol, err := app.FindCollectionByNameOrId("players")
+	if err != nil {
+		return fmt.Errorf("find players collection: %w", err)
+	}
+
+	p := core.NewRecord(playersCol)
+	p.Set("nickname", acc.GetString("nickname"))
+	p.Set("player_code", "pa-"+acc.Id)
+	if err := app.Save(p); err != nil {
+		return fmt.Errorf("create player for account %s: %w", acc.Id, err)
+	}
+
+	acc.Set("player", p.Id)
+	if err := app.Save(acc); err != nil {
+		return fmt.Errorf("link player %s to account %s: %w", p.Id, acc.Id, err)
+	}
+
+	// 审计：player.autocreate
+	if err := writeLog(app, nil, "player.autocreate", "player_accounts", acc.Id, map[string]any{
+		"player_id":   p.Id,
+		"player_code": p.GetString("player_code"),
+		"nickname":    p.GetString("nickname"),
+	}); err != nil {
+		log.Printf("[jjb] player.autocreate audit log failed: %v", err)
+	}
+
+	return nil
 }
 
 // scoreMatch 解析 match.result 算获胜场 × 系数 = delta，为每个 player 写 scores + score.adjust logs。
