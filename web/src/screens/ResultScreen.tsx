@@ -40,7 +40,7 @@ async function postMatchResult(): Promise<RecordOutcome> {
       // mode 按 ruleMode 落：match 进正式天梯（hook 算分），practice 仅自存（hook 跳过算分）。
       mode: ruleMode === 'match' ? 'match' : 'practice',
       game_mode: currentSessionMode(), payload_code: code, payload_ver: PAYLOAD_VER,
-      players: player ? [player.id] : [], host: getAccount()?.id,
+      players: player ? [player.id] : [], host: ruleMode === 'match' ? getAccount()?.id : undefined,
       result: (JijieData as unknown as { winLoseList?: number[] }).winLoseList || [], score_total: getScore(),
     });
     sessionStorage.setItem(key, '1'); // 成功后才置防重（失败可重试）
