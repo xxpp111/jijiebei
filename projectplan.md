@@ -2725,3 +2725,24 @@ Step 1-3 同构补测试 → 并行派 2-3 spoke（claude+glm5.2 via Dubhe / Cod
 4. **poster-r1 debug print 噪音**：Stop hook check-no-debug.sh 报 6 个 `design/poster-r1/*.py` 的 print（独立海报设计轮脚本，非本 round 引入，session 开始即 ?? 未提交）。本 round scope 不含 design，未动；待 hub 清（gitignore 或移走，用户拍板）。
 5. **不自行 commit**：工作树改动（3 新测试文件 + projectplan 本节）停在工作树交 hub。
 
+---
+
+## 🧹 全面整理项目（2026-06-29 · 系统回顾 + 自检 + 规范）
+
+用户要求"全面整理，确保不要垃圾文件，保证清晰简洁"。调研 → 分类 → 用户拍板（删临时·归档报告 / diagrams 留文档board清截图）→ 执行。
+
+### 清理（commit 489f5ae + docs 收尾）
+- **删过程稿**（git rm，git log 留底）：hp-verify.mjs + react-migration×3 + react-phase2×2（React 迁移完成、jjb-platform 已上线）
+- **删 untracked 过程产物**：根 6 验证截图（已 gitignore）+ tmp/ 整个（临时脚本×7 + snap截图×3 + kb中转）+ diagrams 截图目录×4 + 2026导出 + packages/ 空目录
+- **归档 → docs/archive/（11 个）**：platform-research-report(31K) + kb-audit-findings + dispatch×7 + 2 份 06-17 过时审计
+- **入库**：diagrams board 资产（arch/collab/overview/rules-board.png + README）
+
+### 自检结论（结构清晰）
+- 根 tracked 10 个干净：4 配置（.gitignore/README/tsconfig/jsconfig）+ 4 Cocos 工程（creator.d.ts/project.json/template.json/template-banner.png）+ projectplan + mode-rules-truth-table
+- 子项目根：web/backend/admin 标准项目文件 + 验证工具脚本（shot.mjs / backend harness-*/verify-all.sh 互引 = harness 基础设施，保留非垃圾）
+- gitignore 本地目录（kb-guide/kb-whiteboards/config/scripts/local/node_modules）= 本地治理/产物，保留无害
+- docs/ 主目录 21 文档（架构 architecture/deployment/operations/testing + 规则 CSV + 调研 research-*，皆资产）
+
+### 红线零触碰 ✓
+Cocos（assets/Script + project.json + template* + creator.d.ts + settings/）+ design/v4-r2 + backend/pb_data + mode-rules-truth-table.md 哨兵全过。
+
