@@ -81,11 +81,6 @@ func rankingsHandler(e *core.RequestEvent) error {
 		return e.BadRequestError("rankings query failed", err)
 	}
 
-	// 序号（按 total_delta DESC 排名，同分同号）
-	for i := range rows {
-		_ = i // rank 由前端按数组下标算；此处返回有序数组
-	}
-
 	return e.JSON(http.StatusOK, map[string]any{
 		"season":   season,
 		"board":    board,

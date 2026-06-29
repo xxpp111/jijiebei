@@ -7,7 +7,7 @@ import { getToken } from '../logic/backend';
 // EventRulesScreen — 需求2「比赛规则临时 ban」配置面（主播后台）。对齐 BpConfigScreen 视觉语言。
 // 三分区多选：禁用地图 / 禁用因子(带双打命中数) / 禁用官突(A/B/C分组+搜索)。
 // ★数据源自包含：直接 import FACTORS(71母表)+MUTATOR_POOL(官突+地图)，命中数本地算——不依赖 spoke 的 eventBan.ts。
-// ★后端读写(/api/event-rules + event_rules)由 spoke 提供；此处先 mock(loadRuleset/saveRuleset stub)，spoke 交工后按接口契约接真的。
+// ★后端读写 /api/event-rules + event_rules 已接真（本屏 onClick 内联 fetch；瘦身 Batch4 待下沉 backend.ts）。
 
 const ALL_MUTATORS: MutatorEntry[] = [...MUTATOR_POOL.A, ...MUTATOR_POOL.B, ...MUTATOR_POOL.C];
 const ALL_MAPS = [...new Set(ALL_MUTATORS.map((e) => e.map))].sort();

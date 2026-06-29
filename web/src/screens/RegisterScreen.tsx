@@ -5,7 +5,7 @@ import { registerPlayer, pbAuthPlayer } from '../logic/backend';
 
 // RegisterScreen — 选手注册界面（需求1）。对齐 LoginScreen F 风格（左 hero + 右卡）。
 // 必填：昵称/手机号/密码/确认密码；选填：社交媒体账号 / 擅长指挥官（官方18+CM4）。
-// 后端 registerPlayer 由 spoke 提供；此处 mock（不依赖 spoke 未完成的 backend.ts），交工后接真的。
+// 后端 registerPlayer + pbAuthPlayer 走 backend.ts（经 vite proxy /api → PocketBase player_accounts，注册即登录）。
 type RegStatus = 'idle' | 'loading' | 'error' | 'success';
 
 export function RegisterScreen({ style, mode, onBack, onSuccess }: { style: string; mode: string; onBack: () => void; onSuccess: () => void }) {

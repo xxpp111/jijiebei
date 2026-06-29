@@ -14,12 +14,7 @@
     "jsx": "react-jsx",
     "strict": false,
     "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "baseUrl": ".",
-    "paths": {
-      "@logic/*": ["../assets/Script/jijie2/*"],
-      "@jjb/*": ["../assets/Script/jjbDesign/*"]
-    }
+    "noUnusedParameters": false
   },
   "include": ["src"]
 }

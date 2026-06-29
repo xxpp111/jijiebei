@@ -34,5 +34,3 @@ export const raceUrl = (code: 'P' | 'T' | 'Z'): string => {
 };
 // logo：品牌 dM 字标，真实游戏图无独立件，沿用 design 金色 logo（全皮肤统一；保留 style/mode 入参供将来分皮肤）。
 export const logoUrl = (_style?: string, _mode?: string): string => dz('assets/logo-cm-gold.png');
-// 集结杯艺术字标题（真实图 images/brand/jjb-title-{style}-{mode}.png，对齐后端 JJBHome/JJBResult 的 jjb-title sprite）。
-export const titleUrl = (style: string, mode: string): string => pick('brand', `jjb-title-${style}-${mode}`);

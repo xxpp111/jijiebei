@@ -61,7 +61,6 @@ function persistAuth() {
 
 export function getToken(): string | null { return authToken; }
 export function getAccount(): AuthAccount | null { return authAccount; }
-export function setToken(t: string | null) { authToken = t; persistAuth(); }
 export function clearAuth() { authToken = null; authAccount = null; authRemember = false; if (typeof window !== 'undefined') { try { window.localStorage.removeItem(AUTH_KEY); window.sessionStorage.removeItem(AUTH_KEY); } catch { /* noop */ } } }
 
 /** host/admin 登录 → token（accounts 集合，identity=email）。失败抛错。remember 控制持久化存储层。 */
@@ -155,20 +154,6 @@ export async function postMatch(p: MatchPayload): Promise<{ id: string }> {
   });
   if (!r.ok) throw new Error(`[backend] postMatch 失败 ${r.status}: ${(await r.text()).slice(0, 200)}`);
   return r.json();
-}
-
-/** 回读一局（确认落库）。 */
-export async function getMatch(id: string): Promise<unknown> {
-  const r = await fetch(`${API}/collections/matches/records/${id}`);
-  if (!r.ok) throw new Error(`[backend] getMatch ${r.status}`);
-  return r.json();
-}
-
-/** 全选手（直播展示 / 报名选择，公开读无需 auth）。 */
-export async function getPlayers(): Promise<PlayerRecord[]> {
-  const r = await fetch(`${API}/collections/players/records?perPage=200&sort=nickname`);
-  if (!r.ok) throw new Error(`[backend] getPlayers ${r.status}`);
-  return ((await r.json()).items || []) as PlayerRecord[];
 }
 
 /** 按稳定 player_code 取选手（直播横条锚定，昵称可改、code 不可改）。 */

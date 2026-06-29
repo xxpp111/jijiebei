@@ -46,8 +46,3 @@ export function toggleBpMode(mode: string): void {
   if (isBpModeLocked(mode)) return;
   bpModeOverride.set(mode, !getBpModeEnabled(mode));
 }
-
-/** 重置所有覆盖到 R3 默认态。 */
-export function resetBpModes(): void {
-  bpModeOverride.clear();
-}
