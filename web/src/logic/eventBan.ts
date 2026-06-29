@@ -7,6 +7,7 @@
 //   不受 event ban 影响；ban 只作用随机抽取部分，不动 XP 锁定项。
 //   具体豁免由调用方（jjbSession.ts / jjbDoubles.ts）负责；本模块只提供 getter。
 import { MUTATOR_POOL } from '../data/mutatorPool';
+import { getEventRules } from './backend';
 
 // ---------- 内部状态 ----------
 let _banMaps: Set<string> = new Set();
@@ -63,10 +64,7 @@ export function getMutatorHitCount(factorName: string): number {
  * 后端不可达 / 无 active 行 → 无 ban、不阻断开局（静默）。生效下一局：开局读已 load 的 Set 快照。
  */
 export async function fetchAndLoadEventBan(): Promise<void> {
-  try {
-    const r = await fetch('/api/event-rules');
-    if (!r.ok) return;
-    const d = await r.json();
-    loadEventBan({ ban_maps: d.ban_maps ?? [], ban_factors: d.ban_factors ?? [], ban_mutators: d.ban_mutators ?? [] });
-  } catch { /* 后端不可达 → 无 ban，不阻断开局 */ }
+  const d = await getEventRules(); // 与 EventRulesScreen 共用 backend.getEventRules（去重 GET /api/event-rules + 不可达兜底）
+  if (!d) return; // 后端不可达 / 无 active 行 → 无 ban，不阻断开局
+  loadEventBan({ ban_maps: d.ban_maps ?? [], ban_factors: d.ban_factors ?? [], ban_mutators: d.ban_mutators ?? [] });
 }

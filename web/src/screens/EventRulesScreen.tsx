@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrandLockup } from '../components/BrandLockup';
 import { FACTORS } from '../config/factors';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
-import { getToken } from '../logic/backend';
+import { getToken, getEventRules, saveEventRules } from '../logic/backend';
 
 // EventRulesScreen — 需求2「比赛规则临时 ban」配置面（主播后台）。对齐 BpConfigScreen 视觉语言。
 // 三分区多选：禁用地图 / 禁用因子(带双打命中数) / 禁用官突(A/B/C分组+搜索)。
@@ -17,7 +17,7 @@ function mutatorHitCount(factorName: string): number {
 }
 
 // 真后端：/api/event-rules 公开读当前 ruleset；保存走 POST event_rules（host token，触发单活跃 hook）。
-const API = '/api';
+// 读写下沉到 backend.getEventRules / saveEventRules（瘦身 Batch4），本屏不再内联 fetch / 手拼 Authorization。
 
 export function EventRulesScreen({ style, mode }: { style: string; mode: string }) {
   const [season, setSeason] = useState('2026-W26');
@@ -27,14 +27,14 @@ export function EventRulesScreen({ style, mode }: { style: string; mode: string 
   const [search, setSearch] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
 
-  // 初始加载当前赛事 ruleset（/api/event-rules 公开读，无 active 行返空）
+  // 初始加载当前赛事 ruleset（backend.getEventRules，与 eventBan 共用，不可达兜底空 ban）
   useEffect(() => {
-    fetch(`${API}/event-rules`).then((r) => r.json()).then((d) => {
+    getEventRules().then((d) => {
       if (d.season) setSeason(d.season);
-      setBanMaps(new Set(d.ban_maps ?? []));
-      setBanFactors(new Set(d.ban_factors ?? []));
-      setBanMutators(new Set(d.ban_mutators ?? []));
-    }).catch(() => { /* 后端不可达 → 空 ban */ });
+      setBanMaps(new Set(d.ban_maps));
+      setBanFactors(new Set(d.ban_factors));
+      setBanMutators(new Set(d.ban_mutators));
+    });
   }, []);
 
   const toggle = (set: Set<string>, setter: (s: Set<string>) => void, key: string) => {
@@ -111,15 +111,11 @@ export function EventRulesScreen({ style, mode }: { style: string; mode: string 
           <button type="button" className="evr-btn-clear" data-evr-clear onClick={() => { setBanMaps(new Set()); setBanFactors(new Set()); setBanMutators(new Set()); }}>清空恢复无 ban</button>
           <span className="evr-foot-note">{saveState === 'done' ? '✓ 已保存，下一局生效' : saveState === 'error' ? '保存失败（需主播登录）' : '保存后写入 /api/event-rules，下一局生效'}</span>
           <button type="button" className="evr-btn-save" data-evr-save disabled={guardMap || saveState === 'saving'} onClick={async () => {
-            const token = getToken();
-            if (!token) { setSaveState('error'); window.alert('请先用主播账号登录再保存'); return; }
+            if (!getToken()) { setSaveState('error'); window.alert('请先用主播账号登录再保存'); return; }
             setSaveState('saving');
             try {
-              const r = await fetch(`${API}/collections/event_rules/records`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token },
-                body: JSON.stringify({ season, ban_maps: [...banMaps], ban_factors: [...banFactors], ban_mutators: [...banMutators], active: true }),
-              });
-              setSaveState(r.ok ? 'done' : 'error');
+              const ok = await saveEventRules({ season, ban_maps: [...banMaps], ban_factors: [...banFactors], ban_mutators: [...banMutators] });
+              setSaveState(ok ? 'done' : 'error');
             } catch { setSaveState('error'); }
           }}>{saveState === 'saving' ? '保存中…' : saveState === 'done' ? '✓ 已保存' : '保存并生效（下一局起）'}</button>
         </div>

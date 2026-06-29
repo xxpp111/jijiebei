@@ -4,61 +4,18 @@ import { FactorFrame } from '../components/FactorFrame';
 import { BrandLockup } from '../components/BrandLockup';
 import { CaptureButtons } from '../components/CaptureButtons';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
-import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, currentSessionMode, ensureDoublesSessionFromUrl } from '../logic/jjbView';
-import { encodePayload, capturePayload, PAYLOAD_VER } from '../logic/codec';
-import { getRuleMode, getScore } from '../logic/jjbSession';
-import { postMatch, getToken, getAccount, ensurePlayer } from '../logic/backend';
-import JijieData from '../logic/legacy/JijieData';
+import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, ensureDoublesSessionFromUrl } from '../logic/jjbView';
+import { postMatchResult, canPostResult } from '../logic/matchRecord';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
-
-type RecordOutcome = 'posted' | 'duplicate' | 'skipped';
-let posting = false; // 模块级 in-flight 锁：防 useEffect 双触 / 自动落库与手点按钮并发重复落
-
-// P5 联调 + 需求1：canRecord 按 account.kind 收紧（防选手登录误触发正式天梯落库）。
-//   比赛模式（ruleMode=match）：只 host/admin token（account.kind=host）落库 → mode=match 进正式天梯（scores hook 派生积分）。
-//   练习模式（ruleMode=practice）：选手（kind=player）token 可落库 → mode=practice，scores hook 按 mode 过滤跳过算分（练习战绩选手自己看，不进正式天梯）。
-//   ⚠️ 阶段4 前端就绪 / 后端待联动：matches.CreateRule=host||admin（init_collections:83 红线），选手 token（player_accounts 无 role）现阶段会被 matches 挡 400。
-//      故 practice+选手 组合的 postMatch 会静默失败（catch 不阻断结算）。落库身份联动（CreateRule 放开 practice 态 + player_accounts.player→players relation）= 蓝图阶段4 独立轮，不在本契约。
-//   ensurePlayer：选手不存在则以输入名兜底建/关联（hook 派生 scores 仅 match 态）。返回 outcome 供按钮反馈；失败抛错由调用方 catch。防重 key 成功后才置。
-async function postMatchResult(): Promise<RecordOutcome> {
-  const ruleMode = getRuleMode();
-  const kind = getAccount()?.kind;
-  // 比赛态只 host 落库；练习态选手可落库（自存练习战绩，不计正式分）；其余 skipped。
-  const canPost = ruleMode === 'match' ? kind === 'host' : ruleMode === 'practice' ? kind === 'player' : false;
-  if (!canPost || !getToken()) return 'skipped';
-  const ms = currentMatches();
-  if (ms.length < 3 || ms.some((m) => !m.result)) return 'skipped';
-  const code = encodePayload(capturePayload());
-  const key = 'jjb_posted_' + code.slice(0, 40);
-  if (sessionStorage.getItem(key)) return 'duplicate'; // 防重：同局码已落
-  if (posting) return 'duplicate';                      // in-flight：避免并发双落
-  posting = true;
-  try {
-    const player = await ensurePlayer(currentPlayerName()); // 兜底：找不到则建/关联，让现场选手随便输名上天梯
-    await postMatch({
-      // mode 按 ruleMode 落：match 进正式天梯（hook 算分），practice 仅自存（hook 跳过算分）。
-      mode: ruleMode === 'match' ? 'match' : 'practice',
-      game_mode: currentSessionMode(), payload_code: code, payload_ver: PAYLOAD_VER,
-      players: player ? [player.id] : [], host: ruleMode === 'match' ? getAccount()?.id : undefined,
-      result: (JijieData as unknown as { winLoseList?: number[] }).winLoseList || [], score_total: getScore(),
-    });
-    sessionStorage.setItem(key, '1'); // 成功后才置防重（失败可重试）
-    // 落库成功审计由后端 logs(match.create) 记，前端不打 log（check-no-debug）。
-    return 'posted';
-  } finally {
-    posting = false;
-  }
-}
 
 // ResultScreen — 结算屏（段3③）。承接后端 JJBResult.build：TopBar + 大比分 banner + 战绩卡列表 + 页脚。
 // 大比分 = getScore()（winCount，含带奖励不双计）；战绩卡 result 从 sessionMatches 反查。0 改 jijie2。
 export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: string; onGenCode: () => void }) {
   const [, setTick] = useState(0);
   const [recordState, setRecordState] = useState<'idle' | 'posting' | 'done' | 'error'>('idle');
-  // canRecord 按账户种类收紧（与 postMatchResult 同口径）：比赛模式只 host 可录、练习模式选手可录自存战绩。其余不显示录入按钮。
-  const acctKind = getAccount()?.kind;
-  const canRecord = (getRuleMode() === 'match' ? acctKind === 'host' : getRuleMode() === 'practice' ? acctKind === 'player' : false) && !!getToken();
+  // canRecord = 落库资格谓词（与 postMatchResult 同口径，单点 canPostResult()）：比赛只 host 可录、练习选手可录自存战绩，其余不显示录入按钮。
+  const canRecord = canPostResult();
 
   async function runRecord() {
     setRecordState('posting');

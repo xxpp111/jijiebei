@@ -204,3 +204,34 @@ export async function getRankings(board: 'all' | 'single' | 'double' = 'all'): P
   if (!r.ok) throw new Error(`[backend] rankings ${r.status}`);
   return r.json();
 }
+
+/** 赛事 ban 规则集（需求2 event_rules）。读写下沉自 EventRulesScreen + eventBan（瘦身 Batch4，去重 GET /api/event-rules）。 */
+export interface EventRuleset {
+  season?: string;
+  ban_maps: string[];
+  ban_factors: string[];
+  ban_mutators: string[];
+}
+
+/** 公开读当前赛事 ban（GET /api/event-rules active=true；无 active 行 / 不可达 → 空 ban，不阻断开局）。 */
+export async function getEventRules(): Promise<EventRuleset> {
+  try {
+    const r = await fetch(`${API}/event-rules`);
+    const d = await r.json();
+    return { season: d.season, ban_maps: d.ban_maps ?? [], ban_factors: d.ban_factors ?? [], ban_mutators: d.ban_mutators ?? [] };
+  } catch {
+    return { ban_maps: [], ban_factors: [], ban_mutators: [] };
+  }
+}
+
+/** 保存赛事 ban（POST event_rules，host token，触发后端单活跃 hook）。无 token → false。 */
+export async function saveEventRules(ruleset: EventRuleset): Promise<boolean> {
+  const token = getToken();
+  if (!token) return false;
+  const r = await fetch(`${API}/collections/event_rules/records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: token },
+    body: JSON.stringify({ ...ruleset, active: true }),
+  });
+  return r.ok;
+}
