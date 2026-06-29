@@ -324,6 +324,7 @@ export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: 
   // 双打=独立引擎：JJBDoubles 自管池/槽/洗牌/计分，不读写 JijieData 单打管线。
   // 早分支启动后即返——绕开 restoreConfig/setModeFlags/toStart/toSelect/9格固化；调试镜像走 __jjbDebug.doubles。
   clearBpRuntime(); // 任何开局都重置 BP ban（含双打早分支，避免跨局残留）
+  clearGoldRuntime(); // 同步重置点金（修跨局泄漏 bug：上局点金因子带进下局经 weightedFactorScore 让 difficulty×2 污染记分）
   if (mode === 'doubles') { doublesStart('guantu'); return; }
   if (mode === 'feiqiu-doubles') { doublesStart('feiqiu'); return; }
   doublesReset(); // 非 doubles 模式开局时重置双打引擎（防跨局 doublesLive 残留，影响 navigate 模式判断）
@@ -604,6 +605,7 @@ export function randomFillAndStart(): void {
   const d: any = JijieData;
   if (!jjbLive()) return;
   clearBpRuntime(); // 随机填充=放弃 BP 手选 ban（防 ban+随机 死角；完整 ban×随机集成需「多揉因子」保池=槽，留完整 BP 轮）
+  clearGoldRuntime(); // 同步重置点金（修跨局泄漏）
   fillSelectionSlots(d);
   d.winLoseList = [];
   d.status = 3;
@@ -614,6 +616,7 @@ export function randomFillSelection(): void {
   const d: any = JijieData;
   if (!jjbLive()) return;
   clearBpRuntime(); // 随机填充=放弃 BP 手选 ban（同 randomFillAndStart；完整 ban×随机集成留完整 BP 轮）
+  clearGoldRuntime(); // 同步重置点金（修跨局泄漏）
   fillSelectionSlots(d);
   exposeSelectDebug(getSelectState().mode);
 }
