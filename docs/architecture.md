@@ -1,6 +1,6 @@
 # 集结杯 · 架构（Architecture）
 
-> 范围：项目从「单刷抽签工具」演进到「比赛平台」后的完整体系图：7 屏前端 + Arco 业务后台 + PocketBase 5 集合后端 + devbox 三层同源部署。
+> 范围：项目从「单刷抽签工具」演进到「比赛平台」后的完整体系图：11 屏前端 + Arco 业务后台 + PocketBase 7 集合后端 + devbox 三层同源部署。
 > 真相源：`projectplan.md`（决策史）/ `web/src/`（前端代码）/ `backend/`（PocketBase + Go hook）/ `backend/deploy/`（部署产物）。
 
 ---
@@ -16,7 +16,7 @@ flowchart LR
   end
 
   subgraph devbox_8080[devbox nginx:8080 · 三层同源]
-    WEB[web SPA<br/>React + Vite<br/>7 屏]
+    WEB[web SPA<br/>React + Vite<br/>11 屏]
     ADM[admin SPA<br/>Arco 业务后台<br/>base=/admin/]
     API[/api 反代/]
     PBA[/_/ 反代/]
@@ -64,7 +64,7 @@ flowchart LR
 
 ---
 
-## 1. 前端：7 + 2 屏（`web/src/screens/`）
+## 1. 前端：9 + 2 屏（`web/src/screens/`）
 
 | 屏 | 路径 | 路由 (`?screen=`) | 职责 | 关键逻辑 |
 |---|---|---|---|---|
@@ -74,11 +74,13 @@ flowchart LR
 | **ResultScreen** | `ResultScreen.tsx` | `result` | 大比分 + 战绩卡 + 落库触发 | `getScore()` + `postMatch(payload)` |
 | **ObsScreen** | `ObsScreen.tsx` | `obs` | 直播横条三形态 | `ObsBar` 组件，三态 URL 参数切换 |
 | **LadderScreen** | `LadderScreen.tsx` | `ladder` | 天梯榜（公开读 `/api/rankings`） | `getRankings()` + 系数展示 |
-| **LoginScreen** | `LoginScreen.tsx` | `login` | 主播登录（host / admin） | `pbAuth(identity, password)` |
+| **LoginScreen** | `LoginScreen.tsx` | `login` | 双 tab 登录：选手（player_accounts）/ 主播（accounts host·admin） | `pbAuthPlayer` / `pbAuthHost` |
+| **RegisterScreen** | `RegisterScreen.tsx` | `register` | 选手注册参赛（昵称/手机号/密码 + 擅长指挥官 22 chip 选填） | `registerPlayer` + `pbAuthPlayer`（注册即登录） |
+| **EventRulesScreen** | `EventRulesScreen.tsx` | `eventrules` | 需求2 赛事临时 ban 配置面（主播后台：禁地图/因子/官突） | `event_rules` 读写 + `eventBan.ts` 三引擎 pre-roll |
 | **BpConfigScreen** | `BpConfigScreen.tsx` | `bpconfig` | BP 规则配置（practice 无上限 / match 上限 1） | `toggleBanFactor` / `getBpExclusive` |
 | **CodeScreen** | `CodeScreen.tsx` | `code` | 码方案（`?code=gen` 生成 / `?code=paste` 贴码还原） | `codec.encodePayload` / `applySnapshot` |
 
-> **7 屏**（home / select / battle / result / obs / ladder / login）+ **2 子页**（bpconfig / code）。`App.tsx` 集中路由（`?screen=…`）+ 主题切换（`?style=metal|sc2|minimal` × `?mode=dark|light`）。
+> **9 屏**（home / select / battle / result / obs / ladder / login / register / eventrules）+ **2 子页**（bpconfig / code）。`App.tsx` 集中路由（`?screen=…`）+ 主题切换（`?style=metal|sc2|minimal` × `?mode=dark|light`）。登录门（需求1）：select/battle 开局前要登录，公开读屏（home/obs/ladder/result/eventrules/code）匿名不挡。
 
 ### 1.1 视觉主题（6 主题 token）
 
@@ -91,7 +93,8 @@ flowchart LR
 | `jjbSession.ts` | 单打状态机 + 9 模式开局 + BP + 难度分 | `startSession / getSelectState / validate / startFromSelection / getSessionMatches / factorScore / difficultyTotal` |
 | `jjbDoubles.ts` | 双打独立引擎（自管 selection + winLose） | `getDoublesState / setDoublesCmd / setDoublesFac / setDoublesVerdict / randomFillDoubles / doublesScore` |
 | `codec.ts` | 整局 → 自包含短码（schema v1 冻结） | `encodePayload / decodePayload` + 三道闸（version / pool / invalid） |
-| `backend.ts` | PocketBase API 客户端（auth / match / players / rankings） | `pbAuth / postMatch / getPlayers / getPlayerByCode / getRankings` |
+| `backend.ts` | PocketBase API 客户端（双登录 / 注册 / match / rankings） | `pbAuthPlayer / pbAuthHost / registerPlayer / getAccount / pbRefresh / postMatch / getPlayerByCode / getRankings` |
+| `eventBan.ts`（需求2） | 赛事临时 ban 状态机（地图/因子/官突三引擎 pre-roll） | `loadEventBan / getBanMaps / getBanFactors / getBanMutators / fetchAndLoadEventBan` |
 | `bpConfig.ts` | BP 规则 + practice/match 软违规分流 | `toggleBanFactor / getBpState / getBpExclusive` |
 | `aiEnemySelector.ts` | 随机敌方（开关 ON 注入 P/T/Z） | `rollEnemy / getEnemyPool` |
 | `commanderWeight.ts` | 指挥官权重（A/B 组） | `getCommanderPool` |
@@ -100,9 +103,9 @@ flowchart LR
 
 ---
 
-## 2. 后端：5 集合 + Go hook + 2 自定义路由（`backend/`）
+## 2. 后端：7 集合 + Go hook + 2 自定义路由（`backend/`）
 
-### 2.1 5 集合 schema（`pb_migrations/1782000001_init_collections.go` + `1782000003_scores_wins_games.go`）
+### 2.1 7 集合 schema（`pb_migrations/`：init_collections + scores_wins_games + event_rules + player_accounts）
 
 | 集合 | 类型 | 关键字段 | 读 | 写 |
 |---|---|---|---|---|
@@ -111,8 +114,10 @@ flowchart LR
 | **matches** | base | `mode (practice\|match) / game_mode (11 SessionMode 枚举) / payload_code / payload_ver / players (relation) / host (relation) / result (JSON winLoseList) / score_total / bp_config` | 公开 | host ‖ admin（改：本人主持 ‖ admin） |
 | **scores** | base | `player (relation) / match (relation) / delta / wins / games / reason / season` | 公开 | admin-only（hook 用 `app.Save` 绕过规则写） |
 | **logs** | base | `actor (relation accounts) / action / target_type / target_id / detail (JSON) / ip` | admin-only | hook 写；update/delete = nil 不可改删 |
+| **event_rules**（需求2） | base | `season / ban_maps / ban_factors / ban_mutators (JSON) / active` | 公开（`/api/event-rules` active=true） | host ‖ admin（单活跃 hook：存 active 时其它行置 false + 写 logs） |
+| **player_accounts**（需求1） | auth | `nickname / phone / social (JSON) / fav_commanders (JSON 中文名数组) / player (relation→players)` | 自隔离（list/view/update = `@request.auth.id=id`） | 自助注册（create=`""`）/ delete = admin |
 
-> 9 个迁移文件：3 个 Go embed（`1782000001_init_collections` / `1782000002_lock_default_users` / `1782000003_scores_wins_games`） + PocketBase 内置 `users` 锁。
+> 5 个 Go embed 迁移（`..001_init_collections` / `..002_lock_default_users` / `..003_scores_wins_games` / `..004_event_rules`〔需求2〕 / `..005_player_accounts`〔需求1〕） + PocketBase 内置 `users` 锁。
 
 ### 2.2 算分 hook（`backend/hooks.go`）
 
@@ -244,9 +249,9 @@ sequenceDiagram
 | 层 | 形态 | 端口 | 职责 | 部署产物 |
 |---|---|---|---|---|
 | **nginx** | docker `jijiebei-nginx` (`nginx:1.27-alpine`) | 宿主 8080:80 | web 静态 / admin 静态 / `/api` 反代 / `/_/` Admin UI 反代 | `backend/deploy/nginx-docker-triple.conf` |
-| **web** | Vite SPA，hash 文件名（CDN 友好） | 容器内 80 | 7 屏 + 6 主题 | `web/dist/`（`npm run build`） |
+| **web** | Vite SPA，hash 文件名（CDN 友好） | 容器内 80 | 11 屏 + 6 主题 | `web/dist/`（`npm run build`） |
 | **admin** | Vite SPA (`base=/admin/`) | 容器内 80 | Arco 业务后台（6 模块：Dashboard / Players / Matches / Accounts / Rankings / Logs） | `admin/dist/`（`npm run build`） |
-| **backend** | PocketBase 单二进制 + Litestream sidecar | 宿主 127.0.0.1:8090（不直接对外） | 5 集合 + Go hook + 2 自定义路由 | `backend/pocketbase`（`go build`）+ `config/` + `pb_migrations/`（编译进二进制） |
+| **backend** | PocketBase 单二进制 + Litestream sidecar | 宿主 127.0.0.1:8090（不直接对外） | 7 集合 + Go hook + 2 自定义路由 | `backend/pocketbase`（`go build`）+ `config/` + `pb_migrations/`（编译进二进制） |
 | **数据** | SQLite + Litestream → S3 兼容对象存储 | — | 实时增量复制（`sync-interval: 1s`） | `backend/deploy/litestream.yml` |
 
 > **三者同源** = 前端 `fetch /api` 走同一 origin 8080，**免 CORS**。详细部署步骤见 [docs/deployment.md](deployment.md)。
@@ -274,7 +279,7 @@ sequenceDiagram
 4. **wins/games 战绩**：`scores.wins = countWins(result)`，`scores.games = len(result)`；`/api/rankings` 用 `COALESCE(SUM(wins),0)` / `COALESCE(SUM(games),0)` 兜底 0（旧记录 nil 字段不报错）。
 5. **logs 不可改删**：`updateRule = nil` + `deleteRule = nil` → PocketBase 返 403 `Only superusers can perform this action`（验证见 `verify-all.sh` §6e）。
 6. **payload_code schema v1 冻结**：`codec.ts` 三道闸（version / pool / invalid）保证编解码往返等价（`e2e/codec.mjs` 段 2 强制）。
-7. **0 改 jijie2 / jjbDesign 边界**：前端逻辑引擎 `assets/Script/jijie2/` XP 维护；jjbDesign / web/src 只读 `JijieData` public + 调 XP 现成 handler（详见 `react-migration-plan.md`）。
+7. **0 改 jijie2 / jjbDesign 边界**：前端逻辑引擎 `assets/Script/jijie2/` XP 维护；jjbDesign / web/src 只读 `JijieData` public + 调 XP 现成 handler。
 8. **season 隔离**：scores.season 决定天梯聚合键；`?season=` 可查历史赛季；改 `config/scoring.json` 的 `current_season` 即切赛季。
 
 ---

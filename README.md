@@ -2,12 +2,12 @@
 
 > **星际争霸 2 合作任务突变因子比赛平台** —— B 站主播「土豆」主办 × 社区 MOD「CM」联名。**不是**单纯的「抽签前端」。
 
-项目面向「工具 → 平台」演进：前端 React 7 屏（home / select / battle / result / obs / ladder / login / bpconfig / code） + Arco 业务后台 + PocketBase 后端（5 集合 + Go hook 算分 + 天梯聚合） + devbox 三层同源部署（web / admin / api 共享 nginx:8080）。
+项目面向「工具 → 平台」演进：前端 React 11 屏（home / select / battle / result / obs / ladder / login / register / eventrules / bpconfig / code） + Arco 业务后台 + PocketBase 后端（7 集合 + Go hook 算分 + 天梯聚合 + 需求1 选手登录 + 需求2 赛事 ban） + devbox 三层同源部署（web / admin / api 共享 nginx:8080）。
 
 | 入口 | 文档 |
 |---|---|
 | 装/跑/测/部署导航 | 当前 README §3 快速开始 |
-| 7 屏 + 5 集合 + 数据流 | [docs/architecture.md](docs/architecture.md) |
+| 11 屏 + 7 集合 + 数据流 | [docs/architecture.md](docs/architecture.md) |
 | 三层测试（vitest / AI-E2E / 双打同步） | [docs/testing.md](docs/testing.md) |
 | devbox 部署手册（nginx / Litestream / 回滚） | [docs/deployment.md](docs/deployment.md) |
 | 主播账号 / 选手 / 赛季 / 系数 / 天梯 / FAQ | [docs/operations.md](docs/operations.md) |
@@ -43,9 +43,9 @@ jijiebei/
 │   ├── testing.md
 │   ├── deployment.md
 │   └── operations.md
-├── web/                         ← React + Vite 前端（7 屏）
+├── web/                         ← React + Vite 前端（11 屏）
 │   ├── src/
-│   │   ├── screens/             ← 9 个屏组件（home/select/battle/result/obs/ladder/login/bpconfig/code）
+│   │   ├── screens/             ← 11 个屏组件（home/select/battle/result/obs/ladder/login/register/eventrules/bpconfig/code）
 │   │   ├── components/          ← 共享 UI 组件（BrandLockup/MatchRow/FactorFrame/...）
 │   │   ├── logic/               ← 核心逻辑（jjbSession 状态机 / jjbDoubles 双打 / codec 编解码 / backend API 客户端）
 │   │   ├── lib/                 ← 工具（capture/snapDOM 截图 / dragdrop / designAssets）
@@ -61,7 +61,7 @@ jijiebei/
 │   ├── hooks.go                 ← match→scores 派生 + 审计
 │   ├── routes.go                ← /api/rankings /api/scoring 自定义路由
 │   ├── scoring.go               ← 系数表加载 + delta 计算
-│   ├── pb_migrations/           ← 3 个 Go embed 迁移（init / lock users / scores wins·games）
+│   ├── pb_migrations/           ← 5 个 Go embed 迁移（init / lock users / scores wins·games / event_rules / player_accounts）
 │   ├── pb_data/                 ← SQLite 数据（含 data.db + wal + shm）
 │   ├── config/scoring.json      ← 系数表（修改重启即生效，不重编译 Go）
 │   ├── deploy/                  ← nginx conf / systemd / Litestream / runbook / Dockerfile
@@ -149,8 +149,8 @@ cd backend
 
 ## 4. 现状（截至 2026-06-24）
 
-- ✅ 前端 7 屏 + 2 子页（bpconfig / code）已交付，dev 跑通；build 0 error，9 模式 + 双打全路径 e2e 绿。
-- ✅ 后端 P5（5 集合 + Go hook + /api/rankings /api/scoring）全链路验证（`backend/verify-all.sh` 10 段全绿）。
+- ✅ 前端 9 屏 + 2 子页（bpconfig / code）已交付，dev 跑通；build 0 error，9 模式 + 双打全路径 e2e 绿。需求1（选手/主播双登录 + 注册 + 登录门）+ 需求2（赛事临时 ban）已上线。
+- ✅ 后端（7 集合 + Go hook + /api/rankings /api/scoring /api/event-rules）全链路验证（`backend/verify-all.sh` 10 段全绿）。
 - ✅ devbox 部署：web（jjb-live-dock） + admin（jjb-admin-dock） + backend（systemd `jjb-backend`）+ nginx（docker 容器 `jijiebei-nginx`）三层同源 :8080 实测联通。
 - ✅ 三层测试：①代码层（前端 build + 后端 Go test）②AI-E2E（8 个 e2e 脚本）③双打同步（两 profile 对战）。
 - ⚠️ 系数表（`config/scoring.json`）天梯上线前须 yb/土豆拍板定稿（caveat 3）。
