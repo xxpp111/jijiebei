@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { pbAuthHost, pbAuthPlayer } from '../logic/backend';
-import { raceUrl } from '../lib/realAsset';
+import { ScreenShell } from '../components/ScreenShell';
+import { LoginHero, loginInputStyle } from '../components/LoginHero';
 
 // LoginScreen — 登录界面 F。选手/主播双 tab：
 //   主播 tab → pbAuthHost(accounts, role host/admin)；选手 tab → pbAuthPlayer(player_accounts, phone 登录)。
@@ -33,37 +34,16 @@ export function LoginScreen({ style, mode, onBack, onSuccess, onRegister }: { st
     }
   };
 
-  const inputStyle = { background: 'none', border: 'none', outline: 'none', color: 'var(--ink)', width: '100%', font: 'inherit' } as const;
+  const inputStyle = loginInputStyle;
   const btnText = status === 'loading' ? '登录中' : status === 'success' ? (isPlayer ? '进入' : '进入后台') : '登录';
   const btnDisabled = status === 'loading' || status === 'success';
 
   return (
-    <div className={`jjb login-stage style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`login-${style}-${mode}`}>
-      <div className="jjb-bg"><div className="bg-grad"></div><div className="bg-tex"></div><div className="bg-vignette"></div></div>
+    <ScreenShell className={`jjb login-stage style-${style} mode-${mode}`} data-screen-label={`login-${style}-${mode}`}>
       <div className="jjb-inner login-inner">
 
         {/* 左：品牌 hero */}
-        <div className="login-hero">
-          <div className="lockup lockup-lg">
-            <div className="lockup-word">
-              <span className="lockup-cn">集结杯</span>
-              <span className="lockup-en">ASSEMBLY CUP</span>
-            </div>
-          </div>
-          <div className="hero-kicker">STARCRAFT II · CO-OP MISSIONS</div>
-          <div className="hero-sub">{isPlayer ? '选手 · 参赛登录' : '主播 · 比赛后台'}</div>
-          <div className="hero-racesblock">
-            <div className="hero-racescap">星际II 合作任务 · 参赛三族</div>
-            <div className="hero-races">
-              {([['P', '神族', 'PROTOSS'], ['T', '人族', 'TERRAN'], ['Z', '虫族', 'ZERG']] as const).map(([code, cn, en]) => (
-                <div className="race-emblem" key={code}>
-                  <img src={raceUrl(code)} alt={cn} />
-                  <div className="race-name"><b>{cn}</b><span>{en}</span></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <LoginHero sub={isPlayer ? '选手 · 参赛登录' : '主播 · 比赛后台'} />
 
         <div className="hero-div"></div>
 
@@ -129,6 +109,6 @@ export function LoginScreen({ style, mode, onBack, onSuccess, onRegister }: { st
         </div>
 
       </div>
-    </div>
+    </ScreenShell>
   );
 }

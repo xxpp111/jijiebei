@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { BrandLockup } from '../components/BrandLockup';
+import { ScreenShell } from '../components/ScreenShell';
+import { TopBar, MetaRow } from '../components/TopBar';
 import { FACTORS } from '../config/factors';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
 import { getToken, getEventRules, saveEventRules } from '../logic/backend';
@@ -45,13 +46,11 @@ export function EventRulesScreen({ style, mode }: { style: string; mode: string 
   const guardMap = mapsLeft < 3; // 守卫：单打每局抽 3 张地图，可抽 < 3 阻止保存
 
   return (
-    <div className={`jjb bpc evr style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`eventrules-${style}-${mode}`}>
-      <div className="jjb-bg"><div className="bg-grad"></div><div className="bg-tex"></div><div className="bg-vignette"></div></div>
+    <ScreenShell className={`jjb bpc evr style-${style} mode-${mode}`} data-screen-label={`eventrules-${style}-${mode}`}>
       <div className="jjb-inner">
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta"><div className="meta-row"><span className="meta-k">赛事规则</span><span className="meta-v">{season}</span></div></div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="赛事规则" v={season} />
+        </TopBar>
         <div className="bpc-head">
           <span className="bpc-kicker">EVENT BAN</span>
           <span className="bpc-title">本周赛事规则</span>
@@ -120,6 +119,6 @@ export function EventRulesScreen({ style, mode }: { style: string; mode: string 
           }}>{saveState === 'saving' ? '保存中…' : saveState === 'done' ? '✓ 已保存' : '保存并生效（下一局起）'}</button>
         </div>
       </div>
-    </div>
+    </ScreenShell>
   );
 }

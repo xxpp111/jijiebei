@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { BrandLockup } from '../components/BrandLockup';
+import { ScreenShell } from '../components/ScreenShell';
+import { TopBar, MetaRow } from '../components/TopBar';
 import { getRankings } from '../logic/backend';
 import { currentPlayerName } from '../logic/jjbView';
 
@@ -50,17 +51,13 @@ export function LadderScreen({ style, mode }: { style: string; mode: string }) {
   const myIdx = rows.findIndex((r) => r.nickname === me);
 
   return (
-    <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`ladder-${style}-${mode}`}>
-      <div className="jjb-bg"><div className="bg-grad"></div><div className="bg-tex"></div><div className="bg-vignette"></div></div>
+    <ScreenShell className={`jjb style-${style} mode-${mode}`} data-screen-label={`ladder-${style}-${mode}`}>
       <div className="jjb-inner lad">
         {/* topbar */}
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta">
-            <div className="meta-row"><span className="meta-k">积分天梯</span><span className="meta-v">展示层</span></div>
-            <div className="meta-row"><span className="meta-k">数据源</span><span className="meta-v">/api/rankings</span></div>
-          </div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="积分天梯" v="展示层" />
+          <MetaRow k="数据源" v="/api/rankings" />
+        </TopBar>
 
         {/* 赛季头 */}
         <div className="lad-season">
@@ -143,6 +140,6 @@ export function LadderScreen({ style, mode }: { style: string; mode: string }) {
           </div>
         )}
       </div>
-    </div>
+    </ScreenShell>
   );
 }

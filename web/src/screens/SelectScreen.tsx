@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { DropCell } from '../components/DropCell';
-import { BrandLockup } from '../components/BrandLockup';
+import { ScreenShell } from '../components/ScreenShell';
+import { TopBar, MetaRow } from '../components/TopBar';
+import { MapThumb } from '../components/MapThumb';
+import { useToast, ToastV } from '../components/Toast';
 import { EnemyBadge } from '../components/EnemyBadge';
 import { CaptureButtons } from '../components/CaptureButtons';
-import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
+import { cmdUrl, facUrl } from '../lib/realAsset';
 import {
   getSelectState,
   startSession,
@@ -122,13 +125,8 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
       try { startSession(m); setTick((x) => x + 1); } catch (e) { console.error('[Select] 兜底开局失败:', e); }
     }
   }, []);
-  // 校验失败 toast：开始按钮按下时塞
-  const [toast, setToast] = useState<{ msg: string; count: number; kind: 'hard' | 'soft' } | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  // 校验失败 toast：开始按钮按下时塞（state + 4s 自动消失 → useToast）
+  const [toast, setToast] = useToast();
 
   const s = getSelectState();
   const live = s.jjbLive;
@@ -225,43 +223,23 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
   }
 
   return (
-    <div
+    <ScreenShell
       className={`jjb style-${style} mode-${mode}`}
-      style={{ width: 1280, height: 720 }}
       data-screen-label={`select-${style}-${mode}-${s.mode}`}
       data-capture="select"
     >
-      <div className="jjb-bg">
-        <div className="bg-grad"></div>
-        <div className="bg-tex"></div>
-        <div className="bg-vignette"></div>
-      </div>
-
       <div className="jjb-inner sel">
         {/* topbar */}
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta">
-            <div className="meta-row">
-              <span className="meta-k">当前选手</span>
-              <span className="meta-v" data-meta-player>{s.playerName || '选手'}</span>
-            </div>
-            <div className="meta-row">
-              <span className="meta-k">比赛模式</span>
-              <span className="meta-v" data-meta-mode>{modeLabel}</span>
-            </div>
-            <div className="meta-row">
-              <span className="meta-k">难度总分</span>
-              <span className="meta-v" data-difficulty-total style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{difficultyTotal()}</span>
-            </div>
-          </div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="当前选手" v={s.playerName || '选手'} vProps={{ 'data-meta-player': true }} />
+          <MetaRow k="比赛模式" v={modeLabel} vProps={{ 'data-meta-mode': true }} />
+          <MetaRow k="难度总分" v={difficultyTotal()} vProps={{ 'data-difficulty-total': true, style: { fontWeight: 700, color: 'var(--accent, #e8b84b)' } }} />
+        </TopBar>
 
         {/* 3 场 slots（真实地图 + 锁定因子 + 空槽数=manualSlots(i)） */}
         <div className="slots">
           {s.manualSlots.map((slots, i) => {
             const mapName = s.mapList[i] || '—';
-            const mapSrc = mapUrl(mapName);
             const lock = s.lockFactorList[i];
             const selCmd = s.selectedCommanderList[i];
             const isBoss = i === 2;
@@ -284,16 +262,9 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   </span>
                   {isBoss && <span className="slot-flag">双倍</span>}
                 </div>
-                <span className="mapthumb">
-                  {mapSrc ? (
-                    <img src={mapSrc} alt={mapName} />
-                  ) : (
-                    <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
-                      {mapName}
-                    </span>
-                  )}
+                <MapThumb map={mapName}>
                   <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} size="lg" />
-                </span>
+                </MapThumb>
                 <div className="slot-targets">
                   <div className="t-cmds">
                     {selCmd ? (
@@ -457,14 +428,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
             )}
             </div>
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
-              {toast && (
-                <div className={'toastv ' + toast.kind + (toast.count > 1 ? ' toastv-stack' : '')} data-toast-err data-toast-kind={toast.kind}>
-                  <span className="toastv-ico">!</span>
-                  <span className="toastv-tx">{toast.msg}</span>
-                  {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
-                  <span className={toast.kind === 'soft' ? 'toastv-rule' : 'toastv-block'}>{toast.kind === 'soft' ? '仍可开赛' : '阻断开赛'}</span>
-                </div>
-              )}
+              <ToastV toast={toast} />
               <EnemyStatusPill />
               <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode}>生成对局码 →</button>
               <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select.png" />
@@ -488,7 +452,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
           </div>
         </div>
       </div>
-    </div>
+    </ScreenShell>
   );
 }
 
@@ -500,12 +464,7 @@ function isPickedDoubles(slots: Array<{ cmds: (string | null)[]; factors: (strin
 
 function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
   const [, setTick] = useState(0);
-  const [toast, setToast] = useState<{ msg: string; count: number; kind: 'hard' | 'soft' } | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const [toast, setToast] = useToast();
 
   const st = getDoublesState();
   const matchVMs = doublesMatches();
@@ -560,29 +519,23 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
       : (cfg.matchMutators || []).map((ms) => ms.join('·')).join(' | '));
 
   return (
-    <div
+    <ScreenShell
       className={`jjb style-${style} mode-${mode}`}
-      style={{ width: 1280, height: 720 }}
       data-screen-label={`select-${style}-${mode}-doubles`}
       data-capture="select"
       data-doubles-select
     >
-      <div className="jjb-bg"><div className="bg-grad"></div><div className="bg-tex"></div><div className="bg-vignette"></div></div>
       <div className="jjb-inner sel">
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta">
-            <div className="meta-row"><span className="meta-k">参赛战队</span><span className="meta-v" data-meta-player>双打战队</span></div>
-            <div className="meta-row"><span className="meta-k">比赛模式</span><span className="meta-v" data-meta-mode data-doubles-mode>{doublesModeLabel()}</span></div>
-            <div className="meta-row"><span className="meta-k">{lockLabel}</span><span className="meta-v" data-doubles-mutators style={{ fontWeight: 700, color: 'var(--accent, #e8b84b)' }}>{allMatchMuts}</span></div>
-          </div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="参赛战队" v="双打战队" vProps={{ 'data-meta-player': true }} />
+          <MetaRow k="比赛模式" v={doublesModeLabel()} vProps={{ 'data-meta-mode': true, 'data-doubles-mode': true }} />
+          <MetaRow k={lockLabel} v={allMatchMuts} vProps={{ 'data-doubles-mutators': true, style: { fontWeight: 700, color: 'var(--accent, #e8b84b)' } }} />
+        </TopBar>
 
         <div className="slots" data-doubles-slots={slots.length}>
           {matchVMs.map((m, i) => {
             const sel = slots[i] || { cmds: [], factors: [] };
             const mapName = m.map || '—';
-            const mapSrc = mapUrl(mapName);
             const isBoss = i === matchVMs.length - 1;
             return (
               <div key={i} className={'slot' + (i === 0 ? ' slot-active' : '')} data-slot-idx={i} data-doubles-slot={i} data-doubles-lock={(m.mutators || []).join(',')}>
@@ -592,14 +545,9 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
                   <span className="slot-difficulty" style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>{isFeiqiu ? '非酋' : `官突 ${mutNames[i] || (m.mutators || []).join('·')}`}</span>
                   {isBoss && <span className="slot-flag">BOSS</span>}
                 </div>
-                <span className="mapthumb">
-                  {mapSrc ? (
-                    <img src={mapSrc} alt={mapName} />
-                  ) : (
-                    <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>{mapName}</span>
-                  )}
+                <MapThumb map={mapName}>
                   <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} size="lg" />
-                </span>
+                </MapThumb>
                 <div className="slot-targets">
                   <div className="t-cmds">
                     {Array.from({ length: cfg.cmdsPerMatch }).map((_, k) => {
@@ -664,14 +612,7 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
             </div>
             </div>
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
-              {toast && (
-                <div className={'toastv ' + toast.kind + (toast.count > 1 ? ' toastv-stack' : '')} data-toast-err data-toast-kind={toast.kind}>
-                  <span className="toastv-ico">!</span>
-                  <span className="toastv-tx">{toast.msg}</span>
-                  {toast.count > 1 && <span className="toastv-n">+{toast.count - 1}</span>}
-                  <span className={toast.kind === 'soft' ? 'toastv-rule' : 'toastv-block'}>{toast.kind === 'soft' ? '仍可开赛' : '阻断开赛'}</span>
-                </div>
-              )}
+              <ToastV toast={toast} />
               <EnemyStatusPill />
               <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode}>生成对局码 →</button>
               <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select-doubles.png" />
@@ -681,6 +622,6 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
           </div>
         </div>
       </div>
-    </div>
+    </ScreenShell>
   );
 }

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { raceUrl } from '../lib/realAsset';
+import { ScreenShell } from '../components/ScreenShell';
+import { LoginHero, loginInputStyle } from '../components/LoginHero';
 import { COMMANDERS } from '../config/commanders';
 import { registerPlayer, pbAuthPlayer } from '../logic/backend';
 
@@ -38,7 +39,7 @@ export function RegisterScreen({ style, mode, onBack, onSuccess }: { style: stri
     } catch (e) { setErr((e as Error).message || '注册失败，请重试'); setStatus('error'); }
   };
 
-  const inputStyle = { background: 'none', border: 'none', outline: 'none', color: 'var(--ink)', width: '100%', font: 'inherit' } as const;
+  const inputStyle = loginInputStyle;
   const reqFields: [string, string, (v: string) => void, string, string][] = [
     ['昵称', nickname, setNickname, 'text', '你的比赛昵称'],
     ['手机号', phone, setPhone, 'tel', '11 位手机号'],
@@ -47,22 +48,9 @@ export function RegisterScreen({ style, mode, onBack, onSuccess }: { style: stri
   ];
 
   return (
-    <div className={`jjb login-stage reg-stage style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`register-${style}-${mode}`}>
-      <div className="jjb-bg"><div className="bg-grad"></div><div className="bg-tex"></div><div className="bg-vignette"></div></div>
+    <ScreenShell className={`jjb login-stage reg-stage style-${style} mode-${mode}`} data-screen-label={`register-${style}-${mode}`}>
       <div className="jjb-inner login-inner">
-        <div className="login-hero">
-          <div className="lockup lockup-lg"><div className="lockup-word"><span className="lockup-cn">集结杯</span><span className="lockup-en">ASSEMBLY CUP</span></div></div>
-          <div className="hero-kicker">STARCRAFT II · CO-OP MISSIONS</div>
-          <div className="hero-sub">选手 · 注册参赛</div>
-          <div className="hero-racesblock">
-            <div className="hero-racescap">星际II 合作任务 · 参赛三族</div>
-            <div className="hero-races">
-              {([['P', '神族', 'PROTOSS'], ['T', '人族', 'TERRAN'], ['Z', '虫族', 'ZERG']] as const).map(([code, cn, en]) => (
-                <div className="race-emblem" key={code}><img src={raceUrl(code)} alt={cn} /><div className="race-name"><b>{cn}</b><span>{en}</span></div></div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <LoginHero sub="选手 · 注册参赛" />
         <div className="hero-div"></div>
         <div className="slot login-card reg-card">
           <div className="login-titleblock">
@@ -113,6 +101,6 @@ export function RegisterScreen({ style, mode, onBack, onSuccess }: { style: stri
           </div>
         </div>
       </div>
-    </div>
+    </ScreenShell>
   );
 }

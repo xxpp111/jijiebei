@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
 import { startSession, getSelectState, exposeBattleDebug, randomFillAndStart, querySessionMode, type SessionMode } from '../logic/jjbSession';
 import { currentDifficulty, currentEnemyAi, currentEnemyRace, currentIsDoubles, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, setCurrentVerdict } from '../logic/jjbView';
-import { BrandLockup } from '../components/BrandLockup';
+import { ScreenShell } from '../components/ScreenShell';
+import { TopBar, MetaRow } from '../components/TopBar';
 
 const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'doubles', 'feiqiu-doubles']);
 
@@ -73,32 +74,17 @@ export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: 
   }));
 
   return (
-    <div
+    <ScreenShell
       className={`jjb style-${style} mode-${mode}`}
-      style={{ width: 1280, height: 720 }}
       data-screen-label={`battle-${style}-${mode}-${dbl ? 'doubles' : s.mode}`}
       data-tick={tick}
       {...(dbl ? { 'data-doubles-battle': matches.length } : {})}
     >
-      <div className="jjb-bg">
-        <div className="bg-grad"></div>
-        <div className="bg-tex"></div>
-        <div className="bg-vignette"></div>
-      </div>
       <div className="jjb-inner battle">
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta">
-            <div className="meta-row">
-              <span className="meta-k">当前选手</span>
-              <span className="meta-v">{playerName}</span>
-            </div>
-            <div className="meta-row">
-              <span className="meta-k">获胜场数</span>
-              <span className="meta-v">{score} 场</span>
-            </div>
-          </div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="当前选手" v={playerName} />
+          <MetaRow k="获胜场数" v={`${score} 场`} />
+        </TopBar>
 
         <div className="matches">
           {rows.map((r) => (
@@ -123,6 +109,6 @@ export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: 
           <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode} style={{ marginLeft: 'auto' }}>生成对局码 →</button>
         </div>
       </div>
-    </div>
+    </ScreenShell>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { startSession, setRuleMode, type SessionMode } from '../logic/jjbSession';
 import { getAccount } from '../logic/backend';
+import { ScreenShell } from '../components/ScreenShell';
 import { BrandLockup } from '../components/BrandLockup';
 import { PromoBar } from '../components/PromoBar';
 import JijieData from '../logic/legacy/JijieData';
@@ -53,16 +54,10 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
   };
 
   return (
-    <div
+    <ScreenShell
       className={`jjb style-${style} mode-${mode}`}
-      style={{ width: 1280, height: 720 }}
       data-screen-label={`home-${style}-${mode}`}
     >
-      <div className="jjb-bg">
-        <div className="bg-grad"></div>
-        <div className="bg-tex"></div>
-        <div className="bg-vignette"></div>
-      </div>
       <div className="jjb-inner home">
         <div className="home-head">
           <BrandLockup styleName={style} modeName={mode} size="lg" />
@@ -176,6 +171,6 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
           </div>
         )}
       </div>
-    </div>
+    </ScreenShell>
   );
 }

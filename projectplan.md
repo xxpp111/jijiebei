@@ -2746,3 +2746,37 @@ Step 1-3 同构补测试 → 并行派 2-3 spoke（claude+glm5.2 via Dubhe / Cod
 ### 红线零触碰 ✓
 Cocos（assets/Script + project.json + template* + creator.d.ts + settings/）+ design/v4-r2 + backend/pb_data + mode-rules-truth-table.md 哨兵全过。
 
+
+---
+
+## B3 前端 UI 抽共用件（worktree·瘦身 spoke·2026-06-30）
+
+> 目标：11 屏抽共用件减重复 + 为后续加新比赛模式铺路。表现型零行为变化（逐像素一致）。单打/双打/std15 渲染分叉有意，不强合。绝不碰 jjbSession.ts / Cocos / design/v4-r2 / backend/pb_data。
+
+### 完成 — 抽了 5 个共用件（web/src/components/ 新建），接入 10 屏
+
+| 共用件(新文件:行) | 重复点 | 接入屏 |
+|---|---|---|
+| ScreenShell.tsx(25) | jjb-bg 4 层 + 1280×720 壳 | Home/Battle/Result/Code/Ladder/EventRules/BpConfig/Login/Register/Select(单+双) = 10 屏 11 处 |
+| TopBar.tsx(37,含 MetaRow) | topbar+BrandLockup+topbar-meta+meta-row | Battle/Result/Code/Ladder/EventRules/BpConfig/Select(单+双) = 7 屏 8 处 |
+| MapThumb.tsx(20) | mapthumb img+缺图兜底 | Result/Select(单+双) = 3 处 |
+| Toast.tsx(29,含 useToast) | toast state+4s+渲染块 | Select 单+双 = 2 处 |
+| LoginHero.tsx(34,含 loginInputStyle) | 左 hero+inputStyle | Login/Register = 2 处 |
+
+净增删：screens −244 行 / 新件 +145 行 → 净 −99 行；重复块收敛为 5 个可复用件（后续加新模式直接复用壳/顶栏/缩略图/toast）。
+bundle: index.js 433.74→428.24 kB（dedup −5.5 kB）。
+
+### 未合并的有意分叉（守住红线）
+- 单打(锁定+手选槽) vs 双打(mutators+extraFactors) vs std15(只读5因子) 渲染分叉保留，未硬合。
+- ObsScreen 不接 ScreenShell（其根是 obs-host flex 容器、非 1280×720 屏根，强接会破布局）。
+- jjbSession.ts / Cocos / design/v4-r2 / backend/pb_data 零改。
+- CodeScreen 原有 dead import(useEffect) 非本次产生，按规则保留不删。
+
+### DOM 逐像素一致核验
+原 bare data-*（data-meta-player 等）= JSX 简写 ={true}，与 vProps ={true} 渲染完全一致（两者皆 "true"，非 ""）。
+real-browser 探针确认 select/battle ScreenShell(bg×3 层)+TopBar(meta-row)+MapThumb(×3)+Toast(初始 0/合法填充 0)+LoginHero(三族×3) 渲染如常（探针验后已删）。
+
+### 验证（真实输出·全绿）
+- tsc=0 / build OK / run.mjs 11 模式 PASS / practice-post PASS / auth.flow PASS / login.flow PASS / login-gate.flow PASS
+- ui-smoke / r6 / match-flow：本 worktree 环境因登录门（未登录 select 被踢 home）+ Chrome channel 卡 random-fill locator → baseline 同样 timeout，非本改动回归（已 stash 还原对照确认）。
+- 未 commit（隔离 worktree，hub 终验合并）。环境补：worktree npm install + copy backend/pocketbase 二进制 + playwright 1.56.0。

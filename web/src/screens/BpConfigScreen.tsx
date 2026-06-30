@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { BrandLockup } from '../components/BrandLockup';
+import { ScreenShell } from '../components/ScreenShell';
+import { TopBar, MetaRow } from '../components/TopBar';
 import { getBpModeState, toggleBpMode, type BpModeState } from '../logic/bpConfig';
 import { getRandomEnemyEnabled, toggleRandomEnemy } from '../logic/randomConfig';
 import { rollEnemiesForSession } from '../logic/aiEnemySelector';
@@ -65,19 +66,11 @@ export interface BpConfigScreenProps {
 export function BpConfigScreen({ style, mode }: BpConfigScreenProps) {
   const [, setTick] = useState(0);
   return (
-    <div className={`jjb bpc style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-screen-label={`bpconfig-${style}-${mode}`}>
-      <div className="jjb-bg">
-        <div className="bg-grad"></div>
-        <div className="bg-tex"></div>
-        <div className="bg-vignette"></div>
-      </div>
+    <ScreenShell className={`jjb bpc style-${style} mode-${mode}`} data-screen-label={`bpconfig-${style}-${mode}`}>
       <div className="jjb-inner">
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta">
-            <div className="meta-row"><span className="meta-k">赛前配置</span><span className="meta-v">BP · 二选一</span></div>
-          </div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="赛前配置" v="BP · 二选一" />
+        </TopBar>
         <div className="bpc-head">
           <span className="bpc-kicker">BP SWITCH</span>
           <span className="bpc-title">每模式 BP 开关</span>
@@ -109,6 +102,6 @@ export function BpConfigScreen({ style, mode }: BpConfigScreenProps) {
           <span className="bpc-legend"><span className="lockico" style={{ color: 'var(--lose)' }}></span><b>双打</b> 暂不可用 · 开关灰掉锁死不可点</span>
         </div>
       </div>
-    </div>
+    </ScreenShell>
   );
 }

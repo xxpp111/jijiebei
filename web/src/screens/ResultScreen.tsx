@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
-import { BrandLockup } from '../components/BrandLockup';
+import { ScreenShell } from '../components/ScreenShell';
+import { TopBar, MetaRow } from '../components/TopBar';
+import { MapThumb } from '../components/MapThumb';
 import { CaptureButtons } from '../components/CaptureButtons';
-import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
+import { cmdUrl, facUrl } from '../lib/realAsset';
 import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, ensureDoublesSessionFromUrl } from '../logic/jjbView';
 import { postMatchResult, canPostResult } from '../logic/matchRecord';
 
@@ -41,27 +43,13 @@ export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: 
   const playerName = currentPlayerName();
 
   return (
-    <div className={`jjb style-${style} mode-${mode}`} style={{ width: 1280, height: 720 }} data-capture="result" data-screen-label={`result-${style}-${mode}`}>
-      <div className="jjb-bg">
-        <div className="bg-grad"></div>
-        <div className="bg-tex"></div>
-        <div className="bg-vignette"></div>
-      </div>
+    <ScreenShell className={`jjb style-${style} mode-${mode}`} data-capture="result" data-screen-label={`result-${style}-${mode}`}>
       <div className="jjb-inner result">
         {/* TopBar（同对战页） */}
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta">
-            <div className="meta-row">
-              <span className="meta-k">当前选手</span>
-              <span className="meta-v" data-meta-player>{playerName}</span>
-            </div>
-            <div className="meta-row">
-              <span className="meta-k">比赛模式</span>
-              <span className="meta-v" data-meta-mode>{currentModeLabel()}</span>
-            </div>
-          </div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="当前选手" v={playerName} vProps={{ 'data-meta-player': true }} />
+          <MetaRow k="比赛模式" v={currentModeLabel()} vProps={{ 'data-meta-mode': true }} />
+        </TopBar>
 
         {/* banner：kicker + 大比分 + tag */}
         <div className="result-banner">
@@ -77,7 +65,6 @@ export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: 
         <div className="rcards" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {matches.map((m, i) => {
             const cls = 'rcard' + (m.result ? ' rcard-' + m.result : '');
-            const mapSrc = mapUrl(m.map);
             const difficulty = currentDifficulty(i);
             const lockedFactors = currentLockedFactors(m);
             const difficultyAttrs = difficulty === undefined ? {} : { 'data-match-difficulty': difficulty, [`data-match-difficulty-${i}`]: difficulty };
@@ -95,15 +82,7 @@ export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: 
                   )}
                 </div>
                 <div className="rcard-map">
-                  <span className="mapthumb">
-                    {mapSrc ? (
-                      <img src={mapSrc} alt={m.map} />
-                    ) : (
-                      <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
-                        {m.map}
-                      </span>
-                    )}
-                  </span>
+                  <MapThumb map={m.map} />
                 </div>
                 <div className="rcard-mid">
                   <div className="rcard-cmds">
@@ -158,6 +137,6 @@ export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: 
           <CaptureButtons targetSelector='[data-capture="result"]' filename="jjb-result.png" />
         </div>
       </div>
-    </div>
+    </ScreenShell>
   );
 }

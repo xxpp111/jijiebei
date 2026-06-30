@@ -6,7 +6,8 @@
 // 「按此码开局」本 round 做到 decode 成功 + 写 URL #hash + 导航 select 接通；applySnapshot 还原留后续 round
 //   （单打可直写 JijieData + 已有 setter，双打需 applyDoublesSnapshot 直写 jjbDoubles 闭包，超本 round scope，统一留后续）。
 import { useEffect, useState } from 'react';
-import { BrandLockup } from '../components/BrandLockup';
+import { ScreenShell } from '../components/ScreenShell';
+import { TopBar, MetaRow } from '../components/TopBar';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { mapUrl, cmdUrl, facUrl } from '../lib/realAsset';
@@ -97,29 +98,18 @@ function truncateCode(code: string): string {
 
 export function CodeScreen({ style, mode, variant, onBack, onStart }: CodeScreenProps) {
   return (
-    <div
+    <ScreenShell
       className={`jjb style-${style} mode-${mode}`}
-      style={{ width: 1280, height: 720, overflow: 'hidden' }}
+      style={{ overflow: 'hidden' }}
       data-screen-label={`code-${variant}-${style}-${mode}`}
     >
-      <div className="jjb-bg">
-        <div className="bg-grad"></div>
-        <div className="bg-tex"></div>
-        <div className="bg-vignette"></div>
-      </div>
       <div className="jjb-inner code-screen">
-        <div className="topbar">
-          <BrandLockup styleName={style} modeName={mode} size="sm" />
-          <div className="topbar-meta">
-            <div className="meta-row">
-              <span className="meta-k">码方案</span>
-              <span className="meta-v" data-code-variant>{variant === 'gen' ? '生成码 · 非实时' : '贴码开局 · 非实时'}</span>
-            </div>
-          </div>
-        </div>
+        <TopBar styleName={style} modeName={mode}>
+          <MetaRow k="码方案" v={variant === 'gen' ? '生成码 · 非实时' : '贴码开局 · 非实时'} vProps={{ 'data-code-variant': true }} />
+        </TopBar>
         {variant === 'gen' ? <GenPanel onBack={onBack} /> : <PastePanel onBack={onBack} onStart={onStart} />}
       </div>
-    </div>
+    </ScreenShell>
   );
 }
 
