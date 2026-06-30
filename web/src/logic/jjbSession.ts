@@ -878,40 +878,19 @@ export function getBpState(): { banned: string[]; banLimit: number; ruleMode: 'p
 export function clearBpRuntime(): void { bpBanRuntime.clear(); }
 
 // ===== 段3④：难度总分（锁定因子 + 手选因子求和；点金因子分值×2） =====
-// 分值真相：因子配置.txt 第3列（表头「名字,类型,分值」），经 ConfigData.factorList_back 读取
-//   （factorList_back 是 initFactor 时的完整副本，popFactor 只消耗 factorList，这份永不被消耗）。
-//   虚空重生者(因子配置.txt:30) 行仅 2 列「虚空重生者,5」缺第3列；yb 2026-06-19 拍板按 7 分（较难因子），覆盖 csv 旧 5 分。
-//   混乱工作室 / 礼尚往来是 XP 非酋路径硬编码因子，但当前 jjdata 分值表缺行；显式列白名单，避免恢复“所有未知=7”。
-const FACTOR_SCORE_FALLBACKS: Record<string, number> = {
-  虚空重生者: 7,
-  混乱工作室: 7,
-  礼尚往来: 7,
-};
+// 分值真相 = config/factors.ts points（docs/因子点数配置.csv 经 gen-config 生成，71 条全表）。Batch5 cutover：
+//   从 legacy ConfigData.factorList_back(因子配置.txt 41 条不全 + 6 个填 0 + 虚空重生者 2 列缺值) + FACTOR_SCORE_FALLBACKS
+//   切到 config 单一真相源，消数值分叉 + 补 13 个漏算因子(因子配置.txt 缺行 → 现算 0)。
+//   yb 2026-06-30 拍板：虚空重生者按官方 5；混乱工作室 / 礼尚往来(非酋模式恒锁/可分配)CSV「限定」→ 7。
+const FACTOR_POINTS: Record<string, number> = Object.fromEntries(FACTORS.map((f) => [f.name, f.points]));
 
-/** 单因子分值（因子配置.txt 第3列；已知缺表因子走白名单 fallback）。
- *  name 为空 → 0；非白名单未知/坏配置 → 0 + warning，避免 typo 被静默记成高分。 */
+/** 单因子分值 = config/factors.ts points（单一真相源，Batch5 cutover）。
+ *  name 为空 → 0；config 未登记 → 0 + warning（避免 typo 被静默记成高分）。 */
 export function factorScore(name: string): number {
   if (!name) return 0;
-  let matched = false;
-  try {
-    const list = (ConfigData as any).factorList_back as any[] | undefined;
-    if (Array.isArray(list)) {
-      for (const arr of list) {
-        if (arr && arr[0] === name) {
-          matched = true;
-          // 虚空重生者(因子配置.txt:30)「虚空重生者,5」仅 2 列 → arr[2] undefined → 走 fallback
-          if (arr.length >= 3) {
-            const n = Number(arr[2]);
-            if (!Number.isNaN(n)) return n;
-          }
-          break;
-        }
-      }
-    }
-  } catch { /* noop */ }
-  if (Object.prototype.hasOwnProperty.call(FACTOR_SCORE_FALLBACKS, name)) return FACTOR_SCORE_FALLBACKS[name];
+  if (Object.prototype.hasOwnProperty.call(FACTOR_POINTS, name)) return FACTOR_POINTS[name];
   // eslint-disable-next-line no-console
-  console.warn('[difficultyTotal] 未找到合法因子分值:', name, matched ? 'bad-row' : 'missing-row');
+  console.warn('[difficultyTotal] 未找到合法因子分值:', name, 'missing in config/factors.ts');
   return 0;
 }
 

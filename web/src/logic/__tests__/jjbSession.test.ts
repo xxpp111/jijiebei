@@ -52,32 +52,32 @@ describe('jjbSession 开局契约', () => {
   });
 });
 
-describe('factorScore 白名单 fallback', () => {
-  // 真值来源：因子配置.txt（web/src/data/jjdata）grep 实测 + jjbSession.ts FACTOR_SCORE_FALLBACKS 表。
-  //   光子过载「光子过载,1,1」3 列 → 正常路径返 arr[2]=1；
-  //   虚空重生者「虚空重生者,5」仅 2 列缺第 3 列 → fallback 7（yb 2026-06-19 拍板覆盖 csv 旧 5）；
-  //   混乱工作室 / 礼尚往来：csv 缺行 → fallback 7；
-  //   空 / 非白名单未知名 → 0（防 typo 被静默记成高分）。
+describe('factorScore（config/factors.ts 单一真相源，Batch5 cutover）', () => {
+  // 真值来源：config/factors.ts points（docs/因子点数配置.csv 经 gen-config 生成，71 条全表）。
+  //   光子过载 = 1（csv 正常值）；
+  //   虚空重生者 = 5（yb 2026-06-30 按官方 config，覆盖旧 fallback 7）；
+  //   混乱工作室 / 礼尚往来 = 7（csv「限定」→ yb 2026-06-30 拍 7，非酋模式恒锁/可分配因子）；
+  //   空 / config 未登记名 → 0（防 typo 被静默记成高分）。
   beforeEach(() => { g.__jjbDebug = undefined; startSession('std10'); /* 触发 ConfigData.init */ });
 
   it('空名 → 0', () => {
     expect(factorScore('')).toBe(0);
   });
 
-  it('正常 3 列因子：光子过载 = 1（走 csv 第 3 列，非 fallback）', () => {
+  it('正常因子：光子过载 = 1', () => {
     expect(factorScore('光子过载')).toBe(1);
   });
 
-  it('2 列缺第 3 列：虚空重生者 = 7（fallback 覆盖 csv 旧值）', () => {
-    expect(factorScore('虚空重生者')).toBe(7);
+  it('虚空重生者 = 5（yb 2026-06-30 按官方 config，覆盖旧 fallback 7）', () => {
+    expect(factorScore('虚空重生者')).toBe(5);
   });
 
-  it('csv 缺行白名单：混乱工作室 / 礼尚往来 = 7', () => {
+  it('非酋恒锁/可分配因子：混乱工作室 / 礼尚往来 = 7（csv「限定」→ 7）', () => {
     expect(factorScore('混乱工作室')).toBe(7);
     expect(factorScore('礼尚往来')).toBe(7);
   });
 
-  it('非白名单未知名 → 0（防 typo 静默高分）', () => {
+  it('config 未登记名 → 0（防 typo 静默高分）', () => {
     expect(factorScore('不存在的因子xyz')).toBe(0);
   });
 });
