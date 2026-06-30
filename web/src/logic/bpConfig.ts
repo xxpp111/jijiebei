@@ -19,6 +19,7 @@ const BP_MODE_DEFS: Record<string, BpModeDef> = {
   feiqiu: { enabledDefault: false, locked: false },
   doubles: { enabledDefault: false, locked: true }, // 官突双打：BP 暂未启用，锁死
   'feiqiu-doubles': { enabledDefault: false, locked: true }, // 非酋双打：BP 暂未启用，锁死（对齐 doubles；P0-1 遗留显式键，不再走 fallback）
+  std15: { enabledDefault: false, locked: true }, // 15 因子纯随机：无手选槽 → BP 手选 ban 无意义，锁死
 };
 
 // 运行时覆盖（配置面 toggle 的结果；未覆盖则取默认）

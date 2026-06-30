@@ -32,6 +32,7 @@ export const MODES = [
 export function modeLabel(): string {
     const d: any = JijieData;
     if (d.modeSuiji) return "随机模式 · 抽取";
+    if (d.modeStd15) return "15 因子 · 随机";
     if (d.modeIsZhengjiu) return "拯救模式 · 10 因子";
     if (d.modeIsVeryHard) return "极难挑战";
     if (d.modeFeiqiu) return "非酋模式";
@@ -98,6 +99,7 @@ export function facFlatIdx(slot: number, idx: number): number { return slot * FA
 export function manualSlots(slotIdx: number): number {
     const d: any = JijieData;
     if (d.modeSuiji) return 0;   // 随机模式：因子槽全隐藏（连锁定因子都不显示）
+    if (d.modeStd15) return 0;   // std15 纯随机：无手选槽（5 因子只读直渲，不走 DropCell）
     if (d.modeFeiqiu) return 1;  // 非酋：仅 factor1
     let f = d.modelFactorCount;
     if (slotIdx === 2) {
@@ -132,11 +134,17 @@ export function sessionMatches(): MatchVM[] {
     const out: MatchVM[] = [];
     for (let i = 0; i < 3; i++) {
         const cmd: string = (d.selectedCommanderList || [])[i];
-        const lock: string = d.modeSuiji ? null : (d.lockFactorList || [])[i]; // 随机模式：锁定因子不显示（对齐 XP updateStart）
-        const fac: string[] = lock ? [lock] : []; // 锁定因子(自动) 打头
-        for (let k = 0; k < FAC_PER_MATCH; k++) {
-            const v = (d.selectedFactorList || [])[facFlatIdx(i, k)];
-            if (v) fac.push(v);
+        const lock: string = (d.modeSuiji || d.modeStd15) ? null : (d.lockFactorList || [])[i]; // 随机/std15：锁定因子不显示（对齐 XP updateStart）
+        let fac: string[];
+        if (d.modeStd15) {
+            // std15 纯随机：每场 5 个随机因子直接从 randomFactorPoor 切片（无锁定、无手选槽）
+            fac = (d.randomFactorPoor || []).slice(i * 5, i * 5 + 5).filter(Boolean);
+        } else {
+            fac = lock ? [lock] : []; // 锁定因子(自动) 打头
+            for (let k = 0; k < FAC_PER_MATCH; k++) {
+                const v = (d.selectedFactorList || [])[facFlatIdx(i, k)];
+                if (v) fac.push(v);
+            }
         }
         const wl = (d.winLoseList || [])[i];
         out.push({

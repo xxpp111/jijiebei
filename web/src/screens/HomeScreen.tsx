@@ -18,6 +18,7 @@ const MODES: { no: string; key: SessionMode | 'doubles'; name: string; tag: stri
   { no: '04', key: 'rescue', name: '拯救模式', tag: '固定7人' },
   { no: '05', key: 'feiqiu-doubles', name: '非酋之轮', tag: '非酋双打' },
   { no: '06', key: 'doubles', name: '官突双打', tag: '双打' },
+  { no: '07', key: 'std15', name: '15 因子', tag: '纯随机' },
 ];
 
 export interface HomeScreenProps {

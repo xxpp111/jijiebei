@@ -61,13 +61,13 @@ function restoreConfig(): void {
 const rand = (n: number) => Math.floor(Math.random() * n);
 
 // ===== 9 模式入口（段2 Phase 0 全模式开局）+ doubles 双打（段3④ 独立引擎接通） =====
-export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'suiji' | 'doubles' | 'feiqiu-doubles';
+export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'std15' | 'suiji' | 'doubles' | 'feiqiu-doubles';
 
 /** URL 赛事模式白名单（App.tsx 与 SelectScreen.tsx 共用，避免重复定义）。
  *  suiji 第五格入口已由 feiqiu 顶替下线：故移出 URL 白名单 → ?mode=suiji / ?sessionMode=suiji 回落 std8。
  *  'suiji' 仍保留在 SessionMode 类型与 setModeFlags 内（startSession('suiji') 与 e2e 9 模式恒等式回归依赖），仅非 URL/首页可达。
  *  'doubles' 双打入白名单：官突双打。'feiqiu-doubles'：飞球（非酋）双打，混乱工作室+随机1替代官突 CSV 池。 */
-const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'doubles', 'feiqiu-doubles'];
+const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'std15', 'doubles', 'feiqiu-doubles'];
 
 /** 解析 URL 赛事模式：优先 ?sessionMode=（白名单），兼容旧 ?mode=std10；非法/主题值(dark/light)回落 std8。
  *  SSR（typeof window==='undefined'）守卫防 Node 端崩。App.tsx 与 SelectScreen.tsx 共用此函数（LOW2 去重）。 */
@@ -106,6 +106,8 @@ function setModeFlags(mode: SessionMode): void {
       d.modelFactorCount = 1; d.modeFeiqiu = true; break;
     case 'suiji':
       d.modelFactorCount = 0; d.modeSuiji = true; break;
+    case 'std15':
+      d.modelFactorCount = 0; d.modeStd15 = true; break; // 15 因子纯随机：mfc=0（因子数走 toSelectCore modeStd15 分支，标签走 currentModeLabel modeStd15 分支）
   }
 }
 
@@ -153,8 +155,8 @@ function toStartCore(): void {
     if (!_evtBanFactorExempt.has(f)) ConfigData.popFactor(f);
   }
 
-  // 3 锁定因子（JijieContro.toStart 第 92-105 行）
-  for (let i = 0; i < 3; i++) {
+  // 3 锁定因子（JijieContro.toStart 第 92-105 行）。std15 纯随机无锁定，跳过整循环（lockFactorList 留空）。
+  for (let i = 0; !d.modeStd15 && i < 3; i++) {
     let lockFactor: string;
     if (d.modeZhenghuo) {
       lockFactor = '随机';
@@ -241,7 +243,10 @@ function toSelectCore(): void {
   let factorCount = 0;
   const pm: any = ConfigData.paramMap;
 
-  if (d.modeIsVeryHard) {
+  if (d.modeStd15) {
+    // 15 因子纯随机：抽 15 进 randomFactorPoor（每场 5）。event-ban 已在 toStartCore 预删 → getJijieFactor 自动避让。
+    factorCount = 15;
+  } else if (d.modeIsVeryHard) {
     // 极难：factorCount=随机因子数极难 + jinanArr 4选2 强抽 + factorCount-=2 —— 第 199-210 行
     factorCount = pm['随机因子数极难'];
     const jinanArr: string[] = ['风暴英雄', '虚空裂隙', '给我死吧', '虚空重生者'];
@@ -348,7 +353,7 @@ export function exposeSelectDebug(mode: SessionMode): void {
     const poolLen = (d.randomFactorPoor || []).length;
     const selFacLen = (d.selectedFactorList || []).length;
     const selCmd = (d.selectedCommanderList || []).slice();
-    const identityPass = poolLen === sumSlots;
+    const identityPass = d.modeStd15 ? true : poolLen === sumSlots; // std15 纯随机池=15/slots=0 豁免（仿 getSelectState）
     const w: any = window;
     w.__jjbDebug = w.__jjbDebug || {};
     w.__jjbDebug.screen = 'select';
@@ -361,6 +366,7 @@ export function exposeSelectDebug(mode: SessionMode): void {
       modeIsOnePick: !!d.modeIsOnePick,
       modeFeiqiu: !!d.modeFeiqiu,
       modeSuiji: !!d.modeSuiji,
+      modeStd15: !!d.modeStd15,
       modelFactorCount: d.modelFactorCount,
       status: d.status,
       mapCount: (d.mapList || []).length,
@@ -523,6 +529,7 @@ export interface SelectState {
   modeIsOnePick: boolean;
   modeFeiqiu: boolean;
   modeSuiji: boolean;
+  modeStd15: boolean;
   modelFactorCount: number;
   mapList: string[];
   lockFactorList: string[];
@@ -575,6 +582,7 @@ export function getSelectState(): SelectState {
     modeIsOnePick: !!d.modeIsOnePick,
     modeFeiqiu: !!d.modeFeiqiu,
     modeSuiji: !!d.modeSuiji,
+    modeStd15: !!d.modeStd15,
     modelFactorCount: d.modelFactorCount || 0,
     mapList: (d.mapList || []).slice(),
     lockFactorList: (d.lockFactorList || []).slice(),
@@ -585,7 +593,7 @@ export function getSelectState(): SelectState {
     selectedCommanderList: ((d.selectedCommanderList || []) as any[]).slice(),
     manualSlots: slots,
     sumSlots,
-    identityPass: poolLen === sumSlots,
+    identityPass: d.modeStd15 ? true : poolLen === sumSlots, // std15 纯随机池=15/slots=0 不恒等，豁免（仿 suiji 0===0）
     jjbLive: jjbLive(),
     selfPool,
     selfShow,
@@ -903,6 +911,12 @@ function weightedFactorScore(name: string | null | undefined): number {
 export function matchDifficulty(slot: 0 | 1 | 2): number {
   const d: any = JijieData;
   let sum = 0;
+  if (d.modeStd15) {
+    // std15 纯随机：每场难度 = randomFactorPoor 该场 5 个因子分值之和（点金 ×2 经 weightedFactorScore）
+    const poor = (d.randomFactorPoor || []) as (string | null)[];
+    for (let k = 0; k < 5; k++) sum += weightedFactorScore(poor[slot * 5 + k]);
+    return sum;
+  }
   const lock = ((d.lockFactorList || []) as (string | null)[])[slot];
   sum += weightedFactorScore(lock);
 
@@ -954,6 +968,7 @@ export function applySelectState(snap: SingleSnapshot): void {
   d.modeIsOnePick = snap.flags.op;
   d.modeFeiqiu = snap.flags.fq;
   d.modeSuiji = snap.flags.sj;
+  d.modeStd15 = snap.flags.s15;
   d.modelFactorCount = snap.mfc;
   setRuleMode(snap.rm);
   exposeSelectDebug(snap.mode);

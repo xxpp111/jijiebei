@@ -310,30 +310,42 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                     )}
                   </div>
                   <div className="t-facs">
-                    {/* 锁定因子（自动）打头 — 不可拖不可清 */}
-                    {lock ? (
-                      <FactorFrame src={facUrl(lock)} size={52} tag="锁定" />
-                    ) : (
-                      <DropCell w={52} h={52} hint="锁定" />
-                    )}
-                    {/* 手选因子（已选 gold + 未选 DropCell），共 manualSlots(i) 槽 */}
-                    {Array.from({ length: slots }).map((_, k) => {
-                      const v = s.selectedFactorList[facFlatIdx(i, k)];
-                      return v ? (
-                        <span
-                          key={k}
-                          ref={setTarget(`factor:${i}:${k}`)}
-                          data-slot-fac={`${i}:${k}`}
-                          onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
-                          style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
-                        >
-                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
-                          <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
+                    {s.modeStd15 ? (
+                      /* std15 纯随机：每场 5 个随机因子只读直渲（无锁定、无手选槽；点金可切，对齐双打 mutators 范式） */
+                      s.randomFactorPoor.slice(i * 5, i * 5 + 5).map((f, k) => (
+                        <span key={k} data-slot-fac={`${i}:${k}`} style={{ position: 'relative', display: 'inline-block' }}>
+                          <FactorFrame src={facUrl(f)} size={52} gold={getGoldFor(f)} />
+                          <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
                         </span>
-                      ) : (
-                        <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
-                      );
-                    })}
+                      ))
+                    ) : (
+                      <>
+                        {/* 锁定因子（自动）打头 — 不可拖不可清 */}
+                        {lock ? (
+                          <FactorFrame src={facUrl(lock)} size={52} tag="锁定" />
+                        ) : (
+                          <DropCell w={52} h={52} hint="锁定" />
+                        )}
+                        {/* 手选因子（已选 gold + 未选 DropCell），共 manualSlots(i) 槽 */}
+                        {Array.from({ length: slots }).map((_, k) => {
+                          const v = s.selectedFactorList[facFlatIdx(i, k)];
+                          return v ? (
+                            <span
+                              key={k}
+                              ref={setTarget(`factor:${i}:${k}`)}
+                              data-slot-fac={`${i}:${k}`}
+                              onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
+                              style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
+                            >
+                              <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
+                              <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
+                            </span>
+                          ) : (
+                            <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

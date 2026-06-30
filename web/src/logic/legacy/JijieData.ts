@@ -33,6 +33,7 @@ export default class JijieData {
 
     public static  modeFeiqiu: boolean;
     public static  modeSuiji: boolean;
+    public static  modeStd15: boolean; // 15 因子纯随机模式（每场 5，无锁定无手选）
     public static  modeZhenghuo: boolean;
 
     //因子池
@@ -66,6 +67,7 @@ export default class JijieData {
     public static reset() {
         this.modeFeiqiu = false;
         this.modeSuiji = false;
+        this.modeStd15 = false;
         this.modeIsRandom = false;
         this.modeIsOnePick = false;
         this.modeIsVeryHard = false;

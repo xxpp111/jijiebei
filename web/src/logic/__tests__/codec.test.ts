@@ -11,7 +11,7 @@ import type { DecodeResult } from '../codec';
 import { startSession } from '../jjbSession';
 
 const g = globalThis as any;
-const SOLO_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji'] as const;
+const SOLO_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15'] as const;
 
 /** 取 DecodeResult 的 reason（tsc 对第三方 expect 后的 union 收窄不稳，显式收窄到 DecodeBad）。 */
 function reasonOf(r: DecodeResult): string {

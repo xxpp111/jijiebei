@@ -31,20 +31,20 @@ const bundle = readFileSync(join(assetsDir, js), 'utf8');
 // 9 mode 名为 jjbSession 硬编码；'随机因子数极难'/'混乱工作室'/'礼尚往来'/'极难因子组' 为 toStart/toSelect 真身用到的因子表名
 const bundleMarkers = [
   '__jjbDebug', 'winLoseList', '集结杯', 'jjbSession',
-  'std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji',
+  'std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15',
   '随机因子数极难', '混乱工作室', '礼尚往来', '极难因子组',
 ];
 const bundleMissing = bundleMarkers.filter((m) => !bundle.includes(m));
 if (bundleMissing.length) fail('bundle missing markers: ' + bundleMissing.join(', '));
-else pass('bundle contains all 16 markers');
+else pass(`bundle contains all ${bundleMarkers.length} markers`);
 
 // ===== 阶段 2: Vite SSR 加载 jjbSession 跑 9 模式 =====
-const MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji'];
+const MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15'];
 
 // manualSlots 镜像（JJBData.ts:96-112），客户端跑通前用本地镜像校验
 function manualSlotsMirror(modeFlags) {
-  const { modelFactorCount, modeSuiji, modeFeiqiu, modeIsVeryHard, modeIsOnePick } = modeFlags;
-  if (modeSuiji) return [0, 0, 0];
+  const { modelFactorCount, modeSuiji, modeFeiqiu, modeIsVeryHard, modeIsOnePick, modeStd15 } = modeFlags;
+  if (modeSuiji || modeStd15) return [0, 0, 0]; // 纯随机（suiji/std15）：无手选槽
   if (modeFeiqiu) return [1, 1, 1];
   const out = [];
   for (let slotIdx = 0; slotIdx < 3; slotIdx++) {
@@ -144,22 +144,28 @@ try {
       if (status !== 2) fail(`${mode}: status=${status} ≠ 2`);
       // 断言 5：map=3, lock=3
       if (mapCount !== 3) fail(`${mode}: mapCount=${mapCount} ≠ 3`);
-      if (lockCount !== 3) fail(`${mode}: lockCount=${lockCount} ≠ 3`);
+      if (mode !== 'std15' && lockCount !== 3) fail(`${mode}: lockCount=${lockCount} ≠ 3`); // std15 纯随机无锁定，豁免
       // 断言 6：manualSlots 对账表
-      const ms = manualSlotsMirror({ modelFactorCount, modeSuiji: sel.modeSuiji, modeFeiqiu: sel.modeFeiqiu, modeIsVeryHard: sel.modeIsVeryHard, modeIsOnePick: sel.modeIsOnePick });
+      const ms = manualSlotsMirror({ modelFactorCount, modeSuiji: sel.modeSuiji, modeStd15: sel.modeStd15, modeFeiqiu: sel.modeFeiqiu, modeIsVeryHard: sel.modeIsVeryHard, modeIsOnePick: sel.modeIsOnePick });
       const msMatch = ms[0] === manualSlots[0] && ms[1] === manualSlots[1] && ms[2] === manualSlots[2];
       if (!msMatch) fail(`${mode}: manualSlots ${manualSlots.join('/')} ≠ 镜像 ${ms.join('/')}`);
 
-      const passed = identityPass && selectedFactorListLen === 9 && isNullTriple && status === 2 && mapCount === 3 && lockCount === 3 && msMatch;
+      const passed = identityPass && selectedFactorListLen === 9 && isNullTriple && status === 2 && mapCount === 3 && (mode === 'std15' ? lockCount === 0 : lockCount === 3) && msMatch;
       console.log(
         `${mode.padEnd(6)}  ${String(randomFactorPoorLen).padStart(4)}  ${manualSlots.join('/').padStart(19)}  ${String(sumSlots).padStart(3)}  ${(identityPass ? '✓' : '✗').padStart(8)}  ${String(mapCount).padStart(3)}  ${String(lockCount).padStart(4)}  ${String(selectedFactorListLen).padStart(9)}  ${String(selectedCommanderList.length).padStart(6)}  ${String(status).padStart(6)}  ${passed ? 'PASS' : 'FAIL'}`,
       );
+
+      // std15 纯随机专属断言：randomFactorPoor=15（每场 5）+ 无锁定（lock=0）。仿 suiji 拎出特例，不入池=槽恒等式。
+      if (mode === 'std15') {
+        if (randomFactorPoorLen !== 15) fail(`std15: randomFactorPoor=${randomFactorPoorLen} ≠ 15（每场 5）`);
+        if (lockCount !== 0) fail(`std15: lockCount=${lockCount} ≠ 0（纯随机无锁定）`);
+      }
 
       // ===== 段2 Phase 1 select 渲染断言（getSelectState 9 模式透出 + randomFillAndStart 接缝） =====
       // getSelectState 透出 + 池=槽恒等式（与 __jjbDebug.select 一致）
       const sState = getSelectState();
       if (!sState) fail(`${mode}: getSelectState() 返回 undefined`);
-      if (sState && (sState.mode !== mode || !sState.jjbLive || sState.mapList.length !== 3 || sState.lockFactorList.length !== 3 || sState.sumSlots !== sumSlots || sState.manualSlots.join('/') !== manualSlots.join('/') || sState.randomFactorPoor.length !== randomFactorPoorLen)) {
+      if (sState && (sState.mode !== mode || !sState.jjbLive || sState.mapList.length !== 3 || (mode !== 'std15' && sState.lockFactorList.length !== 3) || sState.sumSlots !== sumSlots || sState.manualSlots.join('/') !== manualSlots.join('/') || sState.randomFactorPoor.length !== randomFactorPoorLen)) {
         fail(`${mode}: getSelectState 字段不一致 mode=${sState && sState.mode} jjbLive=${sState && sState.jjbLive} map=${sState && sState.mapList && sState.mapList.length} lock=${sState && sState.lockFactorList && sState.lockFactorList.length} pool=${sState && sState.randomFactorPoor && sState.randomFactorPoor.length} sumSlots=${sState && sState.sumSlots}`);
       }
 
@@ -186,8 +192,10 @@ try {
 
       // 段3④：难度总分 = 锁定因子 + 手选因子；点金单因子贡献翻倍。
       const afterFillState = getSelectState();
-      const scoreFactors = (afterFillState.lockFactorList || [])
-        .concat((afterFillState.selectedFactorList || []).filter(Boolean));
+      const scoreFactors = afterFillState.modeStd15
+        ? (afterFillState.randomFactorPoor || []) // std15 纯随机：难度分 = randomFactorPoor 全 15 因子（每场 5）
+        : (afterFillState.lockFactorList || [])
+          .concat((afterFillState.selectedFactorList || []).filter(Boolean));
       const scoreExpected = scoreFactors.reduce((sum, f) => sum + factorScore(f) * (getGoldFor(f) ? 2 : 1), 0);
       const scoreActual = difficultyTotal();
       if (scoreActual !== scoreExpected) fail(`${mode}: difficultyTotal=${scoreActual} ≠ 手工求和 ${scoreExpected}`);
@@ -261,13 +269,13 @@ try {
         for (let i = 0; i < 3; i++) {
           const m = matches[i];
           if (!m) continue;
-          const expectedFacN = manualSlots[i] + (m.lock ? 1 : 0);
+          const expectedFacN = mode === 'std15' ? 5 : manualSlots[i] + (m.lock ? 1 : 0); // std15 纯随机每场 5 随机因子（无锁定无手选）
           if (m.factors.length !== expectedFacN) {
             fail(`${mode}: sessionMatches[${i}].factors.length=${m.factors.length} ≠ 预期 ${expectedFacN}（手选 ${manualSlots[i]} + 锁定 ${m.lock ? 1 : 0}）`);
             continue;
           }
-          // factors[0] 是锁定（如果有），后续是手选
-          for (let k = (m.lock ? 1 : 0); k < m.factors.length; k++) {
+          // factors[0] 是锁定（如果有），后续是手选。std15 因子是纯随机（非手选），跳过 vs handPicked 对账（length=5 已验）。
+          if (mode !== 'std15') for (let k = (m.lock ? 1 : 0); k < m.factors.length; k++) {
             if (m.factors[k] !== handPickedFac[handIdx]) {
               fail(`${mode}: sessionMatches[${i}].factors[${k}]=${m.factors[k]} ≠ 手选 ${handPickedFac[handIdx]}`);
             }
@@ -585,4 +593,4 @@ if (failed) {
   console.error('\n[react-e2e] ❌ 至少 1 mode 失败');
   process.exit(1);
 }
-console.log('\n[react-e2e] ✅ 9 模式池=槽恒等式 + 9格契约 + 状态全 + 双打全路径(启动/手选/verdict/难度分隔离) PASS');
+console.log('\n[react-e2e] ✅ 10 模式(含 std15 纯随机)池=槽恒等式 + 9格契约 + 状态全 + 双打全路径(启动/手选/verdict/难度分隔离) PASS');
