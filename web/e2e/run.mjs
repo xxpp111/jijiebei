@@ -31,7 +31,7 @@ const bundle = readFileSync(join(assetsDir, js), 'utf8');
 // 9 mode 名为 jjbSession 硬编码；'随机因子数极难'/'混乱工作室'/'礼尚往来'/'极难因子组' 为 toStart/toSelect 真身用到的因子表名
 const bundleMarkers = [
   '__jjbDebug', 'winLoseList', '集结杯', 'jjbSession',
-  'std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15',
+  'std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15', 'cm',
   '随机因子数极难', '混乱工作室', '礼尚往来', '极难因子组',
 ];
 const bundleMissing = bundleMarkers.filter((m) => !bundle.includes(m));
@@ -39,7 +39,7 @@ if (bundleMissing.length) fail('bundle missing markers: ' + bundleMissing.join('
 else pass(`bundle contains all ${bundleMarkers.length} markers`);
 
 // ===== 阶段 2: Vite SSR 加载 jjbSession 跑 9 模式 =====
-const MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15'];
+const MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15', 'cm'];
 
 // manualSlots 镜像（JJBData.ts:96-112），客户端跑通前用本地镜像校验
 function manualSlotsMirror(modeFlags) {
@@ -593,4 +593,4 @@ if (failed) {
   console.error('\n[react-e2e] ❌ 至少 1 mode 失败');
   process.exit(1);
 }
-console.log('\n[react-e2e] ✅ 10 模式(含 std15 纯随机)池=槽恒等式 + 9格契约 + 状态全 + 双打全路径(启动/手选/verdict/难度分隔离) PASS');
+console.log('\n[react-e2e] ✅ 11 模式(含 std15 纯随机 + cm 专属)池=槽恒等式 + 9格契约 + 状态全 + 双打全路径(启动/手选/verdict/难度分隔离) PASS');

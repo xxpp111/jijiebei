@@ -8,7 +8,7 @@ import { startSession, getSelectState, factorScore } from '../jjbSession';
 
 const g = globalThis as any;
 // suiji 之外的 8 个单打开局模式（suiji 池=0 单独验）
-const SOLO_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu'] as const;
+const SOLO_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'cm'] as const;
 
 describe('jjbSession 池=槽恒等式（赛制核心，此前全 e2e 零断言）', () => {
   beforeEach(() => { g.__jjbDebug = undefined; });

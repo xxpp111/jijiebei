@@ -19,6 +19,7 @@ const MODES: { no: string; key: SessionMode | 'doubles'; name: string; tag: stri
   { no: '05', key: 'feiqiu-doubles', name: '非酋之轮', tag: '非酋双打' },
   { no: '06', key: 'doubles', name: '官突双打', tag: '双打' },
   { no: '07', key: 'std15', name: '15 因子', tag: '纯随机' },
+  { no: '08', key: 'cm', name: 'CM 专属', tag: 'CM 指挥官' },
 ];
 
 export interface HomeScreenProps {

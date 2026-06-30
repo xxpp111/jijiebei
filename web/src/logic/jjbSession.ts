@@ -17,6 +17,9 @@ import { rollEnemiesForSession, getEnemyRoll } from './aiEnemySelector';
 import { setRandomEnemyEnabled } from './randomConfig';
 import { AI_ENEMY_POOL } from '../data/aiEnemyPool';
 import { FACTORS } from '../config/factors';
+import { COMMANDERS } from '../config/commanders';
+/** CM 专属模式固定指挥官池 = commanders.ts 标 source:'cm' 的项（单一真相源，改表即改池）。 */
+const CM_POOL: string[] = COMMANDERS.filter((c) => c.source === 'cm').map((c) => c.name);
 import type { SingleSnapshot } from './codec';
 import { getBanMaps, getBanFactors } from './eventBan';
 
@@ -61,13 +64,13 @@ function restoreConfig(): void {
 const rand = (n: number) => Math.floor(Math.random() * n);
 
 // ===== 9 模式入口（段2 Phase 0 全模式开局）+ doubles 双打（段3④ 独立引擎接通） =====
-export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'std15' | 'suiji' | 'doubles' | 'feiqiu-doubles';
+export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'hard1' | 'hard2' | 'feiqiu' | 'std15' | 'cm' | 'suiji' | 'doubles' | 'feiqiu-doubles';
 
 /** URL 赛事模式白名单（App.tsx 与 SelectScreen.tsx 共用，避免重复定义）。
  *  suiji 第五格入口已由 feiqiu 顶替下线：故移出 URL 白名单 → ?mode=suiji / ?sessionMode=suiji 回落 std8。
  *  'suiji' 仍保留在 SessionMode 类型与 setModeFlags 内（startSession('suiji') 与 e2e 9 模式恒等式回归依赖），仅非 URL/首页可达。
  *  'doubles' 双打入白名单：官突双打。'feiqiu-doubles'：飞球（非酋）双打，混乱工作室+随机1替代官突 CSV 池。 */
-const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'std15', 'doubles', 'feiqiu-doubles'];
+const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'std15', 'cm', 'doubles', 'feiqiu-doubles'];
 
 /** 解析 URL 赛事模式：优先 ?sessionMode=（白名单），兼容旧 ?mode=std10；非法/主题值(dark/light)回落 std8。
  *  SSR（typeof window==='undefined'）守卫防 Node 端崩。App.tsx 与 SelectScreen.tsx 共用此函数（LOW2 去重）。 */
@@ -108,6 +111,8 @@ function setModeFlags(mode: SessionMode): void {
       d.modelFactorCount = 0; d.modeSuiji = true; break;
     case 'std15':
       d.modelFactorCount = 0; d.modeStd15 = true; break; // 15 因子纯随机：mfc=0（因子数走 toSelectCore modeStd15 分支，标签走 currentModeLabel modeStd15 分支）
+    case 'cm':
+      d.modelFactorCount = 3; d.modeCm = true; break; // CM 专属：mfc=3（std10 因子节奏 2/2/3 → 10 因子）+ 固定 CM 指挥官池（toSelectCore modeCm 分支）
   }
 }
 
@@ -192,6 +197,9 @@ function toSelectCore(): void {
     d.randomCommanderPoorA.push('沃拉尊');
     d.randomCommanderPoorA.push('斯图科夫');
     d.randomCommanderPoorA.push('米拉');
+  } else if (d.modeCm) {
+    // CM 专属：固定 CM_POOL（仿 rescue 硬编码），不填 B 组、不 push 自选、等概率无降权（CM 不在官方 A/B 权重语义）
+    for (const name of CM_POOL) d.randomCommanderPoorA.push(name);
   } else {
     if (d.modeIsVeryHard && !d.modeIsVeryHard2) {
       // 极难① 整 A/B 组（第 129-132 行）—— slice() 防污染
@@ -367,6 +375,7 @@ export function exposeSelectDebug(mode: SessionMode): void {
       modeFeiqiu: !!d.modeFeiqiu,
       modeSuiji: !!d.modeSuiji,
       modeStd15: !!d.modeStd15,
+      modeCm: !!d.modeCm,
       modelFactorCount: d.modelFactorCount,
       status: d.status,
       mapCount: (d.mapList || []).length,
@@ -530,6 +539,7 @@ export interface SelectState {
   modeFeiqiu: boolean;
   modeSuiji: boolean;
   modeStd15: boolean;
+  modeCm: boolean;
   modelFactorCount: number;
   mapList: string[];
   lockFactorList: string[];
@@ -562,7 +572,7 @@ export function getSelectState(): SelectState {
   const cmdInPool: Record<string, boolean> = {};
   (d.randomCommanderPoorA || []).forEach((c: string) => { if (c && c !== '自选') cmdInPool[c] = true; });
   (d.randomCommanderPoorB || []).forEach((c: string) => { if (c) cmdInPool[c] = true; });
-  const selfShow = !d.modeSuiji && !d.modeIsZhengjiu && (!d.modeIsVeryHard || d.modeIsVeryHard2) && !d.modeFeiqiu;
+  const selfShow = !d.modeSuiji && !d.modeCm && !d.modeIsZhengjiu && (!d.modeIsVeryHard || d.modeIsVeryHard2) && !d.modeFeiqiu;
   let selfPool: string[] = [];
   if (selfShow) {
     try {
@@ -583,6 +593,7 @@ export function getSelectState(): SelectState {
     modeFeiqiu: !!d.modeFeiqiu,
     modeSuiji: !!d.modeSuiji,
     modeStd15: !!d.modeStd15,
+    modeCm: !!d.modeCm,
     modelFactorCount: d.modelFactorCount || 0,
     mapList: (d.mapList || []).slice(),
     lockFactorList: (d.lockFactorList || []).slice(),
@@ -969,6 +980,7 @@ export function applySelectState(snap: SingleSnapshot): void {
   d.modeFeiqiu = snap.flags.fq;
   d.modeSuiji = snap.flags.sj;
   d.modeStd15 = snap.flags.s15;
+  d.modeCm = snap.flags.cm;
   d.modelFactorCount = snap.mfc;
   setRuleMode(snap.rm);
   exposeSelectDebug(snap.mode);

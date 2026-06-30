@@ -36,7 +36,7 @@ export const PAYLOAD_VER = 1;
 
 /** 模式↔码字面量双向校验表（手钉，不靠 union 顺序；码里存字面量，此表用于 decode 校验合法 mode）。 */
 const MODE_CODES: readonly SessionMode[] = [
-  'std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'std15', 'suiji', 'doubles', 'feiqiu-doubles',
+  'std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'std15', 'cm', 'suiji', 'doubles', 'feiqiu-doubles',
 ];
 
 // ===== 因子名↔下标双向表 =====
@@ -103,7 +103,7 @@ export interface SingleSnapshot {
   kind: 's';
   mode: SessionMode;          // 字面量
   mfc: number;                // modelFactorCount (0-4)
-  flags: { vh: boolean; vh2: boolean; zj: boolean; op: boolean; fq: boolean; sj: boolean; s15: boolean; rand: boolean };
+  flags: { vh: boolean; vh2: boolean; zj: boolean; op: boolean; fq: boolean; sj: boolean; s15: boolean; cm: boolean; rand: boolean };
   rm: 'practice' | 'match';
   maps: string[];             // 3 张地图（存名，无 frozen 母表）
   locks: string[];            // 3 锁定因子（存名，含「混乱工作室」等限定因子，存名免疫 frozen 重排）
@@ -243,7 +243,7 @@ function captureSingle(): SingleSnapshot {
     kind: 's',
     mode: s.mode,
     mfc: s.modelFactorCount,
-    flags: { vh: s.modeIsVeryHard, vh2: s.modeIsVeryHard2, zj: s.modeIsZhengjiu, op: s.modeIsOnePick, fq: s.modeFeiqiu, sj: s.modeSuiji, s15: s.modeStd15, rand: s.modeIsRandom },
+    flags: { vh: s.modeIsVeryHard, vh2: s.modeIsVeryHard2, zj: s.modeIsZhengjiu, op: s.modeIsOnePick, fq: s.modeFeiqiu, sj: s.modeSuiji, s15: s.modeStd15, cm: s.modeCm, rand: s.modeIsRandom },
     rm: s.ruleMode,
     maps: s.mapList.slice(),
     locks: s.lockFactorList.slice(),

@@ -33,6 +33,7 @@ export function modeLabel(): string {
     const d: any = JijieData;
     if (d.modeSuiji) return "随机模式 · 抽取";
     if (d.modeStd15) return "15 因子 · 随机";
+    if (d.modeCm) return "CM 专属 · 10 因子";
     if (d.modeIsZhengjiu) return "拯救模式 · 10 因子";
     if (d.modeIsVeryHard) return "极难挑战";
     if (d.modeFeiqiu) return "非酋模式";

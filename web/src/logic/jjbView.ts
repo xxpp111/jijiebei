@@ -72,6 +72,7 @@ export function currentModeLabel(): string {
   if (doublesLive()) return doublesModeLabel();
   const s = getSelectState();
   if (s.modeStd15) return '15 因子 · 随机';
+  if (s.modeCm) return 'CM 专属 · 10 因子';
   if (s.modelFactorCount === 4) return '极难模式';
   const fc = s.modelFactorCount === 0 ? '随机'
     : s.modelFactorCount === 2 ? '8 因子'
