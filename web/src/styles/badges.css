@@ -1,0 +1,95 @@
+/* 因子三角标成品皮 — 承接 Claude Design v1 稿「1b 实心圆章」(项目 9f4186b8)。
+   三分角:点金(右上·金×2章) / BP禁(左上·红章) / reroll(右下·骰子蓝章)。
+   仅换视觉皮:交互契约(data-gold-toggle/data-bp-ban-toggle/data-reroll-at + onToggle/onReroll + stopPropagation)全部不变。
+   挂点:SelectScreen 把三 badge 作兄弟节点叠在 position:relative 的因子 wrapper 上。
+   ⚠ 选择器带 .jjb 前缀提特异性(0,2,0):压过 design/v4-r2/theme.css 的 `.jjb button{background:none;color:inherit}`(0,1,1)，否则填充/文字色被 reset 吃掉。 */
+
+.jjb .gold-toggle,
+.jjb .bp-ban,
+.jjb .reroll-toggle {
+  position: absolute;
+  z-index: 5;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.12s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.jjb .gold-toggle:hover,
+.jjb .bp-ban:hover,
+.jjb .reroll-toggle:hover {
+  transform: scale(1.15);
+}
+
+/* ── 点金 · 右上 · 金 ×2 圆章 ── */
+.jjb .gold-toggle {
+  top: -7px;
+  right: -7px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(180deg, #f6e7b6, #d8b15a 55%, #a87e2f);
+  color: #3a2a08;
+}
+/* 未点金:低调暗金(仍是可点入口) */
+.jjb .gold-toggle:not(.on) {
+  background: rgba(20, 22, 28, 0.82);
+  color: #c6ab63;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(216, 177, 90, 0.5);
+}
+/* 已点金:金章强调 */
+.jjb .gold-toggle.on {
+  box-shadow: 0 0 0 2px rgba(255, 244, 214, 0.9), 0 2px 8px rgba(216, 177, 90, 0.75);
+  transform: scale(1.06);
+}
+
+/* ── BP 禁 · 左上 · 红圆章 ── */
+.jjb .bp-ban {
+  top: -7px;
+  left: -7px;
+  background: rgba(20, 22, 28, 0.82);
+  color: #e88a8a;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(192, 69, 75, 0.55);
+}
+.jjb .bp-ban svg {
+  width: 14px;
+  height: 14px;
+}
+/* 已禁:红章强调 */
+.jjb .bp-ban.on {
+  background: linear-gradient(180deg, #e37e7e, #c0454b 60%, #8f2f36);
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 190, 190, 0.55), 0 2px 8px rgba(192, 69, 75, 0.75);
+  transform: scale(1.06);
+}
+
+/* ── reroll 重揉 · 右下 · 骰子蓝章 ── */
+.jjb .reroll-toggle {
+  bottom: -7px;
+  right: -7px;
+  background: linear-gradient(180deg, #6ea6ff, #3f7ff0 60%, #2b5fd0);
+  color: #fff;
+}
+.jjb .reroll-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+/* 次数耗尽:置灰不可点(match 态传 .rr-out 时生效) */
+.jjb .reroll-toggle.rr-out {
+  background: linear-gradient(180deg, #5a6270, #3a4150);
+  color: #9aa4b2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+.jjb .reroll-toggle.rr-out:hover {
+  transform: none;
+}

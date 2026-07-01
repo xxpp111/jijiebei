@@ -8,6 +8,7 @@
 @import './brand-gold.css';
 @import './obs-fuller.css';
 @import './jjb-select.css';
+@import './badges.css';
 
 html, body { margin: 0; background: #0a0b0e; }
 

@@ -79,24 +79,18 @@ export interface SelectScreenProps {
 function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
   return (
     <button
-      className="gold-toggle"
+      className={'gold-toggle' + (on ? ' on' : '')}
       data-gold-toggle={name}
       title="点金 / 取消金"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
-      style={{
-        position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10,
-        border: '1px solid rgba(0,0,0,0.35)', cursor: 'pointer', fontSize: 11, lineHeight: '18px',
-        padding: 0, fontWeight: 700, zIndex: 3,
-        background: on ? '#e8b84b' : 'rgba(20,20,20,0.7)', color: on ? '#3a2400' : '#ddd',
-      }}
     >
-      金
+      ×2
     </button>
   );
 }
 
-/** BP ban 角标按钮（因子池每个因子左上角，toggle ban；占位形态，待 Claude Design 设计稿美化）。
+/** BP ban 角标按钮（因子池每个因子左上角，toggle ban）。皮=实心红圆章（Claude Design v1 稿 1b，见 styles/badges.css .bp-ban）。
  *  红色 lose 语义，与点金 GoldBadge（右上·金）左右分置不重叠；stopPropagation 不触发拖拽。 */
 function BpBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
   return (
@@ -115,7 +109,7 @@ function BpBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: 
   );
 }
 
-/** 重揉角标按钮（每个非锁定因子右下角，reroll 换一个未出现的因子；占位样式，待 Claude Design 美化）。
+/** 重揉角标按钮（每个非锁定因子右下角，reroll 换一个未出现的因子）。皮=骰子蓝圆章（Claude Design v1 稿 1b，见 styles/badges.css .reroll-toggle）。
  *  与点金(右上·金) / BP(左上·红) 分置右下不重叠；stopPropagation 不触发拖拽/清槽。 */
 function RerollBadge({ name, onReroll }: { name: string; onReroll: () => void }) {
   return (
@@ -125,14 +119,13 @@ function RerollBadge({ name, onReroll }: { name: string; onReroll: () => void })
       title="重新揉（换一个未出现过的因子）"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onReroll(); }}
-      style={{
-        position: 'absolute', bottom: -6, right: -6, width: 20, height: 20, borderRadius: 10,
-        border: '1px solid rgba(0,0,0,0.35)', cursor: 'pointer', fontSize: 13, lineHeight: '18px',
-        padding: 0, fontWeight: 700, zIndex: 3,
-        background: 'rgba(20,20,20,0.7)', color: '#8fd6ff',
-      }}
     >
-      ↻
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1">
+        <rect x="4.5" y="4.5" width="15" height="15" rx="3.6"></rect>
+        <circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"></circle>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle>
+        <circle cx="15" cy="15" r="1.5" fill="currentColor" stroke="none"></circle>
+      </svg>
     </button>
   );
 }

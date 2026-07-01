@@ -76,6 +76,12 @@ async function main() {
     await waitForServer(preview);
     browser = await chromium.launch({ channel: 'chrome' });
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    // 绕登录门（HomeScreen 门 + App 守卫，task #54）：注入 player auth，否则 ?screen=select 被守卫挡回 home。
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('jjb_auth', JSON.stringify({ token: 'e2e', account: { id: 'e2e-player', kind: 'player', nickname: 'e2e' } }));
+      } catch { /* noop */ }
+    });
     const messages = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error' || msg.type() === 'warning') {
