@@ -5,6 +5,7 @@ import { ScreenShell } from '../components/ScreenShell';
 import { BrandLockup } from '../components/BrandLockup';
 import { PromoBar } from '../components/PromoBar';
 import JijieData from '../logic/legacy/JijieData';
+import { MODE_DEFS } from '../config/modes';
 
 // 集结杯 × CM — 首页（练习/比赛双模式入口 + 选手名）。承接 design/v4-r2/home + Claude Design 项目
 // 「集结杯练习比赛切换」(19b54387) 的 JJBHomeFrame：品牌字标下加「练习/比赛」tab（纯前端切换、不丢选手名）。
@@ -12,16 +13,13 @@ import JijieData from '../logic/legacy/JijieData';
 //   比赛态 = 主播登录占位 + 突出选手 ID（直播展示）+ 6 模式格 + 积分天梯占位卡。登录/积分均 UI 占位（后端 P5 才接）。
 // 模式集合以当前直播入口为准：8/10/极难 + 拯救 + 两个双打（5 号位非酋之轮=非酋双打 / 6 号位官突双打）。
 // 5、6 号位皆双打：非酋之轮(feiqiu-doubles=混乱工作室锁定+3固定可分配因子+随机真地图) 与 官突双打(doubles=抽CSV真表) 各占一格。
-const MODES: { no: string; key: SessionMode | 'doubles'; name: string; tag: string; soon?: boolean }[] = [
-  { no: '01', key: 'std8', name: '8 因子', tag: '标准赛' },
-  { no: '02', key: 'std10', name: '10 因子', tag: '进阶' },
-  { no: '03', key: 'std12', name: '极难模式', tag: '极难' },
-  { no: '04', key: 'rescue', name: '拯救模式', tag: '固定7人' },
-  { no: '05', key: 'feiqiu-doubles', name: '非酋之轮', tag: '非酋双打' },
-  { no: '06', key: 'doubles', name: '官突双打', tag: '双打' },
-  { no: '07', key: 'std15', name: '15 因子', tag: '纯随机' },
-  { no: '08', key: 'cm', name: 'CM 专属', tag: 'CM 指挥官' },
-];
+// 首页 8 格从 MODE_DEFS 派生（单一真相源，no/key/name/tag/soon 结构不变；当前无 soon 项）。
+const HOME_MODE_KEYS: (SessionMode | 'doubles')[] = ['std8', 'std10', 'std12', 'rescue', 'feiqiu-doubles', 'doubles', 'std15', 'cm'];
+const MODES: { no: string; key: SessionMode | 'doubles'; name: string; tag: string; soon?: boolean }[] =
+  HOME_MODE_KEYS.map((key) => {
+    const d = MODE_DEFS[key];
+    return { no: d.no!, key, name: d.name!, tag: d.tag! };
+  });
 
 export interface HomeScreenProps {
   style: string;

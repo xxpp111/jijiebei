@@ -21,6 +21,7 @@ import {
 } from './jjbDoubles';
 import { getEnemyRoll } from './aiEnemySelector';
 import type { RaceCode } from '../data/aiEnemyPool';
+import { MODE_DEFS } from '../config/modes';
 
 export type Verdict = 'win' | 'bonus' | 'lose';
 export type CurrentMatch = MatchVM & { mutators?: string[] };
@@ -70,21 +71,9 @@ export function currentLockTag(): string {
 
 export function currentModeLabel(): string {
   if (doublesLive()) return doublesModeLabel();
-  const s = getSelectState();
-  if (s.modeStd15) return '15 因子 · 随机';
-  if (s.modeCm) return 'CM 专属 · 10 因子';
-  if (s.modelFactorCount === 4) return '极难模式';
-  const fc = s.modelFactorCount === 0 ? '随机'
-    : s.modelFactorCount === 2 ? '8 因子'
-    : s.modelFactorCount === 3 ? '10 因子'
-    : `${s.modelFactorCount} 因子`;
-  const ml = s.modeIsZhengjiu ? '拯救'
-    : s.modeIsOnePick ? '单指'
-    : s.modeIsVeryHard2 || s.modeIsVeryHard ? '极难'
-    : s.modeFeiqiu ? '非酋'
-    : s.modeSuiji ? '随机'
-    : '手选';
-  return `${fc} · ${ml}`;
+  // 逐模式 label 收敛进 config/modes.ts 的 MODE_DEFS（文案与旧 flag 派生逐字节等价）。
+  // 非双打分支的 mode 只会是 11 个单打 key（doubles/feiqiu-doubles 走上面 doublesLive 早返），均有 label。
+  return MODE_DEFS[currentSessionMode()]?.label ?? '';
 }
 
 export function setCurrentVerdict(matchIdx: number, verdict: Verdict): void {
