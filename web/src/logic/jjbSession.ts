@@ -335,6 +335,7 @@ export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: 
   // 早分支启动后即返——绕开 restoreConfig/setModeFlags/toStart/toSelect/9格固化；调试镜像走 __jjbDebug.doubles。
   clearBpRuntime(); // 任何开局都重置 BP ban（含双打早分支，避免跨局残留）
   clearGoldRuntime(); // 同步重置点金（修跨局泄漏 bug：上局点金因子带进下局经 weightedFactorScore 让 difficulty×2 污染记分）
+  clearRerollRuntime(); // 同步重置重揉次数（比赛态每局限次不跨局残留）
   if (mode === 'doubles') { doublesStart('guantu'); return; }
   if (mode === 'feiqiu-doubles') { doublesStart('feiqiu'); return; }
   doublesReset(); // 非 doubles 模式开局时重置双打引擎（防跨局 doublesLive 残留，影响 navigate 模式判断）
@@ -424,6 +425,9 @@ export function exposeStartSession(): void {
   w.__jjb.validate = validate;
   w.__jjb.startFromSelection = startFromSelection;
   w.__jjb.getBpExclusive = getBpExclusive;
+  // 重揉钩子（reroll e2e 用：限次 + 不重复 + 难度实时重算）
+  w.__jjb.rerollFactor = rerollFactor;
+  w.__jjb.getRerollState = getRerollState;
 }
 
 function fillSelectionSlots(d: any): void {
@@ -895,6 +899,55 @@ export function getBpState(): { banned: string[]; banLimit: number; ruleMode: 'p
 
 /** 清运行时 BP（开新局时调，避免跨局残留）。 */
 export function clearBpRuntime(): void { bpBanRuntime.clear(); }
+
+// ===== 段3⑤：因子「重新揉」（reroll：把单个非锁定因子换成当前 3 场没出现过的一个）=====
+// 复用 legacy 抽签机（getJijieFactor 只从「活池」抽——活池已由 toStartCore/toSelectCore 排除所有在场因子，
+// 天然只剩「当前没出现过的」）。锁定因子(lockFactorList)不换（UI 不挂角标 + 逻辑侧再挡一道）。
+// 限次照抄 BP_BAN_LIMIT 范式：practice 无限、不提示；match 每局上限 REROLL_LIMIT，超限写软违规「超出比赛规则」(不强拦、不执行、已揉的仍有效)。
+let rerollCount = 0;
+const REROLL_LIMIT = 3; // 比赛态「重揉」每局上限；练习态不设上限。
+
+/** 重揉单个非锁定因子。
+ *  kind='pool'  普通模式池候选：randomFactorPoor[i]
+ *  kind='slot'  已落槽手选：  selectedFactorList[facFlatIdx(i,k)]
+ *  kind='std15' std15 场上：   randomFactorPoor[i*5+k]
+ *  返回 true=已揉 / false=旧因子空 or 锁定 or match 超限。 */
+export function rerollFactor(kind: 'pool' | 'slot' | 'std15', i: number, k?: number): boolean {
+  const d: any = JijieData;
+  const poor = (d.randomFactorPoor || []) as (string | null)[];
+  const sel = (d.selectedFactorList || []) as (string | null)[];
+  let arr: (string | null)[];
+  let flat: number;
+  if (kind === 'slot') { arr = sel; flat = facFlatIdx(i, k as number); }
+  else if (kind === 'std15') { arr = poor; flat = i * 5 + (k as number); }
+  else { arr = poor; flat = i; }
+  const oldName = arr[flat];
+  if (!oldName) return false;
+  // 锁定因子不可换（UI 不挂角标；逻辑侧再挡一道，防误调）
+  if (((d.lockFactorList || []) as (string | null)[]).includes(oldName)) return false;
+  // 限次（照抄 BP toggleBanFactor 范式）：match 超限 → 软违规提示、不执行、已揉的仍有效
+  if (ruleMode === 'match' && rerollCount >= REROLL_LIMIT) {
+    exposeSelectWarn('超出比赛规则：重揉每局限 ' + REROLL_LIMIT + ' 次');
+    return false;
+  }
+  // 抽新：先抽后放——getJijieFactor 只从活池抽（活池已排除所有在场因子），保证新因子 ≠ 旧且 ∉ 当前 3 场在场集；
+  //       popFactor(新) 固化在场；旧因子仅当已不在任何展示位(池 + 手选槽)时归还母池（防母池双份 → 后续抽签重复）。
+  const newName = ConfigData.getJijieFactor(!!d.modeIsVeryHard);
+  ConfigData.popFactor(newName);
+  arr[flat] = newName;
+  const stillShown = poor.includes(oldName) || sel.includes(oldName);
+  if (!stillShown) ConfigData.releaseFactor(oldName);
+  rerollCount++;
+  return true;
+}
+
+/** 重揉态快照（给 UI 显「重揉 N/3」剩余 / e2e）。 */
+export function getRerollState(): { count: number; limit: number; remaining: number } {
+  return { count: rerollCount, limit: REROLL_LIMIT, remaining: Math.max(0, REROLL_LIMIT - rerollCount) };
+}
+
+/** 清运行时重揉次数（开新局时调，避免跨局残留）。 */
+export function clearRerollRuntime(): void { rerollCount = 0; }
 
 // ===== 段3④：难度总分（锁定因子 + 手选因子求和；点金因子分值×2） =====
 // 分值真相 = config/factors.ts points（docs/因子点数配置.csv 经 gen-config 生成，71 条全表）。Batch5 cutover：

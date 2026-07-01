@@ -26,6 +26,8 @@ import {
   difficultyTotal,
   matchDifficulty,
   querySessionMode,
+  rerollFactor,
+  getRerollState,
 } from '../logic/jjbSession';
 import { facFlatIdx } from '../logic/legacy/JJBData';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
@@ -113,6 +115,28 @@ function BpBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: 
   );
 }
 
+/** 重揉角标按钮（每个非锁定因子右下角，reroll 换一个未出现的因子；占位样式，待 Claude Design 美化）。
+ *  与点金(右上·金) / BP(左上·红) 分置右下不重叠；stopPropagation 不触发拖拽/清槽。 */
+function RerollBadge({ name, onReroll }: { name: string; onReroll: () => void }) {
+  return (
+    <button
+      className="reroll-toggle"
+      data-reroll-at={name}
+      title="重新揉（换一个未出现过的因子）"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onReroll(); }}
+      style={{
+        position: 'absolute', bottom: -6, right: -6, width: 20, height: 20, borderRadius: 10,
+        border: '1px solid rgba(0,0,0,0.35)', cursor: 'pointer', fontSize: 13, lineHeight: '18px',
+        padding: 0, fontWeight: 700, zIndex: 3,
+        background: 'rgba(20,20,20,0.7)', color: '#8fd6ff',
+      }}
+    >
+      ↻
+    </button>
+  );
+}
+
 export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenProps) {
   // 兜底：?screen=select 直跳时若 jjbLive=false 在本屏内开一局 std8 后 setState 强制重渲。
   // URL ?sessionMode=std8|std10|... 覆盖默认 std8；旧 ?mode=std10 仍兼容。
@@ -193,6 +217,14 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
   // ===== 点击已填槽清除 =====
   const onClearCmd = (slot: number) => { clearCmdSlot(slot); setTick((x) => x + 1); };
   const onClearFac = (slot: number, k: number) => { clearFacSlot(slot, k); setTick((x) => x + 1); };
+
+  // ===== 重揉：换一个未出现的因子（match 超限走软违规 toast，照抄 BpBadge 回显范式） =====
+  const doReroll = (kind: 'pool' | 'slot' | 'std15', i: number, k?: number) => {
+    rerollFactor(kind, i, k);
+    const w = getSelectWarn();
+    if (w) setToast({ msg: w, count: 1, kind: 'soft' });
+    setTick((x) => x + 1);
+  };
 
   // ===== 开始按钮：校验 + 手选进 battle =====
   const handleStart = () => {
@@ -287,6 +319,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                         <span key={k} data-slot-fac={`${i}:${k}`} style={{ position: 'relative', display: 'inline-block' }}>
                           <FactorFrame src={facUrl(f)} size={52} gold={getGoldFor(f)} />
                           <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
+                          <RerollBadge name={f} onReroll={() => doReroll('std15', i, k)} />
                         </span>
                       ))
                     ) : (
@@ -310,6 +343,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                             >
                               <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
                               <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
+                              <RerollBadge name={v} onReroll={() => doReroll('slot', i, k)} />
                             </span>
                           ) : (
                             <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
@@ -348,6 +382,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} banned={getBpModeEnabled(s.mode) && getBanFor(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
                   {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1, kind: 'soft' }); setTick((x) => x + 1); }} />}
+                  {!s.modeStd15 && <RerollBadge name={f} onReroll={() => doReroll('pool', i)} />}
                 </span>
               ))}
             </div>
@@ -429,6 +464,11 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
             </div>
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
               <ToastV toast={toast} />
+              {s.ruleMode === 'match' && (() => { const rr = getRerollState(); return (
+                <span data-reroll-remaining={rr.remaining} style={{ fontSize: 12, fontWeight: 700, color: '#8fd6ff', whiteSpace: 'nowrap' }}>
+                  ↻ 重揉 {rr.remaining}/{rr.limit}
+                </span>
+              ); })()}
               <EnemyStatusPill />
               <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode}>生成对局码 →</button>
               <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select.png" />
