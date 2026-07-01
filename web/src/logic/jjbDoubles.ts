@@ -88,12 +88,19 @@ export function doublesStart(variant: 'guantu' | 'feiqiu' = 'guantu'): void {
     _mutEntries = TIER_ORDER.map((_, i) => ({ name: '非酋', map: maps[i % maps.length] ?? '湮灭快车', factors: [FEIQIU_FIXED] }));
     _factorPool = FEIQIU_ASSIGN_POOL.slice();
   } else {
+    // 3 档官突各自带地图，独立随机抽会撞图（bug：完美风暴/现世现报同配升格之链 → 3 场重复地图）。
+    // 修：逐档抽取时对地图去重——优先抽地图未用过的官突；该档官突地图被前面用尽（撞档，罕见）时回退原池随机，避免抽不出。
+    const usedMaps = new Set<string>();
     _mutEntries = TIER_ORDER.map((t) => {
       const pool = MUTATOR_POOL[t].filter(
         (e) => !getBanMutators().has(e.name) && !e.factors.some((f) => getBanFactors().has(f))
       );
-      const usable = pool.length > 0 ? pool : MUTATOR_POOL[t]; // 守卫：全 ban 时回退原池
-      return usable[Math.floor(Math.random() * usable.length)];
+      const base = pool.length > 0 ? pool : MUTATOR_POOL[t]; // 守卫：全 ban 时回退原池
+      const fresh = base.filter((e) => !usedMaps.has(e.map));
+      const cand = fresh.length > 0 ? fresh : base;
+      const pick = cand[Math.floor(Math.random() * cand.length)];
+      usedMaps.add(pick.map);
+      return pick;
     });
     const lockedFacs = new Set(_mutEntries.flatMap((e) => e.factors));
     _factorPool = shuffle(FACTOR_SOURCE.filter((f) => !lockedFacs.has(f))).slice(0, FACTOR_POOL_SIZE);

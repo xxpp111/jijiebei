@@ -385,6 +385,21 @@ try {
       console.log(`\n  [doubles] 启动接缝：live=${dbl.live} matches=${dbl.config.matches} cmdPool=${dbl.commanderPool.length} facPool=${dbl.factorPool.length} slots=${dslots.length}×(cmd2/fac3) winLose=${dbl.winLoseList.length} ✓`);
     }
 
+    // ===== 段3④ phase2.5：双打地图去重（bug 回归护栏）=====
+    // doubles 3 档官突各带地图，独立随机抽会撞图（完美风暴/现世现报同配升格之链 → 3 场重复地图）。
+    // 修=jjbDoubles 逐档抽取时对地图去重。护栏：多次开局 3 场地图恒不重复（feiqiu-doubles 本就 new Set 去重不受影响）。
+    {
+      let dmapDup = 0;
+      for (let i = 0; i < 40; i++) {
+        startSession('doubles');
+        const cfg = globalThis.window.__jjbDebug && globalThis.window.__jjbDebug.doubles && globalThis.window.__jjbDebug.doubles.config;
+        const dmaps = ((cfg && cfg.matchMaps) || []).filter(Boolean);
+        if (dmaps.length === 3 && new Set(dmaps).size < 3) dmapDup++;
+      }
+      if (dmapDup > 0) fail(`doubles 地图去重: ${dmapDup}/40 局出现重复地图（jjbDoubles 官突抽取需按地图去重）`);
+      else console.log(`  [doubles] 地图去重：40 局开局 3 场地图恒不重复 ✓`);
+    }
+
     // ===== 段3④ phase3：双打 select→battle 全路径 + 难度分隔离裁定（镜像单打手选→battle 渲染断言）=====
     // 难度分裁定：difficultyTotal/matchDifficulty 是单打 JijieData 不变量；双打 JJBDoubles 自管不碰 JijieData。
     // 故显式断言（禁静默）：先开单打局记 difficultyTotal 基线 → 跑双打全流程 → 基线不变（双打零污染单打计分）。
