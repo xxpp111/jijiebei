@@ -85,7 +85,7 @@ function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
     >
-      ×2
+      金
     </button>
   );
 }

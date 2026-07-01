@@ -25,3 +25,9 @@
 /* 因子池左列（pool-factors）随机因子多时（如 std15 的 15 因子）会撑出 .pool(overflow:hidden) 底被裁；
    给它独立内滚，与右列指挥官区一致，整池可滚不裁。 */
 .jjb-inner.sel .pool-factors { min-height: 0; overflow-y: auto; }
+
+/* 边框内嵌修复（yb 反馈：因子图方角外露到金边框外一点，应内嵌进边框实心环内）。
+   v4.css .fx-art 普通缩进 7%(占86%)/金 9%(占82%)，实测边框 PNG 内框更小 → 方角露边。
+   web 层再内收几个 %，让因子图被 .fx-frame 边框压住不外露。双类 specificity 覆盖 design v4.css，不改红线源。 */
+.jjb .fx .fx-art { left: 11%; top: 11%; width: 78%; height: 78%; }
+.jjb .fx.gold .fx-art { left: 13%; top: 13%; width: 74%; height: 74%; }
