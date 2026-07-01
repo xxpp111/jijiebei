@@ -8,3 +8,20 @@
   height: 100%;
   min-height: 0;
 }
+
+/* Bug B 补全：注释里描述的「pool-cmd 内部 overflow:auto 滚动 + 按钮行钉底」此前只靠 SelectScreen 内联样式半实现，
+   且 .pool 受顶栏/slots 挤压，自选指挥官行在 scroll-top 时整行被按钮压到 fold 下只露半行。
+   这里 (1) 中和 .startbtn 的 align-self:flex-end(theme.css 在 pool-cmd flex 列里会顶错按钮行)；
+   (2) 给 sel 顶栏/slots 适度压缩腾出垂直空间，使自选指挥官行整行可见、滚动只兜底超长池。
+   双类 specificity 覆盖 design 单类，不改 design 源、不改 DOM/交互。 */
+.jjb > .jjb-inner.sel { padding-top: 16px; padding-bottom: 16px; }
+.jjb-inner.sel.sel { gap: 12px; }                              /* design .sel gap:18 → 12 */
+.jjb-inner.sel .slot { padding-top: 10px; padding-bottom: 10px; }
+.jjb-inner.sel .slot-targets { margin-top: 7px; }
+.jjb-inner.sel .pool-factors .factor-row { margin-top: 8px; }
+/* 按钮行（pool-cmd 第 2 个直接子 div）钉底不缩；中和 startbtn 跨轴自对齐避免顶错行高 */
+.jjb-inner.sel .pool-cmd > div:last-child { align-items: center; }
+.jjb-inner.sel .pool-cmd .startbtn { align-self: center; margin-top: 0; }
+/* 因子池左列（pool-factors）随机因子多时（如 std15 的 15 因子）会撑出 .pool(overflow:hidden) 底被裁；
+   给它独立内滚，与右列指挥官区一致，整池可滚不裁。 */
+.jjb-inner.sel .pool-factors { min-height: 0; overflow-y: auto; }

@@ -131,3 +131,16 @@
 .jjb-inner.home .match-hint { margin-top: 8px; }
 .jjb-inner.home .mode-block { margin-top: 14px; }
 .jjb-inner.home .promo-head { margin-bottom: 4px; }
+
+/* 比赛态额外压缩：放大的选手 ID 框(.player-field.big 52px+glow) + match-hint + player-row.match 比练习态多占 ~30px，
+   会把 8 模式格 07/08 挤出 720。这里只压缩比赛态 player 区垂直占用（双类 specificity 覆盖 design 单类，不改 design 源），
+   8 格在比赛态也全部可见。练习态不受影响（仅 .match 选择器命中）。 */
+.jjb-inner.home .player-row.match { margin-top: 12px; }
+.jjb-inner.home .player-field.big { height: 46px; }
+.jjb-inner.home .player-field.big .caret { height: 22px; }
+
+/* Bug A 补修（hub·数值验证）：比赛态 8 格溢出 824>720 差 104px。modeBlock(8 格 3 行·mode-btn min-height 104)是最大项、两态共用，
+   压 mode-btn 行高 + mode-grid gap/margin 凑够 104px —— 练习态本已 fit、压后更宽松不破坏，比赛态由此收进 720。 */
+.jjb-inner.home .mode-btn { min-height: 80px; }
+.jjb-inner.home .mode-grid { gap: 12px; margin-top: 8px; }
+.jjb-inner.home .mode-block { margin-top: 8px; }

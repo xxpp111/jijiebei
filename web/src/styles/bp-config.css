@@ -92,3 +92,21 @@
 .bpc-foot { margin-top: 16px; display: flex; align-items: center; gap: 26px; font-size: 12.5px; color: var(--muted); }
 .bpc-foot b { color: var(--ink); font-weight: 700; }
 .bpc-legend { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ===== Bug D：8 模式行 + 随机敌方分区 + foot 超 720 被裁（list 676px 单独就溢出，enemy/foot 全在屏外）=====
+   原稿按 6 行排版（高 74 + gap 12），现 8 行（07/15因子 + 08/CM）+ 随机敌方 + foot 总高 ~900px，超 1280×720 stage。
+   修法：压缩行高/字号/间距 + 收紧顶部头部与随机敌方分区，让 01-08 全 8 行 + 随机敌方 + foot 都在 720 内可见可操作。
+   双类 specificity（.bpc 前缀）覆盖 design/random-enemy 单类，不改 design 源、不改 DOM/交互。 */
+.bpc .topbar { margin-bottom: 12px; }
+.bpc .bpc-head { margin-bottom: 10px; }
+.bpc .bpc-list { gap: 7px; }
+.bpc .bpc-row { height: 50px; padding: 0 24px 0 18px; gap: 16px; }
+.bpc .bpc-no { font-size: 22px; min-width: 36px; }
+.bpc .bpc-main { gap: 2px; }
+.bpc .bpc-name { font-size: 18px; }
+.bpc .bpc-form { font-size: 11.5px; }
+/* 随机敌方分区：压缩内外边距与字号，与压缩后的行列协调 */
+.bpc .bp-enemy { margin: 6px 0 0; padding: 9px 16px; gap: 14px; }
+.bpc .bp-enemy .bp-enemy-k { margin-bottom: 3px; }
+.bpc .bp-enemy .bp-enemy-sub { margin-top: 2px; }
+.bpc .bpc-foot { margin-top: 9px; }

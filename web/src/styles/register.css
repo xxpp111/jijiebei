@@ -1,18 +1,29 @@
 /* RegisterScreen — 选手注册增量样式。复用 login.css 的 login-stage/hero/card/lf/login-banner/startbtn；
    此处只加 reg 专属类。全部 token-driven，三皮肤（metal/sc2/minimal × dark/light）通用。 */
-.reg-card { max-height: 664px; overflow-y: auto; }
-.reg-fields { gap: 10px; }
+
+/* Bug C：擅长指挥官 chip 列表长（官方 18 + CM 4），整卡 max-height:664 + overflow:auto 把
+   注册按钮 + foot 顶到 fold 下不可见（卡内 scrollHeight≈895 > 可视 662，按钮在 stage-top 797、超 720）。
+   修法：reg-stage 收窄上下 padding 腾高 + 卡高吃满可视区 + 把「chip 网格」单独内滚（max-height 封顶），
+   固定区（标题/必填字段/按钮/foot）始终在卡内可见，只有长 chip 列表自身滚动。双类 specificity 覆盖，不改 design 源。 */
+.reg-stage .login-inner { padding-top: 14px; padding-bottom: 14px; }
+.reg-card { max-height: 692px; overflow: hidden; padding-top: 22px; padding-bottom: 18px; }   /* 卡不再整体滚动 → chip 区内滚，按钮/foot 钉在卡内可见 */
+.reg-card .login-titleblock { gap: 4px; }
+.reg-card .login-cardsub { line-height: 1.4; }
+.reg-card .login-btn { margin-top: 14px; }
+.reg-card .login-foot { margin-top: 12px; }
+.reg-fields { gap: 7px; }
+.reg-fields .lf { gap: 5px; }
 .lf-req { color: var(--warn); margin-left: 3px; font-style: normal; }
 .lf-optn { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 4px; }
 
 /* 选填分隔线 */
-.reg-optdiv { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
+.reg-optdiv { display: flex; align-items: center; gap: 10px; margin: 6px 0 2px; }
 .reg-optdiv::before, .reg-optdiv::after { content: ''; flex: 1; height: 1px; background: var(--panel-edge); }
 .reg-optdiv span { font-size: 12px; color: var(--muted); letter-spacing: 2px; }
 
-/* 擅长指挥官 chip 网格（自然展开、不内层滚动 → CM 全显示不半露；紧凑化减垂直占用，整卡单层滚动） */
+/* 擅长指挥官 chip 网格：紧凑化 + 内层滚动封顶（CM 全在内滚区可滚到，固定区不被顶出卡） */
 .reg-cmds-row { align-items: flex-start; }
-.reg-cmds { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; padding: 2px 0; }
+.reg-cmds { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; padding: 2px 4px 2px 0; max-height: 96px; overflow-y: auto; }
 .reg-cmd-chip { font: inherit; font-size: 11.5px; line-height: 1; padding: 5px 9px; border-radius: 6px; border: 1px solid var(--panel-edge); background: var(--panel-bg); color: var(--ink); cursor: pointer; transition: background .12s, border-color .12s, color .12s; white-space: nowrap; }
 .reg-cmd-chip:hover { border-color: var(--accent); }
 .reg-cmd-chip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
