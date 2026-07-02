@@ -50,6 +50,8 @@ const r = await fetch('/api/collections/accounts/auth-with-password', {
 // token 仅内存，不落盘；登出 → clearAuth()
 ```
 
+> ⚠️ **示例密码是仓库明文占位符**：`Host123456!`（含 `waibi@jjb.test` / `laowang@jjb.test` / `manggu@jjb.test` 对应密码，定义在 `backend/deploy/seed-hosts.sh`）是仓库里写死的默认占位密码，生产环境应尽快让各主播自己改掉；改密码路径见下方 1.3 节。
+
 ### 1.3 主播密码重置
 
 ```bash
@@ -116,6 +118,22 @@ POST /api/collections/matches/records
 - Admin UI → players → 改 `active = false`（从 0/1 过滤）
 - 保留历史 matches.players 关系（不删），历史天梯数据仍可查（聚合 query 仍包含旧 score 行）；只是当前天梯榜不再显示。
 
+### 2.5 选手账号运维（player_accounts，选手自助登录体系）
+
+> `player_accounts` 是选手自己注册登录的 auth 集合，跟 §1 的主播账号（`accounts`）、2.1-2.4 的选手档案（`players`，由主播/管理员代建）是三套不同体系——选手账号全程不需要主播/管理员操作。
+
+**自助注册**：选手打开 `/?screen=register`（RegisterScreen）自己填 昵称 + 手机号 + 密码 完成注册：
+
+```js
+// web/src/logic/backend.ts registerPlayer()
+POST /api/collections/player_accounts/records
+{ "nickname": "...", "phone": "13800000000", "password": "...", "passwordConfirm": "..." }
+// phone 字段唯一索引（idx_pa_phone），重复手机号会被拒绝
+```
+
+- **忘记密码**：目前**没有自助找回入口**（跟主播账号一样）；只能 admin 走 Admin UI → `player_accounts` 集合 → 选中记录 → 改 `password` + `passwordConfirm` → 保存（路径同 1.3 节）。
+- **注册联动**：注册成功后，后端 hook 会自动在 `players` 集合建一条关联档案（`player_code` = `pa-<账号ID>`），并把 `player_accounts.player` 关系字段回填指向它——不走、也不需要 2.1-2.4 那套 admin 代建流程。
+
 ---
 
 ## 3. 赛季 / 系数 / 积分
@@ -138,6 +156,8 @@ POST /api/collections/matches/records
 | `feiqiu` / `suiji` | 1.0 / 1.0 | 非酋 / 完全随机 |
 | `doubles` / `feiqiu-doubles` | 1.0 / 1.0 | 双打 + 非酋双打 |
 | **default_coefficient** | 1.0 | 未知 game_mode 兜底 |
+
+> ⚠️ **已知缺口**：新模式 `std15` / `cm` 目前**不在此表**，`config/scoring.json` 里也还没有配这两个 key——对应对局会直接落到 `default_coefficient=1.0` 兜底计分，不是"暂不计分"。系数取值待 yb/土豆拍板定稿，拍板前本文档不臆造具体数值。
 
 **修改流程**：
 ```bash
@@ -409,7 +429,7 @@ curl -s 'http://127.0.0.1:8090/api/rankings?season=2026S1'
 
 ## 7. 红线 / 强约束
 
-1. **0 改 schema 加列**：现有 5 集合字段已是定稿；加列需走 schema migration（新 `1782000xxx_xxx.go`）+ 修改对应 `xxFields.Add` + 改 hook + 改 routes。
+1. **0 改 schema 加列**：现有 7 集合字段已是定稿；加列需走 schema migration（新 `1782000xxx_xxx.go`）+ 修改对应 `xxFields.Add` + 改 hook + 改 routes。
 2. **logs 不可改删**：`updateRule = nil` + `deleteRule = nil`，API 层硬约束（即便 admin 也 403）。
 3. **mode=practice 不计分**：hook 早 return；前端 / admin 不会误算分。
 4. **scores 写仅 hook**：scores.CreateRule = admin-only（前端不直接 POST），hook 用 `app.Save` 绕过。

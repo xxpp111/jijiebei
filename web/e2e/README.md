@@ -16,6 +16,14 @@
 | `r6-doubles-downstream.mjs` | 双打下游三屏 |
 | `ui-smoke.mjs` | React DOM smoke |
 | `record-to-score.mjs` | 兜底建 player→scores 派生→rankings（落库链路，公网用 `JJB_API=<tunnel>/api`）|
+| `auth-perm.mjs` | player_accounts 权限矩阵：注册 createRule 放开 / 选手 list 只看自己 / 匿名挡 / phone unique / 越权改档 404（隔离 PB）|
+| `backend-integ.mjs` | P5 联调：host auth→postMatch→hook 派生 scores→天梯增量全链路（需 vite dev+PocketBase 在跑）|
+| `event-ban.mjs` | 赛事临时 ban 逻辑层（Phase3）：单/双打地图·因子·官突 ban + while 守卫（Vite SSR 纯逻辑断言）|
+| `match-flow.mjs` | P5 联调端到端：真实 UI 比赛流程（登录→选人→开局→判定→落库→选手关联→hook 派生 scores），需 vite dev+PocketBase 在跑 |
+| `player-hook.mjs` | player_accounts→players 自动建 hook：注册自动建 / relation 回设 / 重复 phone 不重复建 / 预绑幂等（隔离 PB 真验）|
+| `practice-post.mjs` | practice 落库权限矩阵：选手自助落 practice 放开 / match 仍限 host / 匿名挡 / practice 落库不派生 scores（隔离 PB）|
+| `register-privacy.mjs` | 记住我默认勾选 + 隐私协议注册门（未勾协议前端拦截，纯前端 vite preview）|
+| `reroll.mjs` | 因子「重新揉」专项门：限次 / 不重复 / 难度实时重算（池候选 + 已落槽手选两种落点，Vite SSR）|
 
 ## 2. AI-E2E flows（`flows/*.flow.mjs`）— 流程化
 
@@ -29,6 +37,8 @@ node e2e/flows/<name>.flow.mjs        # 自带 preview/浏览器生命周期
 | flow | 断言点 | 截图 | 需 P5 |
 |---|---|---|---|
 | `login.flow` | login-stage + 三族×3 + 账号/密码/登录按钮 + 登录歪比 success | login | 登录段需 |
+| `auth.flow` | 注册屏 22 指挥官+4 字段渲染→填表→success banner 真落库 + 登录屏默认选手 tab + 记住我→localStorage 持久 + 主播 tab 切换 | auth-* | 否 |
+| `login-gate.flow` | 未登录点开局→引导 login + 直接 URL ?screen=select 被路由守卫踢回 home + obs/ladder 公开读红线不踢 home + 登录后放行进 select | login-gate-* | 否 |
 | `single-match.flow` | home 比赛 tab 登录入口 + select 3 槽 + battle 判定改 `__jjbDebug.score` | single-* | 否 |
 | `ladder.flow` | 分榜 3 tab + 切换 on + ranked/empty 稳定态 | ladder-* | 否 |
 | `doubles-match.flow` | 官突 factorPool=9 抽 CSV + 非酋 factorPool=3 + commanderPool=6（落库链路见下）| doubles-* | 否 |

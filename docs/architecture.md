@@ -68,7 +68,7 @@ flowchart LR
 
 | 屏 | 路径 | 路由 (`?screen=`) | 职责 | 关键逻辑 |
 |---|---|---|---|---|
-| **HomeScreen** | `HomeScreen.tsx` | `home`（默认） | 入口：选 11 模式之一开赛 / 进天梯 / 进码方案 | `setRuleMode('practice'\|'match')` + `startSession(mode)` |
+| **HomeScreen** | `HomeScreen.tsx` | `home`（默认） | 入口：9 格选一开赛（8 模式 + 1 QQ 群二维码）/ 进天梯 / 进码方案 | `setRuleMode('practice'\|'match')` + `startSession(mode)` |
 | **SelectScreen** | `SelectScreen.tsx` | `select` | 因子/指挥官拖拽 + BP 规则 + 9 格契约 | `jjbSession.validate / startFromSelection` |
 | **BattleScreen** | `BattleScreen.tsx` | `battle` | 3 场 BO3 判定（lose / win / bonus 三态） | `setVerdict` → `winLoseList[i]` |
 | **ResultScreen** | `ResultScreen.tsx` | `result` | 大比分 + 战绩卡 + 落库触发 | `getScore()` + `postMatch(payload)` |
@@ -91,7 +91,7 @@ flowchart LR
 | 模块 | 职责 | 关键导出 |
 |---|---|---|
 | `jjbSession.ts` | 单打状态机 + 9 模式开局 + BP + 难度分 | `startSession / getSelectState / validate / startFromSelection / getSessionMatches / factorScore / difficultyTotal` |
-| `jjbDoubles.ts` | 双打独立引擎（自管 selection + winLose） | `getDoublesState / setDoublesCmd / setDoublesFac / setDoublesVerdict / randomFillDoubles / doublesScore` |
+| `jjbDoubles.ts` | 双打引擎 — per-variant 配置化（`VARIANT_SPECS`：guantu/feiqiu/std15/cm 四种 variant，各自定义 extraFactors/factorPoolSize/cmdACount/cmdBCount；自管 selection + winLose） | `doublesStart(variant) / getDoublesState / setDoublesCmd / setDoublesFac / setDoublesVerdict / randomFillDoubles / doublesScore` |
 | `codec.ts` | 整局 → 自包含短码（schema v1 冻结） | `encodePayload / decodePayload` + 三道闸（version / pool / invalid） |
 | `backend.ts` | PocketBase API 客户端（双登录 / 注册 / match / rankings） | `pbAuthPlayer / pbAuthHost / registerPlayer / getAccount / pbRefresh / postMatch / getPlayerByCode / getRankings` |
 | `eventBan.ts`（需求2） | 赛事临时 ban 状态机（地图/因子/官突三引擎 pre-roll） | `loadEventBan / getBanMaps / getBanFactors / getBanMutators / fetchAndLoadEventBan` |
@@ -189,6 +189,8 @@ GET /api/scoring
 | `doubles` / `feiqiu-doubles` | 1.0 / 1.0 | 双打 + 非酋双打 |
 | **default_coefficient** | 1.0 | 未知 game_mode 兜底 |
 
+> **std15 / cm 缺口**：`scoring.json` 的 `coefficients` 尚未收录这两个 game_mode，落库暂按 `default_coefficient`（1.0）兜底计分；`docs/operations.md` 系数表同款缺口，真实系数待定稿一并补齐。
+
 > **caveat 3**：真实系数（点金 ×2 / 连胜加成 / 赛季周期）须 yb/土豆拍板定稿；改 JSON 重启即生效，**不动 schema**。
 
 ---
@@ -237,7 +239,7 @@ sequenceDiagram
 
 | 接缝 | 落点 | 说明 |
 |---|---|---|
-| **session 状态机** | `JijieData` (web 端 TS 单例) + `JJBDoubles` (双打独立闭包) | 前端单刷/双打分流：startSession('doubles') 早分支启动双打引擎，**不碰 JijieData**（difficultyTotal 隔离断言见 `e2e/run.mjs` 段 3 ④ phase3） |
+| **session 状态机** | `JijieData` (web 端 TS 单例) + `JJBDoubles` (双打独立闭包) | 前端单刷/双打分流：startSession 对 doubles/feiqiu-doubles/std15/cm 四个 mode 早分支按 variant 启动双打引擎，**不碰 JijieData**（difficultyTotal 隔离断言见 `e2e/run.mjs` 段 3 ④ phase3） |
 | **payload_code** | `codec.ts` schema v1 | 整局 → 自包含短码，max 2048 字符（实测 ≤858 + 余量）；`matches.payload_code` 单字段存整局，max 长度对齐 codec 上限 |
 | **winLoseList** | `web/src/logic/jjbSession.ts` + `result` JSON 字段 | `RESULT_VAL = { lose: 0, win: 1, bonus: 2 }`，hook `countWins` 算 v∈{1,2} 计数对齐 `getScore()`（win+bonus 不双计） |
 | **天梯聚合键** | `scores.season` (从 `current_season` 来) | `season=2026S1`（待定稿）；改 `config/scoring.json` 的 `current_season` 即可切赛季，旧 score 仍可按历史 season 聚合（见 `?season=` 参数） |
