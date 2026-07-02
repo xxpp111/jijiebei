@@ -9,8 +9,8 @@
 .reg-card { max-height: 692px; overflow: hidden; padding-top: 22px; padding-bottom: 18px; }   /* 卡不再整体滚动 → chip 区内滚，按钮/foot 钉在卡内可见 */
 .reg-card .login-titleblock { gap: 4px; }
 .reg-card .login-cardsub { line-height: 1.4; }
-.reg-card .login-btn { margin-top: 14px; }
-.reg-card .login-foot { margin-top: 12px; }
+.reg-card .login-btn { margin-top: 8px; }    /* D17 勾选行入卡后收紧（14→8），保 foot 在卡内 */
+.reg-card .login-foot { margin-top: 8px; }   /* 同上（12→8） */
 .reg-fields { gap: 7px; }
 .reg-fields .lf { gap: 5px; }
 .lf-req { color: var(--warn); margin-left: 3px; font-style: normal; }
@@ -35,3 +35,9 @@
 .reg-cmd-chip.reg-cmd-cm { border-style: dashed; }
 .reg-cmd-cmdiv { width: 100%; font-size: 11px; color: var(--muted); letter-spacing: 3px; margin-top: 4px; }
 .reg-foot-note { font-size: 11px; color: var(--muted); }
+
+/* D17 隐私勾选行（两行文案 ≈38px）挤占卡内空间，把 foot「去登录」推出 overflow:hidden 裁切区 →
+   同 Bug C 手法在卡内回收等量高度：chip 内滚区封顶再压（96→64）+ 按钮/foot 间距收紧（上方）+ 勾选行自身紧凑。 */
+.reg-card .reg-privacy { margin-top: 2px; font-size: 12px; line-height: 1.35; align-items: flex-start; }
+.reg-card .reg-privacy input { margin-top: 2px; flex: none; }
+.reg-card .reg-cmds { max-height: 64px; }

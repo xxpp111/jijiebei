@@ -5,7 +5,7 @@ import { LoginHero, loginInputStyle } from '../components/LoginHero';
 
 // LoginScreen — 登录界面 F。选手/主播双 tab：
 //   主播 tab → pbAuthHost(accounts, role host/admin)；选手 tab → pbAuthPlayer(player_accounts, phone 登录)。
-//   记住我勾选 → localStorage 跨会话自动登录。选手 tab 底部「去注册」→ onRegister。
+//   记住我勾选 → localStorage 跨会话自动登录（默认勾选，D12）。选手 tab 底部「去注册」→ onRegister。
 type LoginStatus = 'idle' | 'loading' | 'error' | 'success';
 type LoginKind = 'host' | 'player';
 
@@ -13,7 +13,7 @@ export function LoginScreen({ style, mode, onBack, onSuccess, onRegister }: { st
   const [kind, setKind] = useState<LoginKind>('player');
   const [acct, setAcct] = useState('');
   const [pwd, setPwd] = useState('');
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [status, setStatus] = useState<LoginStatus>('idle');
 
   const isPlayer = kind === 'player';
