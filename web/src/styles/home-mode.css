@@ -66,6 +66,17 @@
 .lb-s { font-family: var(--font-num); font-size: 9.5px; letter-spacing: 2px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
 .lb-s b { color: var(--accent); font-weight: 700; }
 
+/* 已登录态（修"循环登录"：账号名徽标 + 退出，不复用未登录按钮的 cursor:default） */
+.loginbtn.logged { border-color: color-mix(in srgb, var(--accent) 45%, var(--panel-edge)); }
+.loginbtn.logged .lb-ico { color: var(--accent); }
+.logoutbtn {
+  margin-left: 4px; padding: 6px 12px; font-size: 12px; letter-spacing: 1px; cursor: pointer;
+  background: transparent; color: var(--muted); border: 1px solid var(--panel-edge);
+  transition: color .16s, border-color .16s;
+}
+.style-minimal .logoutbtn { border-radius: 6px; }
+.logoutbtn:hover { color: var(--warn); border-color: var(--warn); }
+
 /* ===== 模式提示行（练习 / 比赛） ===== */
 .practice-hint { display: inline-flex; align-items: center; gap: 9px; margin-top: 16px; font-size: 14px; color: var(--muted); }
 .practice-hint .ph-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); opacity: .6; flex: none; }

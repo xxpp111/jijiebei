@@ -28,15 +28,19 @@ export interface HomeScreenProps {
   onLadder: () => void;
   onPasteCode: () => void; // 贴码开局：CodeScreen paste
   onLogin: () => void; // 主播登录：LoginScreen
+  onLogout: () => void; // 退出登录（清 auth 并触发上层重渲染，见 App.tsx rerenderTick）
 }
 
-export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogin }: HomeScreenProps) {
+export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogin, onLogout }: HomeScreenProps) {
   const [playerName, setPlayerName] = useState('集结杯选手');
   // 练习/比赛双模式（纯前端首页态；比赛侧登录/积分为占位，后端 P5 才接）。切 tab 不丢选手名（同一 state）。
   const [homeMode, setHomeMode] = useState<'practice' | 'match'>('practice');
   // QQ 群二维码浮层（第 9 格入口；加群不设登录门）。大图浮层保证直播/远距离可扫。
   const [qrOpen, setQrOpen] = useState(false);
   const isMatch = homeMode === 'match';
+  // 登录入口的登录/已登录两态（修复"循环登录"反馈：老王登录成功后右上角仍显示登录按钮，
+  // 因为此按钮此前无条件渲染、从不读 getAccount()，看起来像没登上）。
+  const account = getAccount();
 
   const start = (m: SessionMode | 'doubles', soon?: boolean) => {
     if (soon) return; // soon 占位项不启动（当前无 soon 项；doubles 已接通）
@@ -89,18 +93,33 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
               <span className="ht-tx"><span className="ht-t">比赛</span><span className="ht-s">TOURNAMENT</span></span>
             </button>
           </div>
-          {/* 登录入口：练习态=选手登录 / 比赛态=主播登录（全模式登录门，两态都显示） */}
+          {/* 登录入口：未登录=练习态选手登录/比赛态主播登录；已登录=账号名+退出（读 getAccount，不再无条件显示登录按钮） */}
           <div className="login-entry">
-            <button className="loginbtn" type="button" data-login-placeholder data-nav-login onClick={onLogin}>
-              <span className="lb-ico">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"></path><circle cx="12" cy="11" r="2.4"></circle><path d="M12 13.4 V16"></path>
-                </svg>
-              </span>
-              <span className="lb-tx">{isMatch
-                ? <><span className="lb-t">主播登录</span><span className="lb-s">ADMIN · <b>比赛后台</b></span></>
-                : <><span className="lb-t">选手登录</span><span className="lb-s">PLAYER · <b>参赛选手</b></span></>}</span>
-            </button>
+            {account ? (
+              <div className="loginbtn logged" data-account-badge>
+                <span className="lb-ico">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"></path><path d="M8.5 12.5 L11 15 L16 9"></path>
+                  </svg>
+                </span>
+                <span className="lb-tx">
+                  <span className="lb-t">{account.kind === 'host' ? (account.display_name || '主播') : (account.nickname || '选手')}</span>
+                  <span className="lb-s">{account.kind === 'host' ? 'ADMIN · 已登录' : 'PLAYER · 已登录'}</span>
+                </span>
+                <button className="logoutbtn" type="button" data-nav-logout onClick={onLogout}>退出</button>
+              </div>
+            ) : (
+              <button className="loginbtn" type="button" data-login-placeholder data-nav-login onClick={onLogin}>
+                <span className="lb-ico">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"></path><circle cx="12" cy="11" r="2.4"></circle><path d="M12 13.4 V16"></path>
+                  </svg>
+                </span>
+                <span className="lb-tx">{isMatch
+                  ? <><span className="lb-t">主播登录</span><span className="lb-s">ADMIN · <b>比赛后台</b></span></>
+                  : <><span className="lb-t">选手登录</span><span className="lb-s">PLAYER · <b>参赛选手</b></span></>}</span>
+              </button>
+            )}
           </div>
         </div>
 

@@ -18,7 +18,7 @@ import { fetchAndLoadEventBan } from './logic/eventBan';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
 import { applySnapshot } from './logic/codec';
 import JijieData from './logic/legacy/JijieData';
-import { pbAuth, pbRefresh, getAccount } from './logic/backend';
+import { pbAuth, pbRefresh, getAccount, clearAuth } from './logic/backend';
 
 // 路由（query）：?screen=home|select|battle|obs|phase0|foundation；
 // ?style=metal|sc2|minimal & ?mode=dark|light 控视觉主题；?sessionMode=std8|std10|... 控赛事模式。
@@ -221,6 +221,7 @@ export default function App() {
           onLadder={() => navigate('ladder')}
           onPasteCode={() => goCode('paste')}
           onLogin={() => navigate('login')}
+          onLogout={() => { clearAuth(); setRerenderTick((x) => x + 1); }}
         />
         {!bare && switcher}
       </>
