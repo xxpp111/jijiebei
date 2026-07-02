@@ -34,6 +34,8 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
   const [playerName, setPlayerName] = useState('集结杯选手');
   // 练习/比赛双模式（纯前端首页态；比赛侧登录/积分为占位，后端 P5 才接）。切 tab 不丢选手名（同一 state）。
   const [homeMode, setHomeMode] = useState<'practice' | 'match'>('practice');
+  // QQ 群二维码浮层（第 9 格入口；加群不设登录门）。大图浮层保证直播/远距离可扫。
+  const [qrOpen, setQrOpen] = useState(false);
   const isMatch = homeMode === 'match';
 
   const start = (m: SessionMode | 'doubles', soon?: boolean) => {
@@ -149,6 +151,15 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
                 <span className="mode-tag">{m.soon ? '开发中' : m.tag}</span>
               </button>
             ))}
+            {/* 第 9 格：QQ 群入口（补齐 3×3；点击弹大码浮层） */}
+            <button className="mode-btn qr-btn" data-qr-open type="button" onClick={() => setQrOpen(true)}>
+              <span className="mode-no">09</span>
+              <span className="mode-name">扫码加群</span>
+              <span className="qr-mini">
+                <img src="/qr/qq-saishi.png" alt="集结杯赛事群" />
+                <img src="/qr/qq-oncall.png" alt="CM 合作练习 OnCall 群" />
+              </span>
+            </button>
           </div>
         </div>
 
@@ -169,6 +180,23 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
           </div>
         )}
       </div>
+
+      {/* QQ 群大码浮层：直播画面/远距离扫码用，点任意处关闭 */}
+      {qrOpen && (
+        <div className="qr-overlay" data-qr-overlay onClick={() => setQrOpen(false)}>
+          <div className="qr-pop">
+            <div className="qr-card">
+              <img src="/qr/qq-saishi.png" alt="合作模式集结杯赛事群" />
+              <span>集结杯赛事群 · 965786418</span>
+            </div>
+            <div className="qr-card">
+              <img src="/qr/qq-oncall.png" alt="CM 合作练习图 OnCall 群" />
+              <span>CM 合作练习 OnCall 群 · 517072</span>
+            </div>
+            <span className="qr-hint">QQ 扫一扫加入群聊 · 点击任意处关闭</span>
+          </div>
+        </div>
+      )}
     </ScreenShell>
   );
 }

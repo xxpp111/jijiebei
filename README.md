@@ -19,7 +19,7 @@
 **问题域**：SC2 合作任务（co-op）比赛，需要在「官方指挥官池 × 官方突变因子池 × 官方地图」三维空间里抽签出题，按赛季聚积分排天梯。
 
 **核心抽象**：
-- **7 种比赛模式**（不只 1 种）—— `std8` / `std10` / `std12`（标准因子数）/ `rescue`（拯救）/ `one-a`（指挥官一选一）/ `hard1` / `hard2`（极难）/ `feiqiu`（非酋=全部随机）/ `suiji`（完全随机）/ `doubles`（双打 2v2）。完整赛制表见 `mode-rules-truth-table.md`。
+- **13 种比赛形态** —— 单打 9 模式：`std8` / `std10` / `std12`（标准因子数）/ `rescue`（拯救）/ `one-a`（指挥官一选一）/ `hard1` / `hard2`（极难）/ `feiqiu`（非酋）/ `suiji`（完全随机）；双打 4 变体（jjbDoubles per-variant）：`doubles`（官突）/ `feiqiu-doubles`（非酋之轮）/ `std15`（15 因子双打随机）/ `cm`（CM 双打·恒锁风暴英雄+虚空裂隙）。首页入口 8 格从 `web/src/config/modes.ts` 派生。完整赛制表见 `mode-rules-truth-table.md`。
 - **9 格契约**：每场比赛 3 场 × 3 因子格（包含 1 个锁定因子 + N 个手选因子）= 9 格；`selectedFactorList` 长度恒为 9。
 - **池=槽恒等式**：随机池的可用因子数 == 9 格中待手选的槽位数（避免「抽多了塞不下、抽少了卡开局」）。
 - **码方案**：整局（mode + 地图 + 锁定因子 + 指挥官 + 因子）→ 自包含短码（codec.ts，schema v1 冻结），可贴码还原同盘。
@@ -179,4 +179,3 @@ cd backend
 | `jjb-public-deploy-policy` | 公网暴露方案选型（CF Pages 优先） |
 | `jjb-platform-roadmap` | 6 phase 并行路线图 + 关键决策 |
 | `harness-pro` + `agent-dispatch` | 派发 spoke / 收口 gate / 多 phase 推进 |
-EOF

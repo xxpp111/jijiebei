@@ -27,7 +27,7 @@
          └─ /_/          → proxy_pass → 127.0.0.1:8090（PocketBase Admin UI）
 
 backend（systemd jjb-backend，127.0.0.1:8090，对外不可见）
-├─ PocketBase 二进制（含 3 个 Go embed migrations）
+├─ PocketBase 二进制（含 6 个 Go embed migrations）
 ├─ config/scoring.json（系数表）
 └─ pb_data/data.db + WAL + SHM（SQLite）
    └─ Litestream sidecar（每 1s 增量复制 → S3 兼容对象存储）
@@ -93,16 +93,20 @@ curl -s http://127.0.0.1:8090/api/health
 # devbox 上
 sudo -u jjb /opt/jjb-backend/pocketbase migrate up --dir /opt/jjb-backend/pb_data
 # 期望输出: Applied 1782000001_init_collections.go / 1782000002_lock_default_users.go / 1782000003_scores_wins_games.go
+#          / 1782000004_event_rules.go / 1782000005_player_accounts.go / 1782000006_matches_practice_rule.go
 
 # 注意：serve 启动时会自动跑未应用的迁移（Automigrate: false），migrate up 是显式补跑
 ```
 
-3 个 Go embed 迁移：
+6 个 Go embed 迁移：
 | migration | 内容 |
 |---|---|
 | `1782000001_init_collections.go` | 5 集合 schema + 权限矩阵 |
 | `1782000002_lock_default_users.go` | PB v0.39.4 自带 `users` 锁 createRule/updateRule = NULL（graceful no-op） |
 | `1782000003_scores_wins_games.go` | scores 加 `wins` / `games` 战绩字段（幂等：字段已存在跳过） |
+| `1782000004_event_rules.go` | event_rules 集合（赛事临时 ban 因子/地图/指挥官） |
+| `1782000005_player_accounts.go` | player_accounts 选手账号集合（注册/登录，phone 唯一索引） |
+| `1782000006_matches_practice_rule.go` | matches 练习局自助落库权限规则 |
 
 ### 2.4 web + admin · 静态产物构建 + 推
 

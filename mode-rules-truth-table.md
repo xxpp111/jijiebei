@@ -8,14 +8,16 @@
 
 ## 0) 2026-06-19 R7 现状（覆盖下方旧表冲突处）
 
-**首页 6 格**（`web/src/screens/HomeScreen.tsx` MODES）：01 8因子(std8) / 02 10因子(std10) / 03 极难模式(std12) / 04 拯救(rescue) / **05 非酋之轮(feiqiu-doubles 双打)** / **06 官突双打(doubles)**。单打非酋(feiqiu)与老随机(suiji)已退出首页+URL白名单（仅 e2e 9 模式恒等式回归保留，玩家不可达）。
+**首页 8 格**（2026-07-02 更新，`web/src/config/modes.ts` MODE_DEFS 派生）：01 8因子(std8) / 02 10因子(std10) / 03 极难模式(std12) / 04 拯救(rescue) / **05 非酋之轮(feiqiu-doubles 双打)** / **06 官突双打(doubles)** / **07 15因子(std15 双打随机)** / **08 CM 专属(cm 双打)**。单打非酋(feiqiu)与老随机(suiji)已退出首页+URL白名单（仅 e2e 9 模式恒等式回归保留，玩家不可达）。
 
-**两个双打模式**（web 真引擎 `web/src/logic/jjbDoubles.ts`，非 Cocos `JJBDoubles.ts` 占位）：
+**四个双打变体**（web 真引擎 `web/src/logic/jjbDoubles.ts` per-variant 配置化 VARIANT_SPECS，commit f61ba0e；非 Cocos `JJBDoubles.ts` 占位）：
 
 | 双打模式 | 锁定因子 | 玩家手填/可分配 | 地图 | 指挥官 |
 |---|---|---|---|---|
-| **官突双打**(doubles) | 每场按 A→B→C 档从 CSV 真表（`docs/官突ABC配置_官突池.csv`，易A51/中B57/难C32）各抽 1 官突，带 1~3 锁定因子 | 手填 3 随机因子（24 因子子集，排除当场锁定） | 官突自带真地图，每场不同 | A 档抽 4 + B 档抽 2 = 6（COMMANDER_A 11人/COMMANDER_B 7人，源 `指挥官配置.txt` 第2列） |
+| **官突双打**(doubles) | 每场按 A→B→C 档从 CSV 真表（`docs/官突ABC配置_官突池.csv`，易A51/中B57/难C32）各抽 1 官突，带 1~3 锁定因子 | 手填 3 随机因子（24 因子子集，排除当场锁定） | 官突自带真地图，每场不同（去重） | A 档抽 4 + B 档抽 2 = 6（COMMANDER_A 11人/COMMANDER_B 7人，源 `指挥官配置.txt` 第2列） |
 | **非酋之轮**(feiqiu-doubles) | 每场只锁「混乱工作室」（1个） | 固定可分配池 3 个 {礼尚往来/风暴英雄/虚空裂隙}（玩家自由分配，非随机抽1） | 每场随机一张真地图（官突池去重地图集） | 同上 A4+B2=6 |
+| **15因子双打**(std15，2026-07-02 yb 拍板) | 无锁定 | 每场 5 待选，候选池 17（15+2 余量），玩家自由分配 | 官方地图池（ConfigData.mapGrid）随机抽 3 去重 | A4+B2=6；自选区=官方全量减已入池（12 人）可拖入 |
+| **CM 双打**(cm，2026-07-02 yb 拍板) | 每场固定锁「风暴英雄+虚空裂隙」2 个（不随机不分场） | 每场 4 待选（VARIANT_SPECS 可配 3-6 默认 4），候选池 14（12+2 余量） | 同 std15 官方地图抽 3 去重 | **3A3B**；CM 自制 4 人放 B 组与官方混抽 + 升权 2.0（`commanderWeight.ts`）；自选区=全部 22（官方18+CM4）减已入池（16 人） |
 
 > 「飞球」=「非酋」同音（fēiqiú，非洲酋长梗），显示文案已全部正名「非酋」（jjbView `currentLockTag`/jjbDoubles `doublesModeLabel`）。
 
