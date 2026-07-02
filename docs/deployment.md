@@ -110,6 +110,12 @@ sudo -u jjb /opt/jjb-backend/pocketbase migrate up --dir /opt/jjb-backend/pb_dat
 
 ### 2.4 web + admin · 静态产物构建 + 推
 
+> ⚠️ **先跑迁移核对，再 build/scp**（2026-07-02 事故教训，见 §11）：
+> ```bash
+> node backend/scripts/check-migrations.mjs
+> ```
+> 命令输出缺口或非 0 退出 → **停止本节，先做 §2.2/§2.3 backend 部署**，migrate up 完再回来跑本节。只更新 web 不核对迁移，等于重演 2026-07-02 的注册 404 事故。
+
 ```bash
 # 本机构建（devbox 外网受限，npm install 也在本机完成）
 cd /Users/bytedance/项目/jijiebei/web     && npm install && npm run build  # → web/dist
@@ -169,7 +175,7 @@ EOF
 | 动作 | 命令 |
 |---|---|
 | **重启 backend** | `ssh 10.37.220.128 'sudo systemctl restart jjb-backend'` |
-| **重发 web/admin 产物** | 本地 build → scp 覆盖 → 无需重启 nginx（hash 文件名避免缓存） |
+| **重发 web/admin 产物** | **先 `node backend/scripts/check-migrations.mjs` 核对无缺口** → 本地 build → scp 覆盖 → 无需重启 nginx（hash 文件名避免缓存） |
 | **reload nginx** | `ssh 10.37.220.128 'docker exec jijiebei-nginx nginx -s reload'`（改 conf 后） |
 | **看 backend 日志** | `ssh 10.37.220.128 'sudo journalctl -u jjb-backend -f'` |
 | **看 nginx 错误日志** | `ssh 10.37.220.128 'docker logs -f jijiebei-nginx'` |

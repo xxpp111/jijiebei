@@ -53,8 +53,10 @@ function remoteMigrationQuery(dbPath) {
   return `set -e
 DB_PATH=${quotedDbPath}
 if command -v sqlite3 >/dev/null 2>&1; then
-  sqlite3 -readonly "$DB_PATH" "SELECT ${MIGRATION_FILE_COLUMN} FROM ${MIGRATIONS_TABLE} ORDER BY ${MIGRATION_FILE_COLUMN};"
-  exit $?
+  if sqlite3 -readonly "$DB_PATH" "SELECT ${MIGRATION_FILE_COLUMN} FROM ${MIGRATIONS_TABLE} ORDER BY ${MIGRATION_FILE_COLUMN};"; then
+    exit 0
+  fi
+  echo "sqlite3 query failed (exit $?), falling back to python3" >&2
 fi
 if command -v python3 >/dev/null 2>&1; then
   python3 - "$DB_PATH" <<'PY'
@@ -86,8 +88,11 @@ exit 127`;
 }
 
 export async function readAppliedMigrationIds({ host = DEFAULT_HOST, dbPath = DEFAULT_DB_PATH } = {}) {
+  if (host.startsWith('-')) {
+    throw new Error(`refusing to treat "${host}" as an ssh host (looks like an option flag, not a hostname)`);
+  }
   const remoteCommand = remoteMigrationQuery(dbPath);
-  const result = await runProcess('ssh', [host, remoteCommand]);
+  const result = await runProcess('ssh', ['--', host, remoteCommand]);
 
   if (result.code !== 0) {
     throw new Error([
@@ -145,7 +150,7 @@ async function main(argv = process.argv.slice(2)) {
 
   console.log('[jjb migration check]');
   console.log(`local migrations: ${localIds.length} (${resolve(repoRoot, 'backend/pb_migrations')})`);
-  console.log(`remote applied:   ${appliedIds.length} (${host}:${dbPath})`);
+  console.log(`remote applied:   ${appliedIds.length} (${host}:${dbPath}, 含 PocketBase 内部系统迁移，非本项目专属数)`);
 
   if (missing.length === 0) {
     console.log('OK: remote backend has all local migrations applied.');
