@@ -352,6 +352,7 @@ curl -s http://127.0.0.1:8090/api/health
 - [ ] 本机：web / admin / backend 依赖装齐
 - [ ] devbox：用户 jjb 已建，目录 /opt/jjb-backend 属主 jjb
 - [ ] devbox：jjb-backend.service 已 enable
+- [ ] 更新 web 前：先跑 `node backend/scripts/check-migrations.mjs` 核对 backend 迁移状态；若有缺口，先部署 backend 二进制并完成 migrations
 - [ ] 本机：交叉编译 linux/amd64 二进制
 - [ ] 本机：web/dist 和 admin/dist 构建完成
 - [ ] scp：pocketbase + config + pb_migrations 推完
@@ -381,3 +382,13 @@ curl -s http://127.0.0.1:8090/api/health
 
 5. **PocketBase 版本锁**：
    当前用 v0.39.4。升版前必跑 `verify-all.sh` 全 10 段 + 测 SSE 长连接（`/_/` realtime）+ 测 Admin UI 渲染。
+
+## 11. 部署节奏解耦事故复盘（2026-07-02）
+
+根因：web 和 backend 是独立 build、独立推送的两条部署节奏，但部署流程里没有检查「当前 backend 是否已经包含并应用 web 依赖的所有 schema migrations」。2026-07-02 的事故里，backend 二进制停在 Jun 26，web `682f09b` 已上线依赖 `player_accounts` / `event_rules` collection 的注册功能，公网用户实测注册返回 404 `Missing or invalid collection context`。
+
+现在的解法：
+- 工具化：`node backend/scripts/check-migrations.mjs` 读取本地 `backend/pb_migrations/*.go`，再只读查询目标 PocketBase `_migrations.file`，diff 出「本地有、目标未应用」的迁移缺口；有缺口时命令非 0。
+- 流程化：`.claude/skills/jjb-deploy/SKILL.md` 已把 `### 🔍 部署前必查：迁移核对` 作为部署前置步骤。任何只更新 web 的部署，都必须先跑该工具；若发现缺口，先做 backend 部署（推二进制 + migrate up），不能只更新 web。
+
+这条检查解决的是部署节奏解耦问题，不替代 backend 自身的 `migrate up`、健康检查和 curl 冒烟；它的职责是在 web 推送前提前发现 backend 迁移债。
