@@ -102,26 +102,29 @@ try {
   }
   if (!failed) pass('  逐字段验证全部一致');
 
-  // ===== 双打往返（doubles）=====
-  console.log('\n=== 双打 applySnapshot 往返（doubles）===');
-  startSession('doubles');
+  // ===== 双打往返（官突 doubles + std15/cm 双打 variant，Batch C 全覆盖）=====
   const db = await server.ssrLoadModule('/src/logic/jjbDoubles.ts');
   const { randomFillDoubles } = db;
-  randomFillDoubles();
-  const snapDA = capturePayload();
-  const codeD = encodePayload(snapDA);
-  const snapDB = decodePayload(codeD);
-  applySnapshot(snapDB);
-  const snapDC = capturePayload();
+  for (const dmode of ['doubles', 'std15', 'cm']) {
+    console.log(`\n=== 双打 applySnapshot 往返（${dmode}）===`);
+    startSession(dmode);
+    randomFillDoubles();
+    const snapDA = capturePayload();
+    if (snapDA.kind !== 'd') fail(`${dmode}: capturePayload kind=${snapDA.kind} 应为 'd'`);
+    const codeD = encodePayload(snapDA);
+    const snapDB = decodePayload(codeD);
+    applySnapshot(snapDB);
+    const snapDC = capturePayload();
 
-  const coreDA = coreFields(snapDA);
-  const coreDC = coreFields(snapDC);
-  if (!deepEqual(coreDA, coreDC)) {
-    fail('双打 applySnapshot: 还原后 capturePayload core fields ≠ 原 snapshot\n' +
-      '  snapDA: ' + JSON.stringify(coreDA).slice(0, 300) + '\n' +
-      '  snapDC: ' + JSON.stringify(coreDC).slice(0, 300));
-  } else {
-    pass('双打 doubles: encode→decode→applySnapshot→capturePayload core fields 深比对相等');
+    const coreDA = coreFields(snapDA);
+    const coreDC = coreFields(snapDC);
+    if (!deepEqual(coreDA, coreDC)) {
+      fail(`双打 ${dmode} applySnapshot: 还原后 capturePayload core fields ≠ 原 snapshot\n` +
+        '  snapDA: ' + JSON.stringify(coreDA).slice(0, 300) + '\n' +
+        '  snapDC: ' + JSON.stringify(coreDC).slice(0, 300));
+    } else {
+      pass(`双打 ${dmode}: encode→decode→applySnapshot→capturePayload core fields 深比对相等`);
+    }
   }
 
 } finally {

@@ -38,8 +38,8 @@ const bundleMissing = bundleMarkers.filter((m) => !bundle.includes(m));
 if (bundleMissing.length) fail('bundle missing markers: ' + bundleMissing.join(', '));
 else pass(`bundle contains all ${bundleMarkers.length} markers`);
 
-// ===== 阶段 2: Vite SSR 加载 jjbSession 跑 9 模式 =====
-const MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15', 'cm'];
+// ===== 阶段 2: Vite SSR 加载 jjbSession 跑单打模式（std15/cm 已改双打，见下方 Batch C 双打断言块） =====
+const MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji'];
 
 // manualSlots 镜像（JJBData.ts:96-112），客户端跑通前用本地镜像校验
 function manualSlotsMirror(modeFlags) {
@@ -144,28 +144,22 @@ try {
       if (status !== 2) fail(`${mode}: status=${status} ≠ 2`);
       // 断言 5：map=3, lock=3
       if (mapCount !== 3) fail(`${mode}: mapCount=${mapCount} ≠ 3`);
-      if (mode !== 'std15' && lockCount !== 3) fail(`${mode}: lockCount=${lockCount} ≠ 3`); // std15 纯随机无锁定，豁免
+      if (lockCount !== 3) fail(`${mode}: lockCount=${lockCount} ≠ 3`);
       // 断言 6：manualSlots 对账表
       const ms = manualSlotsMirror({ modelFactorCount, modeSuiji: sel.modeSuiji, modeStd15: sel.modeStd15, modeFeiqiu: sel.modeFeiqiu, modeIsVeryHard: sel.modeIsVeryHard, modeIsOnePick: sel.modeIsOnePick });
       const msMatch = ms[0] === manualSlots[0] && ms[1] === manualSlots[1] && ms[2] === manualSlots[2];
       if (!msMatch) fail(`${mode}: manualSlots ${manualSlots.join('/')} ≠ 镜像 ${ms.join('/')}`);
 
-      const passed = identityPass && selectedFactorListLen === 9 && isNullTriple && status === 2 && mapCount === 3 && (mode === 'std15' ? lockCount === 0 : lockCount === 3) && msMatch;
+      const passed = identityPass && selectedFactorListLen === 9 && isNullTriple && status === 2 && mapCount === 3 && lockCount === 3 && msMatch;
       console.log(
         `${mode.padEnd(6)}  ${String(randomFactorPoorLen).padStart(4)}  ${manualSlots.join('/').padStart(19)}  ${String(sumSlots).padStart(3)}  ${(identityPass ? '✓' : '✗').padStart(8)}  ${String(mapCount).padStart(3)}  ${String(lockCount).padStart(4)}  ${String(selectedFactorListLen).padStart(9)}  ${String(selectedCommanderList.length).padStart(6)}  ${String(status).padStart(6)}  ${passed ? 'PASS' : 'FAIL'}`,
       );
-
-      // std15 纯随机专属断言：randomFactorPoor=15（每场 5）+ 无锁定（lock=0）。仿 suiji 拎出特例，不入池=槽恒等式。
-      if (mode === 'std15') {
-        if (randomFactorPoorLen !== 15) fail(`std15: randomFactorPoor=${randomFactorPoorLen} ≠ 15（每场 5）`);
-        if (lockCount !== 0) fail(`std15: lockCount=${lockCount} ≠ 0（纯随机无锁定）`);
-      }
 
       // ===== 段2 Phase 1 select 渲染断言（getSelectState 9 模式透出 + randomFillAndStart 接缝） =====
       // getSelectState 透出 + 池=槽恒等式（与 __jjbDebug.select 一致）
       const sState = getSelectState();
       if (!sState) fail(`${mode}: getSelectState() 返回 undefined`);
-      if (sState && (sState.mode !== mode || !sState.jjbLive || sState.mapList.length !== 3 || (mode !== 'std15' && sState.lockFactorList.length !== 3) || sState.sumSlots !== sumSlots || sState.manualSlots.join('/') !== manualSlots.join('/') || sState.randomFactorPoor.length !== randomFactorPoorLen)) {
+      if (sState && (sState.mode !== mode || !sState.jjbLive || sState.mapList.length !== 3 || sState.lockFactorList.length !== 3 || sState.sumSlots !== sumSlots || sState.manualSlots.join('/') !== manualSlots.join('/') || sState.randomFactorPoor.length !== randomFactorPoorLen)) {
         fail(`${mode}: getSelectState 字段不一致 mode=${sState && sState.mode} jjbLive=${sState && sState.jjbLive} map=${sState && sState.mapList && sState.mapList.length} lock=${sState && sState.lockFactorList && sState.lockFactorList.length} pool=${sState && sState.randomFactorPoor && sState.randomFactorPoor.length} sumSlots=${sState && sState.sumSlots}`);
       }
 
@@ -192,10 +186,8 @@ try {
 
       // 段3④：难度总分 = 锁定因子 + 手选因子；点金单因子贡献翻倍。
       const afterFillState = getSelectState();
-      const scoreFactors = afterFillState.modeStd15
-        ? (afterFillState.randomFactorPoor || []) // std15 纯随机：难度分 = randomFactorPoor 全 15 因子（每场 5）
-        : (afterFillState.lockFactorList || [])
-          .concat((afterFillState.selectedFactorList || []).filter(Boolean));
+      const scoreFactors = (afterFillState.lockFactorList || [])
+        .concat((afterFillState.selectedFactorList || []).filter(Boolean));
       const scoreExpected = scoreFactors.reduce((sum, f) => sum + factorScore(f) * (getGoldFor(f) ? 2 : 1), 0);
       const scoreActual = difficultyTotal();
       if (scoreActual !== scoreExpected) fail(`${mode}: difficultyTotal=${scoreActual} ≠ 手工求和 ${scoreExpected}`);
@@ -269,13 +261,13 @@ try {
         for (let i = 0; i < 3; i++) {
           const m = matches[i];
           if (!m) continue;
-          const expectedFacN = mode === 'std15' ? 5 : manualSlots[i] + (m.lock ? 1 : 0); // std15 纯随机每场 5 随机因子（无锁定无手选）
+          const expectedFacN = manualSlots[i] + (m.lock ? 1 : 0);
           if (m.factors.length !== expectedFacN) {
             fail(`${mode}: sessionMatches[${i}].factors.length=${m.factors.length} ≠ 预期 ${expectedFacN}（手选 ${manualSlots[i]} + 锁定 ${m.lock ? 1 : 0}）`);
             continue;
           }
-          // factors[0] 是锁定（如果有），后续是手选。std15 因子是纯随机（非手选），跳过 vs handPicked 对账（length=5 已验）。
-          if (mode !== 'std15') for (let k = (m.lock ? 1 : 0); k < m.factors.length; k++) {
+          // factors[0] 是锁定（如果有），后续是手选。
+          for (let k = (m.lock ? 1 : 0); k < m.factors.length; k++) {
             if (m.factors[k] !== handPickedFac[handIdx]) {
               fail(`${mode}: sessionMatches[${i}].factors[${k}]=${m.factors[k]} ≠ 手选 ${handPickedFac[handIdx]}`);
             }
@@ -472,6 +464,134 @@ try {
       if (!perMuts.every((mu) => mm.factors.includes(mu))) fail(`R5②-B 场${i} factors=${JSON.stringify(mm.factors)} 未含官突 ${JSON.stringify(perMuts)}`);
     });
     pass(`R5②-B 官突取值: 三场各含 CSV 官突 matchMutators 数组一致 ✓`);
+
+    // ===== Batch C P1：std15 双打（variant/4A2B/池17/槽3×(2+5)/无锁定/自选区/地图去重/全路径）=====
+    const CMD_A_ALL = ['雷诺', '凯瑞甘', '阿塔尼斯', '斯旺', '扎加拉', '沃拉尊', '阿巴瑟', '阿纳拉克', '斯图科夫', '菲尼克斯', '米拉'];
+    const CMD_B_ALL = ['凯拉克斯', '诺娃', '德哈卡', '泰凯斯', '泽拉图', '斯台特曼', '蒙斯克'];
+    globalThis.window.__jjbDebug = undefined;
+    startSession('std15');
+    const s15 = globalThis.window.__jjbDebug && globalThis.window.__jjbDebug.doubles;
+    if (!s15 || s15.live !== true) fail('std15-doubles: 启动后应 live=true（startSession std15 早分支未生效）');
+    else {
+      const cfg15 = s15.config;
+      if (cfg15.variant !== 'std15') fail(`std15-doubles: variant=${cfg15.variant} ≠ 'std15'`);
+      if (cfg15.extraFactors !== 5) fail(`std15-doubles: extraFactors=${cfg15.extraFactors} ≠ 5（每场 5 待选）`);
+      if (cfg15.factorPoolSize !== 17) fail(`std15-doubles: factorPoolSize=${cfg15.factorPoolSize} ≠ 17（15 待选 + 2 余量）`);
+      if ((s15.factorPool || []).length !== 17) fail(`std15-doubles: factorPool=${(s15.factorPool || []).length} ≠ 17`);
+      if (new Set(s15.factorPool).size !== 17) fail('std15-doubles: 候选池内因子应不重复');
+      if ((s15.commanderPool || []).length !== 6) fail(`std15-doubles: commanderPool=${(s15.commanderPool || []).length} ≠ 6`);
+      const aCnt15 = s15.commanderPool.filter((c) => CMD_A_ALL.includes(c)).length;
+      const bCnt15 = s15.commanderPool.filter((c) => CMD_B_ALL.includes(c)).length;
+      if (aCnt15 !== 4 || bCnt15 !== 2) fail(`std15-doubles: 指挥官池构成 ${aCnt15}A${bCnt15}B ≠ 4A2B`);
+      if ((cfg15.matchMutators || []).some((ms) => ms.length !== 0)) fail(`std15-doubles: 应无锁定因子, got=${JSON.stringify(cfg15.matchMutators)}`);
+      const sl15 = (s15.selection && s15.selection.slots) || [];
+      if (sl15.length !== 3 || sl15.some((sx) => (sx.cmds || []).length !== 2 || (sx.factors || []).length !== 5)) {
+        fail(`std15-doubles: slots 形状 ≠ 3×(cmd2/fac5), got=${JSON.stringify(sl15.map((sx) => [sx.cmds.length, sx.factors.length]))}`);
+      }
+      // 自选区（D4）：官方全量 18 − 池 6 = 12，且与池不相交
+      const sp15 = s15.selfPool || [];
+      if (sp15.length !== 12) fail(`std15-doubles: selfPool=${sp15.length} ≠ 12（官方 18 − 池 6）`);
+      if (sp15.some((c) => s15.commanderPool.includes(c))) fail('std15-doubles: selfPool 与指挥官池相交');
+      // 地图：3 张真地图去重（D6 复用；40 局护栏）
+      let dup15 = 0, badMap15 = 0;
+      for (let i = 0; i < 40; i++) {
+        startSession('std15');
+        const c2 = globalThis.window.__jjbDebug.doubles.config;
+        const maps15 = (c2.matchMaps || []).filter(Boolean);
+        if (maps15.length !== 3) badMap15++;
+        else if (new Set(maps15).size < 3) dup15++;
+      }
+      if (badMap15 > 0) fail(`std15-doubles: ${badMap15}/40 局地图数 ≠ 3`);
+      if (dup15 > 0) fail(`std15-doubles 地图去重: ${dup15}/40 局出现重复地图`);
+      // 全路径：随机填充 → validate → verdict → score；填充 15 因子不重复（池 17 顺序消费不回卷）
+      startSession('std15');
+      randomFillDoubles();
+      const vr15 = validateDoubles();
+      if (!vr15.ok) fail(`std15-doubles: randomFill 后 validate 应通过 err=${JSON.stringify(vr15.errors)}`);
+      const st15 = getDoublesState();
+      const filled15 = (st15.selection.slots || []).flatMap((sx) => (sx.factors || []).filter(Boolean));
+      if (filled15.length !== 15) fail(`std15-doubles: 随机填充因子 ${filled15.length} ≠ 15（3×5）`);
+      if (new Set(filled15).size !== filled15.length) fail('std15-doubles: 随机填充因子出现重复');
+      const cmdFilled15 = (st15.selection.slots || []).reduce((n, sx) => n + (sx.cmds || []).filter(Boolean).length, 0);
+      if (cmdFilled15 !== 6) fail(`std15-doubles: 随机填充指挥官 ${cmdFilled15} ≠ 6`);
+      setDoublesVerdict(0, 'win'); setDoublesVerdict(1, 'lose'); setDoublesVerdict(2, 'bonus');
+      if (doublesScore() !== 2) fail(`std15-doubles: score=${doublesScore()} ≠ 2（win+bonus）`);
+      // 隔离：std15 双打不碰 JijieData 单打管线（复用官突隔离范式：单打难度基线经 std15 全流程不变）
+      startSession('std10');
+      const diffBase15 = difficultyTotal();
+      startSession('std15');
+      if (difficultyTotal() !== diffBase15) fail(`std15-doubles 隔离: 启动后单打 difficultyTotal ${difficultyTotal()} ≠ 基线 ${diffBase15}`);
+      pass('std15 双打: variant✓ 4A2B✓ 池17✓ 槽3×(2+5)✓ 无锁定✓ 自选区12✓ 地图去重40局✓ 全路径(填充/校验/判定/隔离)✓');
+    }
+
+    // ===== Batch C P2：cm 双打（variant/3A3B+CM混抽/池14/槽3×(2+4)/双固定锁/自选区22/地图去重/全路径）=====
+    const CM_POOL_ALL = ['诺温', '莫比斯（杜兰）', '塞伯鲁斯（塔利斯·柯根）', '瓦伦里安'];
+    const CM_LOCKS_EXP = ['风暴英雄', '虚空裂隙'];
+    globalThis.window.__jjbDebug = undefined;
+    startSession('cm');
+    const scm = globalThis.window.__jjbDebug && globalThis.window.__jjbDebug.doubles;
+    if (!scm || scm.live !== true) fail('cm-doubles: 启动后应 live=true（startSession cm 早分支未生效）');
+    else {
+      const cfgCm = scm.config;
+      if (cfgCm.variant !== 'cm') fail(`cm-doubles: variant=${cfgCm.variant} ≠ 'cm'`);
+      if (cfgCm.extraFactors !== 4) fail(`cm-doubles: extraFactors=${cfgCm.extraFactors} ≠ 4（每场 4 待选）`);
+      if (cfgCm.factorPoolSize !== 14) fail(`cm-doubles: factorPoolSize=${cfgCm.factorPoolSize} ≠ 14（12 待选 + 2 余量）`);
+      if ((scm.factorPool || []).length !== 14) fail(`cm-doubles: factorPool=${(scm.factorPool || []).length} ≠ 14`);
+      if (new Set(scm.factorPool).size !== 14) fail('cm-doubles: 候选池内因子应不重复');
+      if ((scm.factorPool || []).some((f) => CM_LOCKS_EXP.includes(f))) fail('cm-doubles: 候选池不应含固定锁（风暴英雄/虚空裂隙）');
+      // 每场固定锁 2 = 风暴英雄 + 虚空裂隙（D9 定稿：每局都锁这俩，不随机、不分场）
+      if ((cfgCm.matchMutators || []).some((ms) => JSON.stringify(ms) !== JSON.stringify(CM_LOCKS_EXP))) {
+        fail(`cm-doubles: 每场锁定应恒为 ${JSON.stringify(CM_LOCKS_EXP)}, got=${JSON.stringify(cfgCm.matchMutators)}`);
+      }
+      // 指挥官池 3A3B：A 档 3 官方弱档；B 侧 3 从（官方 B 7 + CM 4）混抽（CM 计入 B 侧）
+      if ((scm.commanderPool || []).length !== 6) fail(`cm-doubles: commanderPool=${(scm.commanderPool || []).length} ≠ 6`);
+      const aCntCm = scm.commanderPool.filter((c) => CMD_A_ALL.includes(c)).length;
+      const bCntCm = scm.commanderPool.filter((c) => CMD_B_ALL.includes(c) || CM_POOL_ALL.includes(c)).length;
+      if (aCntCm !== 3 || bCntCm !== 3) fail(`cm-doubles: 指挥官池构成 ${aCntCm}A${bCntCm}B ≠ 3A3B（B 侧含 CM 混抽）`);
+      // 槽形状 3×(cmd2/fac4)
+      const slCm = (scm.selection && scm.selection.slots) || [];
+      if (slCm.length !== 3 || slCm.some((sx) => (sx.cmds || []).length !== 2 || (sx.factors || []).length !== 4)) {
+        fail(`cm-doubles: slots 形状 ≠ 3×(cmd2/fac4), got=${JSON.stringify(slCm.map((sx) => [sx.cmds.length, sx.factors.length]))}`);
+      }
+      // 自选区（D11）：全部 22（官方 18 + CM 4）− 池 6 = 16，且与池不相交
+      const spCm = scm.selfPool || [];
+      if (spCm.length !== 16) fail(`cm-doubles: selfPool=${spCm.length} ≠ 16（22 − 池 6）`);
+      if (spCm.some((c) => scm.commanderPool.includes(c))) fail('cm-doubles: selfPool 与指挥官池相交');
+      // CM 升权配置在池（多局观察 B 侧至少出现过 1 次 CM——升权 2.0 下 CM 缺席 40 局的概率可忽略）
+      // 地图去重 + CM 出现率（40 局护栏）
+      let dupCm = 0, badMapCm = 0, cmSeen = 0;
+      for (let i = 0; i < 40; i++) {
+        startSession('cm');
+        const c2 = globalThis.window.__jjbDebug.doubles;
+        const mapsCm = ((c2.config && c2.config.matchMaps) || []).filter(Boolean);
+        if (mapsCm.length !== 3) badMapCm++;
+        else if (new Set(mapsCm).size < 3) dupCm++;
+        if ((c2.commanderPool || []).some((c) => CM_POOL_ALL.includes(c))) cmSeen++;
+      }
+      if (badMapCm > 0) fail(`cm-doubles: ${badMapCm}/40 局地图数 ≠ 3`);
+      if (dupCm > 0) fail(`cm-doubles 地图去重: ${dupCm}/40 局出现重复地图`);
+      if (cmSeen === 0) fail('cm-doubles: 40 局 B 侧未见任何 CM 指挥官（升权混抽应大概率出现）');
+      // 全路径：随机填充 → validate → verdict → score；填充 12 因子不重复（池 14 顺序消费不回卷）
+      startSession('cm');
+      randomFillDoubles();
+      const vrCm = validateDoubles();
+      if (!vrCm.ok) fail(`cm-doubles: randomFill 后 validate 应通过 err=${JSON.stringify(vrCm.errors)}`);
+      const stCm = getDoublesState();
+      const filledCm = (stCm.selection.slots || []).flatMap((sx) => (sx.factors || []).filter(Boolean));
+      if (filledCm.length !== 12) fail(`cm-doubles: 随机填充因子 ${filledCm.length} ≠ 12（3×4）`);
+      if (new Set(filledCm).size !== filledCm.length) fail('cm-doubles: 随机填充因子出现重复');
+      setDoublesVerdict(0, 'bonus'); setDoublesVerdict(1, 'lose'); setDoublesVerdict(2, 'win');
+      if (doublesScore() !== 2) fail(`cm-doubles: score=${doublesScore()} ≠ 2（win+bonus）`);
+      // matches 视图：每场 factors = 2 锁 + 4 待选 = 6
+      const mvCm = doublesMatches();
+      if (mvCm.some((m) => (m.factors || []).length !== 6)) fail(`cm-doubles: 每场因子槽应 2锁+4待选=6, got=${JSON.stringify(mvCm.map((m) => m.factors.length))}`);
+      // 隔离：cm 双打不碰 JijieData 单打管线
+      startSession('std10');
+      const diffBaseCm = difficultyTotal();
+      startSession('cm');
+      if (difficultyTotal() !== diffBaseCm) fail(`cm-doubles 隔离: 启动后单打 difficultyTotal ${difficultyTotal()} ≠ 基线 ${diffBaseCm}`);
+      pass('cm 双打: variant✓ 3A3B(CM混抽升权)✓ 池14✓ 槽3×(2+4)✓ 双固定锁✓ 自选区16✓ 地图去重40局✓ 全路径(填充/校验/判定/2锁+4待选/隔离)✓');
+    }
   } catch (e) {
     fail(`doubles: 接缝异常 ${e && e.message ? e.message : e}`);
   }
@@ -608,4 +728,4 @@ if (failed) {
   console.error('\n[react-e2e] ❌ 至少 1 mode 失败');
   process.exit(1);
 }
-console.log('\n[react-e2e] ✅ 11 模式(含 std15 纯随机 + cm 专属)池=槽恒等式 + 9格契约 + 状态全 + 双打全路径(启动/手选/verdict/难度分隔离) PASS');
+console.log('\n[react-e2e] ✅ 9 单打模式池=槽恒等式 + 9格契约 + 状态全 + 双打全路径(官突/std15/cm：启动/手选/verdict/地图去重/难度分隔离) PASS');

@@ -123,9 +123,9 @@ export interface DoublesSnapshot {
   v: 1;
   p: number;
   kind: 'd';
-  variant: 'guantu' | 'feiqiu';
-  mutEntries: { name: string; map: string; factors: string[] }[]; // 3 场官突（factors 存名，含非酋「混乱工作室」）
-  facPool: number[];          // factorPool → FACTORS idx（guantu=9 / feiqiu=3）
+  variant: 'guantu' | 'feiqiu' | 'std15' | 'cm';
+  mutEntries: { name: string; map: string; factors: string[] }[]; // 3 场官突（factors 存名，含非酋「混乱工作室」/ cm 锁「风暴英雄+虚空裂隙」；std15 恒空）
+  facPool: number[];          // factorPool → FACTORS idx（guantu=9 / feiqiu=3 / std15=17 / cm=14）
   cmdPool: string[];          // 6 指挥官池（存名）
   slots: { cmds: (string | null)[]; facs: number[] }[]; // 3×(2 指挥官存名 + 3 因子 idx，-1=未选)
   wl: number[];               // 3 场 winLoseList（-1=未判定）
@@ -198,7 +198,7 @@ function validateSingle(s: any): asserts s is SingleSnapshot {
 }
 
 function validateDoubles(s: any): asserts s is DoublesSnapshot {
-  if (s.variant !== 'guantu' && s.variant !== 'feiqiu') throw new Error('[codec] 非法 variant');
+  if (s.variant !== 'guantu' && s.variant !== 'feiqiu' && s.variant !== 'std15' && s.variant !== 'cm') throw new Error('[codec] 非法 variant');
   if (!Array.isArray(s.mutEntries) || !Array.isArray(s.facPool) || !Array.isArray(s.cmdPool) || !Array.isArray(s.slots) || !Array.isArray(s.wl)) throw new Error('[codec] doubles 字段缺失');
   for (const idx of s.facPool) facName(idx);
   for (const slot of s.slots) {

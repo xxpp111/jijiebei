@@ -2,7 +2,15 @@
 // 德哈卡 / 泰凯斯 权重 0.25 ≈ 正常出场率的 1/4，其余指挥官权重 1.0。
 // 加权无放回抽样，供单打(jjbSession toSelectCore B 组)与双打(jjbDoubles doublesStart B 组)共用。
 // 注：德哈卡/泰凯斯均属 B 组（强档），故仅 B 组抽取接此 helper；A 组无降权指挥官，保持等概率。
-export const COMMANDER_WEIGHTS: Record<string, number> = { 德哈卡: 0.25, 泰凯斯: 0.25 };
+// CM 自制指挥官升权 2.0（D10 起步值，yb 拍板「权重起步，跑完看分布再调」）：
+//   仅 cm 双打 B 组混抽命中（官方单打/其他双打池不含 CM 名，权重表命不中即 1.0，零影响）。
+import { COMMANDERS } from '../config/commanders';
+const CM_WEIGHT = 2;
+export const COMMANDER_WEIGHTS: Record<string, number> = {
+  德哈卡: 0.25,
+  泰凯斯: 0.25,
+  ...Object.fromEntries(COMMANDERS.filter((c) => c.source === 'cm').map((c) => [c.name, CM_WEIGHT])),
+};
 
 export function commanderWeightOf(name: string): number {
   return COMMANDER_WEIGHTS[name] ?? 1;

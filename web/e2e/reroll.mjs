@@ -3,7 +3,8 @@
 //   ① 限次（照抄 bp-rules 范式）：practice 无限不提示 / match 每局限 3 次、超限「超出比赛规则」软违规不执行。
 //   ② 不重复：reroll 后新因子 ≠ 旧 且 ∉ 当前 3 场已用集合（getJijieFactor 只从活池抽）。
 //   ③ 难度实时重算：difficultyTotal 随 reroll 精确变 = D0 - 旧分 + 新分。
-// 覆盖三种落点：std15 场上（randomFactorPoor[i*5+k]）、已落槽手选（selectedFactorList[facFlatIdx]）。
+// 覆盖两种落点：池候选（randomFactorPoor[i]）、已落槽手选（selectedFactorList[facFlatIdx]）。
+// Batch C：std15 已改双打且 v1 砍 reroll（D5），原 std15 场上用例迁移为 std10 池候选用例。
 // 零额外依赖（vite 已装；与 run.mjs / bp-rules.mjs 同框架）。
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -37,34 +38,32 @@ try {
   const jdmod = await server.ssrLoadModule('/src/logic/legacy/JJBData.ts');
   const { facFlatIdx } = jdmod;
 
-  // ===== ①-A + ② + ③：std15 场上 reroll（不重复 + 难度实时重算） =====
+  // ===== ①-A + ②：std10 池候选 reroll（不重复；池候选不入难度分，难度应不变） =====
   globalThis.window.__jjbDebug = undefined;
   setRuleMode('practice');
-  startSession('std15');
+  startSession('std10');
   const s = getSelectState();
-  const pool0 = (s.randomFactorPoor || []).slice(); // 15 因子（每场 5）
-  if (pool0.length !== 15) fail(`std15 池应 15, got=${pool0.length}`);
-  const usedBefore = new Set(pool0); // 当前 3 场在场集
+  const pool0 = (s.randomFactorPoor || []).slice(); // std10 池 = Σ手选槽 = 7（2/2/3；10 因子 = 3 锁定 + 7 池）
+  if (pool0.length !== s.sumSlots) fail(`std10 池应 = Σ槽 ${s.sumSlots}, got=${pool0.length}`);
+  const usedBefore = new Set([...(s.lockFactorList || []), ...pool0]); // 当前 3 场在场集（锁定∪池）
   const oldFac = pool0[0];
-  const oldScore = factorScore(oldFac);
   const D0 = difficultyTotal();
 
-  const ok = rerollFactor('std15', 0, 0); // 换第 1 场第 1 个
-  if (!ok) fail('std15 reroll 应成功(practice 无限)');
+  const ok = rerollFactor('pool', 0); // 换池第 1 个候选
+  if (!ok) fail('std10 pool reroll 应成功(practice 无限)');
   const s2 = getSelectState();
   const nf = (s2.randomFactorPoor || [])[0];
-  if (nf === oldFac) fail(`② std15: reroll 后应换成新因子, 仍=${oldFac}`);
-  if (usedBefore.has(nf)) fail(`② std15: 新因子 ${nf} 不应 ∈ 当前 3 场已用集合(不重复)`);
+  if (nf === oldFac) fail(`② pool: reroll 后应换成新因子, 仍=${oldFac}`);
+  if (usedBefore.has(nf)) fail(`② pool: 新因子 ${nf} 不应 ∈ 当前 3 场已用集合(不重复)`);
   const dupCount = (s2.randomFactorPoor || []).filter((x) => x === nf).length;
-  if (dupCount !== 1) fail(`② std15: 新因子 ${nf} 应仅出现 1 次, got=${dupCount}`);
+  if (dupCount !== 1) fail(`② pool: 新因子 ${nf} 应仅出现 1 次, got=${dupCount}`);
   const D1 = difficultyTotal();
-  const newScore = factorScore(nf);
-  if (D1 !== D0 - oldScore + newScore) fail(`③ std15: 难度应 D0-旧+新=${D0 - oldScore + newScore}, got=${D1} (D0=${D0} 旧=${oldScore} 新=${newScore})`);
-  pass(`①-A + ② + ③ std15 场上: reroll ${oldFac}(→${nf}) 不重复 ∉ 在场集 + 难度 ${D0}→${D1} 实时重算(D0-${oldScore}+${newScore}) ✓`);
+  if (D1 !== D0) fail(`①-A pool: 池候选不入难度分, 难度应不变 ${D0}, got=${D1}`);
+  pass(`①-A + ② std10 池候选: reroll ${oldFac}(→${nf}) 不重复 ∉ 在场集 + 难度 ${D0} 不变(池候选不入难度) ✓`);
 
   // ===== ①-B practice 无限：连揉多次全成功、不提示 =====
   let allOk = true;
-  for (let n = 0; n < 8; n++) { if (!rerollFactor('std15', 1, n % 5)) allOk = false; }
+  for (let n = 0; n < 8; n++) { if (!rerollFactor('pool', n % pool0.length)) allOk = false; }
   if (!allOk) fail('①-B practice: 连揉 8 次应全成功(无限)');
   if (getSelectWarn()) fail(`①-B practice: 不应有软违规提示, got=${getSelectWarn()}`);
   if (getRerollState().count < 9) fail(`①-B practice: count 应累加≥9, got=${getRerollState().count}`);
@@ -73,14 +72,14 @@ try {
   // ===== ①-C match 限次：每局限 3、超限软违规不执行 =====
   globalThis.window.__jjbDebug = undefined;
   setRuleMode('match');
-  startSession('std15'); // startSession 重置 rerollCount
+  startSession('std10'); // startSession 重置 rerollCount
   const rs0 = getRerollState();
   if (rs0.count !== 0 || rs0.limit !== 3 || rs0.remaining !== 3) fail(`①-C match: 开局应 {0,3,3}, got=${JSON.stringify(rs0)}`);
   for (let n = 0; n < 3; n++) {
-    if (!rerollFactor('std15', n, 0)) fail(`①-C match: 第 ${n + 1} 次(限内)应成功`);
+    if (!rerollFactor('pool', n)) fail(`①-C match: 第 ${n + 1} 次(限内)应成功`);
   }
   if (getRerollState().remaining !== 0) fail(`①-C match: 3 次后 remaining 应 0, got=${getRerollState().remaining}`);
-  const over = rerollFactor('std15', 0, 1); // 第 4 次超限
+  const over = rerollFactor('pool', 4); // 第 4 次超限
   if (over) fail('①-C match: 第 4 次超限应返回 false(不执行)');
   if (!getSelectWarn().includes('超出比赛规则')) fail(`①-C match: 超限应提示「超出比赛规则」, got=${getSelectWarn()}`);
   if (getRerollState().count !== 3) fail(`①-C match: 超限不计数, count 应 3, got=${getRerollState().count}`);

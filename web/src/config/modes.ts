@@ -69,17 +69,19 @@ export const MODE_DEFS: Record<string, ModeDef> = {
     def: '暂不可用', defcls: 'd-lock', fac: '5 / 场',
     form: 'BP 暂未启用 · 框架预留，下轮实装', note: '独立骨架旁路 XP · 锁死灰掉不可点',
   },
+  // std15/cm 已改双打（Batch C · yb 2026-07-02 拍板）：jjbDoubles variant，格标/文案改双打语义；
+  // BP 与双打其他格一致锁死（双打 BP 未实装，对齐 doubles/feiqiu-doubles 行）。
   std15: {
-    no: '07', name: '15 因子', tag: '纯随机', label: '15 因子 · 随机',
+    no: '07', name: '15 因子', tag: '双打随机', label: '15 因子 · 双打',
     bpDefault: false, bpLocked: true,
-    def: '默认关 · 锁死', defcls: 'd-lock', fac: '5 / 5 / 5',
-    form: '纯随机 · 无 BP（每场 5 因子全锁定）', note: '15 因子纯随机 · 无锁定槽/无手选 · BP 不适用',
+    def: '暂不可用', defcls: 'd-lock', fac: '5 / 场',
+    form: '双打 · 每场 2 指挥官 · 5 待选无锁定', note: '双打 variant=std15 · 4A2B + 自选区 · BP 不适用',
   },
   cm: {
-    no: '08', name: 'CM 专属', tag: 'CM 指挥官', label: 'CM 专属 · 10 因子',
-    bpDefault: false, bpLocked: false,
-    def: '默认关 · 可配', defcls: 'd-off', fac: '1 / 2 / 3',
-    form: '二选一 · Ban 1 因子 / 自选 1 指挥官', note: 'CM 自制指挥官池 · 仿 std10 节奏',
+    no: '08', name: 'CM 专属', tag: 'CM 双打', label: 'CM 专属 · 双打',
+    bpDefault: false, bpLocked: true,
+    def: '暂不可用', defcls: 'd-lock', fac: '2 锁 + 4 / 场',
+    form: '双打 · 每场 2 指挥官 · 恒锁 风暴英雄/虚空裂隙', note: '双打 variant=cm · 3A3B（CM 入 B 升权）· 自选全量 22 · BP 不适用',
   },
   // 仅 currentModeLabel 用（不在任何屏渲染；BP 态走 getter ?? false 兜底）
   'one-a': { label: '10 因子 · 单指' },

@@ -60,13 +60,23 @@ export function currentPlayerName(): string {
 }
 
 export function currentSessionMode(): SessionMode {
-  if (doublesLive()) return getDoublesState().config.variant === 'feiqiu' ? 'feiqiu-doubles' : 'doubles';
+  if (doublesLive()) {
+    const v = getDoublesState().config.variant;
+    if (v === 'feiqiu') return 'feiqiu-doubles';
+    if (v === 'guantu') return 'doubles';
+    return v; // std15/cm：variant 与 SessionMode 同名字面量（Batch C 双打化）
+  }
   return getSelectState().mode;
 }
 
-/** 双打锁定因子角标文案：非酋之轮=「非酋」/ 官突双打=「官突」（select/battle/obs/result 四屏统一）。 */
+/** 双打锁定因子角标文案：非酋之轮=「非酋」/ 官突双打=「官突」/ cm=「锁定」（与单打锁定角标同文案）
+ *  （select/battle/obs/result 四屏统一）。std15 无锁定因子，角标不渲染，返回值不生效。 */
 export function currentLockTag(): string {
-  return doublesLive() && getDoublesState().config.variant === 'feiqiu' ? '非酋' : '官突';
+  if (!doublesLive()) return '官突';
+  const v = getDoublesState().config.variant;
+  if (v === 'feiqiu') return '非酋';
+  if (v === 'cm') return '锁定';
+  return '官突';
 }
 
 export function currentModeLabel(): string {
@@ -95,7 +105,7 @@ export function currentEnemyAi(matchIdx: number): string | undefined {
 export function ensureDoublesSessionFromUrl(): boolean {
   if (doublesLive()) return true;
   const sm = querySessionMode();
-  if (sm !== 'doubles' && sm !== 'feiqiu-doubles') return false;
+  if (sm !== 'doubles' && sm !== 'feiqiu-doubles' && sm !== 'std15' && sm !== 'cm') return false;
   startSession(sm);
   return true;
 }

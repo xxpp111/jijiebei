@@ -105,11 +105,23 @@ async function main() {
     await waitForServer(preview);
     browser = await chromium.launch({ channel: 'chrome' });
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    // 绕登录门（同 ui-smoke task #54 范式）：注入 player auth，否则 ?screen=select/battle 被 App 守卫踢回 home。
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('jjb_auth', JSON.stringify({ token: 'e2e', account: { id: 'e2e-player', kind: 'player', nickname: 'e2e' } }));
+      } catch { /* noop */ }
+    });
+    // 本机可能跑着真 PB（relay 部署链路）：拦 auth-refresh 返 200 假续期，防注入的 e2e auth 被 401 清掉、导航被踢回 home。
+    await page.route('**/auth-refresh', (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'e2e', record: {} }),
+    }));
     const messages = [];
     page.on('console', (msg) => {
       if (msg.type() !== 'error' && msg.type() !== 'warning') return;
       // 放行后端可选的 /api resource error（展示屏 fetch /api，P5 未跑时失败，前端有 catch 兜底；前端 e2e 不应因后端缺席而 FAIL）
       if ((msg.location?.()?.url || '').includes('/api')) return;
+      // 同理放行落库告警：e2e 注入假 auth，结算落库对真/假后端都可能 4xx；前端 catch 兜底不阻断结算
+      if (msg.text().includes('落库失败（不阻断结算）')) return;
       messages.push(`[${msg.type()}] ${msg.text()}`);
     });
     page.on('pageerror', (err) => messages.push(`[pageerror] ${err.message}`));

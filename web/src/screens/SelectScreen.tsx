@@ -37,6 +37,7 @@ import {
   validateDoubles, randomFillDoubles,
 } from '../logic/jjbDoubles';
 import { getBpModeEnabled } from '../logic/bpConfig';
+import { COMMANDERS } from '../config/commanders';
 import { currentEnemyRace, currentEnemyAi, currentModeLabel } from '../logic/jjbView';
 import { getRandomEnemyEnabled } from '../logic/randomConfig';
 import { raceUrl } from '../lib/realAsset';
@@ -212,7 +213,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
   const onClearFac = (slot: number, k: number) => { clearFacSlot(slot, k); setTick((x) => x + 1); };
 
   // ===== 重揉：换一个未出现的因子（match 超限走软违规 toast，照抄 BpBadge 回显范式） =====
-  const doReroll = (kind: 'pool' | 'slot' | 'std15', i: number, k?: number) => {
+  const doReroll = (kind: 'pool' | 'slot', i: number, k?: number) => {
     rerollFactor(kind, i, k);
     const w = getSelectWarn();
     if (w) setToast({ msg: w, count: 1, kind: 'soft' });
@@ -306,44 +307,31 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                     )}
                   </div>
                   <div className="t-facs">
-                    {s.modeStd15 ? (
-                      /* std15 纯随机：每场 5 个随机因子只读直渲（无锁定、无手选槽；点金可切，对齐双打 mutators 范式） */
-                      s.randomFactorPoor.slice(i * 5, i * 5 + 5).map((f, k) => (
-                        <span key={k} data-slot-fac={`${i}:${k}`} style={{ position: 'relative', display: 'inline-block' }}>
-                          <FactorFrame src={facUrl(f)} size={52} gold={getGoldFor(f)} />
-                          <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
-                          <RerollBadge name={f} onReroll={() => doReroll('std15', i, k)} />
-                        </span>
-                      ))
+                    {/* 锁定因子（自动）打头 — 不可拖不可清 */}
+                    {lock ? (
+                      <FactorFrame src={facUrl(lock)} size={52} tag="锁定" />
                     ) : (
-                      <>
-                        {/* 锁定因子（自动）打头 — 不可拖不可清 */}
-                        {lock ? (
-                          <FactorFrame src={facUrl(lock)} size={52} tag="锁定" />
-                        ) : (
-                          <DropCell w={52} h={52} hint="锁定" />
-                        )}
-                        {/* 手选因子（已选 gold + 未选 DropCell），共 manualSlots(i) 槽 */}
-                        {Array.from({ length: slots }).map((_, k) => {
-                          const v = s.selectedFactorList[facFlatIdx(i, k)];
-                          return v ? (
-                            <span
-                              key={k}
-                              ref={setTarget(`factor:${i}:${k}`)}
-                              data-slot-fac={`${i}:${k}`}
-                              onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
-                              style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
-                            >
-                              <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
-                              <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
-                              <RerollBadge name={v} onReroll={() => doReroll('slot', i, k)} />
-                            </span>
-                          ) : (
-                            <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
-                          );
-                        })}
-                      </>
+                      <DropCell w={52} h={52} hint="锁定" />
                     )}
+                    {/* 手选因子（已选 gold + 未选 DropCell），共 manualSlots(i) 槽 */}
+                    {Array.from({ length: slots }).map((_, k) => {
+                      const v = s.selectedFactorList[facFlatIdx(i, k)];
+                      return v ? (
+                        <span
+                          key={k}
+                          ref={setTarget(`factor:${i}:${k}`)}
+                          data-slot-fac={`${i}:${k}`}
+                          onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
+                          style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
+                        >
+                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
+                          <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
+                          <RerollBadge name={v} onReroll={() => doReroll('slot', i, k)} />
+                        </span>
+                      ) : (
+                        <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -375,7 +363,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} banned={getBpModeEnabled(s.mode) && getBanFor(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
                   {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1, kind: 'soft' }); setTick((x) => x + 1); }} />}
-                  {!s.modeStd15 && <RerollBadge name={f} onReroll={() => doReroll('pool', i)} />}
+                  <RerollBadge name={f} onReroll={() => doReroll('pool', i)} />
                 </span>
               ))}
             </div>
@@ -495,6 +483,12 @@ function isPickedDoubles(slots: Array<{ cmds: (string | null)[]; factors: (strin
   return slots.some((s) => (kind === 'cmd' ? s.cmds : s.factors).some((x) => x === name));
 }
 
+// CM 自制指挥官识别章（cm 双打自选全量 22 官方/CM 混排，D11）：标识非按钮，皮见 styles/doubles-select.css .cm-chip。
+const CM_NAMES = new Set(COMMANDERS.filter((c) => c.source === 'cm').map((c) => c.name));
+function CmChip({ name }: { name: string }) {
+  return CM_NAMES.has(name) ? <span className="cm-chip" aria-hidden>CM</span> : null;
+}
+
 function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
   const [, setTick] = useState(0);
   const [toast, setToast] = useToast();
@@ -541,15 +535,30 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
   };
   const handleRandomFill = () => { randomFillDoubles(); setTick((x) => x + 1); };
 
-  // 各场锁定因子展示：topbar 汇总用。官突=每场官突名；非酋之轮=三场共享锁定因子（混乱工作室）。
+  // 各场锁定因子展示：topbar 汇总用。官突=每场官突名；非酋之轮=三场共享锁定因子（混乱工作室）；
+  // std15=无锁定（显待选口径）；cm=每场恒锁 风暴英雄+虚空裂隙。
   const isFeiqiu = cfg.variant === 'feiqiu';
-  const lockLabel = isFeiqiu ? '非酋' : '官突';
+  const isStd15 = cfg.variant === 'std15';
+  const isCm = cfg.variant === 'cm';
+  const lockLabel = isFeiqiu ? '非酋' : isCm ? '锁定' : isStd15 ? '待选' : '官突';
   const mutNames = cfg.matchMutatorNames || [];
   const allMatchMuts = isFeiqiu
     ? '混乱工作室'
-    : (mutNames.length
-      ? mutNames.join(' | ')
-      : (cfg.matchMutators || []).map((ms) => ms.join('·')).join(' | '));
+    : isStd15
+      ? `每场 ${cfg.extraFactors} · 无锁定`
+      : isCm
+        ? '风暴英雄 + 虚空裂隙 · 每场'
+        : (mutNames.length
+          ? mutNames.join(' | ')
+          : (cfg.matchMutators || []).map((ms) => ms.join('·')).join(' | '));
+  // 每场 slot 头部角标文案（per-variant）
+  const slotTag = (i: number) => {
+    if (isFeiqiu) return '非酋';
+    if (isStd15) return `待选 ${cfg.extraFactors}`;
+    if (isCm) return `锁定 2 + 待选 ${cfg.extraFactors}`;
+    return `官突 ${mutNames[i] || ((cfg.matchMutators || [])[i] || []).join('·')}`;
+  };
+  const selfPool = st.selfPool || [];
 
   return (
     <ScreenShell
@@ -575,7 +584,7 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
                 <div className="slot-head">
                   <span className="slot-no">{m.slot}</span>
                   <span className="slot-map-name">{mapName}</span>
-                  <span className="slot-difficulty" style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>{isFeiqiu ? '非酋' : `官突 ${mutNames[i] || (m.mutators || []).join('·')}`}</span>
+                  <span className={'slot-difficulty' + (isStd15 || isCm ? ' slot-tag' : '')} style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>{slotTag(i)}</span>
                   {isBoss && <span className="slot-flag">BOSS</span>}
                 </div>
                 <MapThumb map={mapName}>
@@ -586,8 +595,9 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
                     {Array.from({ length: cfg.cmdsPerMatch }).map((_, k) => {
                       const c = sel.cmds[k];
                       return c ? (
-                        <span key={k} ref={setTarget(`cmd:${i}:${k}`)} data-doubles-cmd={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i, k); }} style={{ cursor: 'pointer' }}>
+                        <span key={k} ref={setTarget(`cmd:${i}:${k}`)} className="cmdwrap" data-doubles-cmd={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i, k); }} style={{ cursor: 'pointer' }}>
                           <CommanderCard src={cmdUrl(c)} name={c} w={56} h={67} fill check />
+                          <CmChip name={c} />
                         </span>
                       ) : (
                         <DropCell key={k} ref={setTarget(`cmd:${i}:${k}`)} w={56} h={67} hint="指挥官" />
@@ -637,12 +647,31 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
               <div className="block-head sm"><span className="block-title">指挥官池（双打 {cfg.cmdPoolSize} 选）</span></div>
               <div className="avatar-row" style={{ gap: 13, flexWrap: 'wrap' }} data-doubles-pool-cmds>
                 {cmdPool.map((c, i) => (
-                  <span key={i} data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none' }}>
+                  <span key={i} className="cmdwrap" data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none' }}>
                     <CommanderCard src={cmdUrl(c)} name={c} />
+                    <CmChip name={c} />
                   </span>
                 ))}
               </div>
             </div>
+            {/* 双打自选区（D4/D11 net-new）：std15=官方全量 / cm=官方+CM 全量，减已入池；拖入场次槽复用同一 dragdrop。
+                guantu/feiqiu selfPool 恒空不渲染（行为不变）。 */}
+            {selfPool.length > 0 && (
+              <div className="grp self-grp">
+                <div className="block-head sm">
+                  <span className="block-title">自选指挥官</span>
+                  <span className="block-note">{isCm ? '全量可选（官方 + CM）· 拖入场次槽位' : '官方全量可选 · 拖入场次槽位'}</span>
+                </div>
+                <div className="avatar-grid" style={{ gap: 11 }} data-doubles-pool-self>
+                  {selfPool.map((c, i) => (
+                    <span key={i} className="cmdwrap" data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none' }}>
+                      <CommanderCard src={cmdUrl(c)} name={c} w={60} h={72} />
+                      <CmChip name={c} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             </div>
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
               <ToastV toast={toast} />

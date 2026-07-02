@@ -56,7 +56,9 @@ try {
   console.log('--------------  ----  ----  --------  --------');
 
   const codeLens = [];
-  const allTargets = [...MODES, 'doubles', 'feiqiu-doubles'];
+  // std15/cm 已改双打（Batch C）：走双打 kind='d' 目标，variant='std15'/'cm'
+  const DOUBLES_TARGETS = ['doubles', 'feiqiu-doubles', 'std15', 'cm'];
+  const allTargets = [...MODES, ...DOUBLES_TARGETS];
   for (const mode of allTargets) {
     try {
       globalThis.window = globalThis.window || globalThis;
@@ -72,9 +74,11 @@ try {
       codeLens.push({ mode, kind, len: code.length });
 
       // 额外断言：kind 与 mode 一致（双打 kind='d'，单打 kind='s'）
-      const isDoubles = mode === 'doubles' || mode === 'feiqiu-doubles';
+      const isDoubles = DOUBLES_TARGETS.includes(mode);
       if (isDoubles && kind !== 'd') fail(`${mode}: kind=${kind} 应为 'd'`);
       if (!isDoubles && kind !== 's') fail(`${mode}: kind=${kind} 应为 's'`);
+      if (mode === 'std15' && snap1.variant !== 'std15') fail(`std15: snapshot.variant=${snap1.variant} 应为 'std15'`);
+      if (mode === 'cm' && snap1.variant !== 'cm') fail(`cm: snapshot.variant=${snap1.variant} 应为 'cm'`);
 
       if (!eq) fail(`${mode}: 往返不等价\n  snap1=${JSON.stringify(snap1)}\n  snap2=${JSON.stringify(snap2)}`);
       console.log(`${mode.padEnd(14)}  ${kind.padEnd(4)}  ${String(code.length).padStart(4)}  ${(eq ? '✓' : '✗').padStart(8)}  ${eq ? 'PASS' : 'FAIL'}`);
@@ -171,4 +175,4 @@ if (failed) {
   console.error('\n[codec-e2e] ❌ 编解码往返或三道闸失败');
   process.exit(1);
 }
-console.log('\n[codec-e2e] ✅ 9 模式 + 双打 往返等价 + 随机敌方 ON + 三道闸(version/pool/invalid) + 越界拦截 PASS');
+console.log('\n[codec-e2e] ✅ 9 单打模式 + 4 双打(官突/非酋/std15/cm) 往返等价 + 随机敌方 ON + 三道闸(version/pool/invalid) + 越界拦截 PASS');

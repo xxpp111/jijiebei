@@ -1,0 +1,43 @@
+/* 双打自选区 + CM 识别章 + 变体槽头 pill — Batch C 净新面成品皮（贴 v4 暗金系统做增量，不动 design/v4-r2 红线）。
+   语言承接：Batch A「边框内嵌」/ badges.css 金属章渐变(#f6e7b6→#d8b15a→#a87e2f) / theme.css token(--accent/--panel-edge/--font-num)。
+   ⚠ .jjb 前缀提特异性，压 design/v4-r2 基础规则（同 badges.css 教训）；只加皮，交互契约(data-doubles-* / 拖拽)全保留。 */
+
+/* ── 自选区内嵌面板：抽中池（亮）vs 全量自选（沉）的层级 ── */
+.jjb .self-grp {
+  margin-top: 10px;
+  padding: 10px 12px 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.14));
+  border: 1px solid var(--panel-edge, rgba(216, 177, 90, 0.22));
+  border-left: 3px solid var(--accent, #d8b15a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.jjb .self-grp .block-head { margin-bottom: 2px; }
+
+/* ── CM 自制指挥官识别章：左上斜切小方旗（标识非按钮——形状区别于点金/BP/reroll 圆形交互章）。
+      pointer-events 穿透不挡拖拽；官方 18 人不挂章，官方 vs CM 混排一眼可分（D11 自选全量 22）。 ── */
+.jjb .cmdwrap { position: relative; display: inline-block; }
+.jjb .cm-chip {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 4;
+  padding: 1px 5px 0;
+  font-family: var(--font-num, 'Rajdhani', sans-serif);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 13px;
+  color: var(--on-accent, #1a1206);
+  background: linear-gradient(180deg, #f6e7b6, #d8b15a 55%, #a87e2f);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+/* ── std15/cm 槽头 pill（guantu/feiqiu 不挂 .slot-tag，槽头原样） ── */
+.jjb .slot-tag {
+  padding: 2px 8px;
+  border: 1px solid rgba(216, 177, 90, 0.45);
+  background: rgba(216, 177, 90, 0.1);
+  border-radius: 2px;
+}

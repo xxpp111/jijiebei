@@ -11,7 +11,7 @@ import type { DecodeResult } from '../codec';
 import { startSession } from '../jjbSession';
 
 const g = globalThis as any;
-const SOLO_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'std15', 'cm'] as const;
+const SOLO_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji'] as const;
 
 /** 取 DecodeResult 的 reason（tsc 对第三方 expect 后的 union 收窄不稳，显式收窄到 DecodeBad）。 */
 function reasonOf(r: DecodeResult): string {
@@ -61,8 +61,28 @@ describe('codec 往返等价：capture → encode → decode deepEqual', () => {
     expect(snap2).toEqual(snap1);
   });
 
+  it('双打 std15（Batch C 双打化）：kind=d、variant=std15 且往返 deepEqual', () => {
+    g.__jjbDebug = undefined;
+    startSession('std15');
+    const snap1 = capturePayload();
+    expect(snap1.kind).toBe('d');
+    if (snap1.kind === 'd') expect(snap1.variant).toBe('std15');
+    const snap2 = decodePayload(encodePayload(snap1));
+    expect(snap2).toEqual(snap1);
+  });
+
+  it('双打 cm（Batch C 双打化）：kind=d、variant=cm 且往返 deepEqual', () => {
+    g.__jjbDebug = undefined;
+    startSession('cm');
+    const snap1 = capturePayload();
+    expect(snap1.kind).toBe('d');
+    if (snap1.kind === 'd') expect(snap1.variant).toBe('cm');
+    const snap2 = decodePayload(encodePayload(snap1));
+    expect(snap2).toEqual(snap1);
+  });
+
   it('码长 < 2000（URL #hash 上限）', () => {
-    for (const mode of [...SOLO_MODES, 'doubles', 'feiqiu-doubles'] as const) {
+    for (const mode of [...SOLO_MODES, 'doubles', 'feiqiu-doubles', 'std15', 'cm'] as const) {
       g.__jjbDebug = undefined;
       startSession(mode);
       expect(encodePayload(capturePayload()).length).toBeLessThan(2000);
