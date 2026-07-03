@@ -1,8 +1,8 @@
-# 集结杯 P5 后端（PocketBase）
+# 集结杯后端（PocketBase）
 
-> 集结杯比赛平台后端地基（P5）：5 集合 schema + 记录级权限 + 积分/天梯 Go hook + Litestream 容灾。
-> 前端 `web/src` 仅只读对接（本 round 不改前端代码），汇流 = 前端 `fetch /api`（后续独立 phase）。
-> 真相基线：`docs/research-backend-p5.md`（schema 字段级 + 权限矩阵 + hook 伪码 + 部署）+ `tmp/platform-research-report.md` §1/§2/§5。
+> 集结杯比赛平台后端：7 集合 schema + 记录级权限 + 积分/天梯 Go hook + Litestream 容灾。
+> 当前架构真相见 `docs/architecture.md` §2（集合/权限/hook），部署见 `docs/deployment.md`。
+> 历史设计稿：`docs/archive/research-backend-p5.md`（P5 立项时的 schema 推导，已归档仅供考古）。
 
 ## 起跑（mac 本地验证）
 
@@ -10,9 +10,10 @@
 cd backend
 go mod tidy                  # 拉依赖（首次；需外网）
 go build -o pocketbase .     # 编译（含 pb_migrations，单二进制）
-rm -rf pb_data && ./pocketbase migrate up   # migrations 从零重放建 5 集合
+rm -rf pb_data && ./pocketbase migrate up   # migrations 从零重放建 7 集合
 ./pocketbase serve --http 127.0.0.1:8090 &  # 起跑；Admin UI: http://127.0.0.1:8090/_/
 ```
+> ⚠️ 以上 `rm -rf pb_data` 仅限**本地验证环境**；devbox 现网 `pb_data` 绝不直接操作（AGENTS.md 红线 9）。
 
 ## 端点
 
@@ -24,17 +25,19 @@ rm -rf pb_data && ./pocketbase migrate up   # migrations 从零重放建 5 集�
 | `GET /api/rankings?season=<可选>` | 天梯聚合（SUM(delta) GROUP BY player，公开） |
 | `GET /api/scoring` | 当前系数表 + 赛季 + 公式（公开，天梯页展示用） |
 
-## 5 集合 schema（概览）
+## 7 集合 schema（概览）
 
 | 集合 | 类型 | 关键字段 | 读 | 写 |
 |---|---|---|---|---|
 | `players` | base | nickname, player_code(unique), race_pref, avatar, active | 公开 | host\|admin |
-| `matches` | base | mode, game_mode, payload_code, players, host, result, score_total, bp_config | 公开 | host\|admin（改：本人主持\|admin） |
-| `scores` | base | player, match, delta, reason, season | 公开 | admin-only（hook 写） |
+| `matches` | base | mode, game_mode, payload_code, players, host, result, score_total, bp_config, created/updated | 公开 | match=host\|admin；practice=任意登录态（migration6）；改：本人主持\|admin |
+| `scores` | base | player, match, delta, wins, games, reason, season | 公开 | admin-only（hook 写） |
 | `logs` | base | actor, action, target_type, target_id, detail, ip | admin-only | hook 写；不可改不可删 |
 | `accounts` | auth | role(admin/host/viewer), display_name + 内置 email/password | admin-only | admin-only（update 可改自己） |
+| `event_rules` | base | season, ban_maps, ban_factors, ban_mutators, active（单活跃 hook） | 公开 | host\|admin |
+| `player_accounts` | auth | nickname, phone(unique), social, fav_commanders, player→players | 本人 | 自助注册（createRule=""）；改=本人 |
 
-完整字段 + 权限矩阵见 `pb_migrations/1782000001_init_collections.go` + `docs/research-backend-p5.md` §1.6。
+完整字段 + 权限矩阵见 `pb_migrations/`（7 个迁移按序读）；集合演进史见 `docs/architecture.md` §2。
 
 ## schema ↔ live 同形映射表（契约 done-when 核心证据）
 

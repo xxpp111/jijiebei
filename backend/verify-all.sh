@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # verify-all.sh — 集结杯 P5 后端 Phase 2/3/4-proof 全流程验证脚本
-# 前置：PocketBase 已在 http://127.0.0.1:8090 运行，migrations 已建（5 集合 + users 锁），DB 干净。
+# 前置：PocketBase 已在 http://127.0.0.1:8090 运行，migrations 已建（7 集合 + users 锁），DB 干净。
 # 自包含：创建 superuser + 3 accounts + 2 players，跑权限矩阵 + hook + 天梯 + sqlite 导出。
 # 用 req() helper：body 写 /tmp/jjb_last.json，HTTP code 单独捕获（避免 -w 追加污染 JSON 解析）。
 #
 # 硬断言版（测试体系第①层）：原 print-and-eyeball 的 expect 注释 → 失败即 exit 1，让 CI 可红。
 # 关键数值（hook delta=2.4 / 天梯 P1=9.8 P2=4.8）+ 权限矩阵（ALLOW/DENIED）全部走 assert。
 set -u
-cd /Users/bytedance/项目/jijiebei/backend || exit 1
+cd "$(dirname "$0")" || exit 1   # 脚本所在目录 = backend/（勿硬编码绝对路径，换机即挂）
 BASE="http://127.0.0.1:8090"
 CT="Content-Type: application/json"
 get()  { python3 -c "import sys,json;print(json.load(sys.stdin).get('$1',''))" 2>/dev/null; }

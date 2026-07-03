@@ -32,45 +32,51 @@
 
 ---
 
+## 1.5 三层演化史 · 我该改哪里（★新维护者必读）
+
+这个仓库是「在一个 Cocos 老项目的躯壳上重写出来的新平台」，根目录因此同时躺着三代代码。**先分清哪层是活的**：
+
+| 层 | 位置 | 地位 | 能不能动 |
+|---|---|---|---|
+| ① XP 原工程（化石） | `assets/`（Script/jijie2 抽签引擎原件 + 场景 + 资源）+ 根目录 Cocos 脚手架（`creator.d.ts` / `project.json` / `template*` / `settings/` / `jsconfig.json` / 根 `tsconfig.json`） | Cocos Creator 2.4 原项目，历史真相源。`assets/resources/jjdata/*.txt` 是赛制配置的**原件**（web 运行期读的是 `web/src/data/jjdata/` 下的同步副本） | **只读**。改赛制配置需两处同步（原件+副本），改引擎行为去 legacy 副本 |
+| ② legacy 复刻引擎 | `web/src/logic/legacy/`（JJConfigData / JijieData / JJBData） | 从 ①verbatim 逐字复刻的运行期真身，新平台的抽签内核。详见 [web/src/logic/legacy/README.md](web/src/logic/legacy/README.md)（副本↔原件对照表 + 分叉规则） | **只调用不改内部**；确需修正走「只改副本、绝不回改原件」规则 |
+| ③ 新平台（主战场） | `web/`（React 前端）+ `backend/`（Go PocketBase）+ `admin/`（运营后台） | 日常开发全部在这里 | 正常开发，守 §5 红线 |
+
+根目录还有一批**不入 git 的本机产物**：`.harness-pro-*`（多 agent round 审计留档）、`library/ build/ temp/ local/`（Cocos 构建缓存，可随时删可再生）、`config/ scripts/ package.json`（本机 harness-pro 工具链，fresh clone 后不存在——README 提到它们时均指本机环境）。
+
+---
+
 ## 2. 目录地图
 
 ```
 jijiebei/
 ├── README.md                    ← 本文件（入口 + 快速开始）
-├── projectplan.md               ← 决策史 / 迭代记录（只读引用）
-├── docs/                        ← 4 份开发者文档
-│   ├── architecture.md
-│   ├── testing.md
-│   ├── deployment.md
-│   └── operations.md
-├── web/                         ← React + Vite 前端（11 屏）
+├── AGENTS.md                    ← ★集中红线清单（人与 AI 共读，改代码前先看）
+├── projectplan.md               ← 决策史 / 迭代记录（append-only 只读引用）
+├── mode-rules-truth-table.md    ← 9 单打 + 4 双打赛制真相表（单一真相源）
+├── docs/                        ← 开发者文档（architecture / testing / deployment / operations 四大件 + codec-schema 等）
+├── web/                         ← React + Vite 前端（主战场）
 │   ├── src/
 │   │   ├── screens/             ← 11 个屏组件（home/select/battle/result/obs/ladder/login/register/eventrules/bpconfig/code）
 │   │   ├── components/          ← 共享 UI 组件（BrandLockup/MatchRow/FactorFrame/...）
-│   │   ├── logic/               ← 核心逻辑（jjbSession 状态机 / jjbDoubles 双打 / codec 编解码 / backend API 客户端）
+│   │   ├── logic/               ← 核心逻辑（jjbSession 单打状态机 / jjbDoubles 双打引擎 / jjbView 分流门面 / codec 编解码 / backend API 客户端）
+│   │   ├── logic/legacy/        ← ★XP verbatim 复刻引擎（只调用不改，见 §1.5）
+│   │   ├── data/jjdata/         ← 赛制配置运行期副本（原件在 assets/resources/jjdata/，两处须一致）
 │   │   ├── lib/                 ← 工具（capture/snapDOM 截图 / dragdrop / designAssets）
-│   │   └── styles/              ← 三主题（metal / sc2 / minimal）× 二模式（dark / light）CSS
-│   ├── e2e/                     ← 7 个 e2e 脚本（run / codec / match-flow / backend-integ / random-enemy / bp-rules / r6-doubles / ui-smoke）
-│   ├── package.json
+│   │   └── styles/              ← 三主题 × 明暗 CSS（全部是对 design/v4-r2 只读基座的双类 specificity 覆盖）
+│   ├── e2e/                     ← 17 个 e2e 脚本 + flows/ 7 条 AI-E2E（清单见 docs/testing.md §3）
 │   └── vite.config.ts           ← dev/preview 都把 /api 反代到 127.0.0.1:8090
 ├── admin/                       ← Arco 业务后台（5 模块 · build base=/admin/）
-│   ├── src/{pages,api,auth,guard,layout}/
-│   └── e2e/admin-smoke.mjs
 ├── backend/                     ← PocketBase + Go hook 后端
-│   ├── main.go                  ← 入口（migrate + loadScoring + registerHooks + registerRoutes）
-│   ├── hooks.go                 ← match→scores 派生 + 审计
-│   ├── routes.go                ← /api/rankings /api/scoring 自定义路由
-│   ├── scoring.go               ← 系数表加载 + delta 计算
-│   ├── pb_migrations/           ← 5 个 Go embed 迁移（init / lock users / scores wins·games / event_rules / player_accounts）
-│   ├── pb_data/                 ← SQLite 数据（含 data.db + wal + shm）
+│   ├── main.go / hooks.go / routes.go / scoring.go
+│   ├── pb_migrations/           ← 7 个 Go embed 迁移（init / lock users / scores wins·games / event_rules / player_accounts / matches practice rule / matches timestamps）
 │   ├── config/scoring.json      ← 系数表（修改重启即生效，不重编译 Go）
-│   ├── deploy/                  ← nginx conf / systemd / Litestream / runbook / Dockerfile
-│   └── verify-all.sh            ← P5 后端全链路验证脚本
-├── knowledge-base/              ← 飞书 wiki 维护素材（已同步飞书）
-├── design/v4-r2/                ← 当前 live 设计轮（6 主题 token，Claude Design 出稿）
-├── config/                      ← harness-pro 模型/策略/部署配置
-├── scripts/                     ← harness-enforcement 等
-└── package.json                 ← 根 package.json（harness-pro CLI 入口）
+│   ├── deploy/                  ← nginx conf / systemd / Litestream / Dockerfile
+│   ├── scripts/check-migrations.mjs ← 部署前迁移核对（只更新 web 前必跑）
+│   └── verify-all.sh            ← 后端全链路验证脚本（隔离造数据）
+├── assets/ + Cocos 脚手架       ← ★XP 化石层（只读，见 §1.5 与 assets/README.md）
+├── design/v4-r2/                ← 当前 live 设计基座（只读红线，6 主题 token）
+└── knowledge-base/              ← 飞书 wiki 维护素材（历史，待归档）
 ```
 
 ---
@@ -85,9 +91,6 @@ jijiebei/
 
 ### 3.2 装依赖
 ```bash
-# 根：harness-pro CLI（用 file: 链本地 harness_pro_core）
-npm install
-
 # 前端
 cd web && npm install && cd ..
 
@@ -97,11 +100,13 @@ cd admin && npm install && cd ..
 # 后端：首次拉 Go 依赖
 cd backend && go mod tidy && cd ..
 ```
+> 根目录的 `package.json` / `config/` / `scripts/` 是本机 harness-pro 工具链、不入 git——fresh clone 没有它们，不需要「根 npm install」。
 
 ### 3.3 跑（本地开发）
 ```bash
-# 终端 1：后端（先用 verify-all.sh 造数据）
+# 终端 1：后端（pocketbase 二进制是构建产物、不入 git，首次先 build）
 cd backend
+go build -o pocketbase .
 ./pocketbase serve --http 127.0.0.1:8090     # Admin UI: http://127.0.0.1:8090/_/
 # 另一终端：造测试账号 + 选手（前提：起 superuser）
 ./verify-all.sh                                # 跑完会有 admin/host/viewer 三个账号
@@ -118,18 +123,13 @@ npm run dev                                     # http://localhost:7790/
 vite dev/preview 都会把 `/api` 反代到 `127.0.0.1:8090`（见 `web/vite.config.ts`），**前端 fetch `/api/...` = 直连 PocketBase**，免 CORS。
 
 ### 3.4 测
+四层测试体系（vitest 单测 / 纯逻辑 e2e / 浏览器与联调 / AI-E2E flows），**17 个 e2e 脚本 + 7 条 flows 的完整清单与前置依赖见 [docs/testing.md](docs/testing.md) §3 覆盖矩阵**（唯一真相源，此处不复读）。最常用的四条：
 ```bash
 cd web
-npm run build                                    # TS 编译 + 产出 dist
-node e2e/run.mjs                                 # 9 模式 + 双打全路径 SSR 断言
+npm run build                                    # TS 编译 + 产出 dist（多数 e2e 的前置）
+npm run test:unit                                # vitest 74 用例（最快）
+node e2e/run.mjs                                 # 9 模式 + 双打全路径 SSR 断言（核心恒等式门）
 node e2e/codec.mjs                               # 码方案往返等价 + 三道闸
-node e2e/bp-rules.mjs                            # BP 规则专项（practice/match 软违规）
-node e2e/random-enemy.mjs                        # 随机敌方端到端
-node e2e/ui-smoke.mjs                            # 浏览器 UI 冒烟（需 build）
-# 端到端（需 dev 在跑 + 后端在跑 + 数据已造）：
-node e2e/match-flow.mjs                          # 比赛模式真实 UI 落库
-node e2e/backend-integ.mjs                       # 端到端 API 联调
-node e2e/r6-doubles-downstream.mjs               # 双打下游 R6（截图+断言）
 ```
 
 后端：
@@ -147,23 +147,22 @@ cd backend
 
 ---
 
-## 4. 现状（截至 2026-06-24）
+## 4. 现状（截至 2026-07-03）
 
-- ✅ 前端 9 屏 + 2 子页（bpconfig / code）已交付，dev 跑通；build 0 error，9 模式 + 双打全路径 e2e 绿。需求1（选手/主播双登录 + 注册 + 登录门）+ 需求2（赛事临时 ban）已上线。
-- ✅ 后端（7 集合 + Go hook + /api/rankings /api/scoring /api/event-rules）全链路验证（`backend/verify-all.sh` 10 段全绿）。
-- ✅ devbox 部署：web（jjb-live-dock） + admin（jjb-admin-dock） + backend（systemd `jjb-backend`）+ nginx（docker 容器 `jijiebei-nginx`）三层同源 :8080 实测联通。
-- ✅ 三层测试：①代码层（前端 build + 后端 Go test）②AI-E2E（8 个 e2e 脚本）③双打同步（两 profile 对战）。
-- ⚠️ 系数表（`config/scoring.json`）天梯上线前须 yb/土豆拍板定稿（caveat 3）。
-- ⚠️ cloudflared quick tunnel 治标不治本（重启换 URL），长期正解 CF Pages（见 `web/public/_redirects` 已预置）。
+- ✅ 前端 11 屏全部交付；13 种比赛形态（单打 9 + 双打 4 变体，含 std15/CM 双打新引擎）已上线 devbox。
+- ✅ 选手自助注册/登录 + 隐私协议门 + 记住我 + 赛事临时 ban + 主界面 QQ 群二维码 已上线。
+- ✅ 后端 7 集合 + 7 个 Go embed 迁移 + hook 算分 + 天梯分榜（single/double）全链路验证。
+- ✅ 四层测试体系：vitest 74 用例 + 17 个 e2e 脚本 + 7 条 AI-E2E flows + 后端 verify-all.sh。
+- ✅ devbox 三层同源部署 :8080 + cloudflared 公网隧道在跑；部署前迁移核对工具（`backend/scripts/check-migrations.mjs`）已入流程。
+- ⚠️ 系数表缺 `std15`/`cm` 两键（暂按 default 1.0 兜底计分），须 yb/土豆拍板定稿。
+- ⚠️ 双打对局个人归属仍是「双打战队」占位（个人化行动方案已定稿待施工，见任务 #84）。
+- ⚠️ cloudflared quick tunnel 治标不治本（重启换 URL），长期正解 CF Pages（`web/public/_redirects` 已预置）。
 
 ---
 
 ## 5. 红线 / 约定
 
-- **纯文档改动不轻易 commit**：hub 走 harness-pro round gate。
-- **三方 key 字面量**：Dubhe / Object store / CF Tunnel 凭据 → 走 env 临时注入，不落盘不进 git 也不进文档示例。
-- **0 改 `assets/Script/jijie2/`**：XP 维护，jjbDesign 边界只读 `JijieData` public + 调 XP handler。
-- **「失活孤儿」清理**：当前 round 改动导致的孤儿 import / 变量 / 函数 → 清掉；原本就存在的 dead code → 不动（标 TODO 即可）。
+**完整红线清单集中在 [AGENTS.md](AGENTS.md)（改任何代码前先读）**。速览：XP 化石层只读（§1.5）、legacy 只调不改、`design/v4-r2/` 只读（含 theme.css button reset 坑）、`backend/pb_data` 现网不碰、池=槽恒等式 + 双打 4 variant 契约 + codec schema v1 冻结不可破、devbox 部署方式不变、三方 key 不落盘、失活孤儿清理（本次改动的孤儿清掉，原有 dead code 不顺手删）。
 
 ---
 
