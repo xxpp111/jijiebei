@@ -42,14 +42,16 @@ func rankingsHandler(e *core.RequestEvent) error {
 	// 方案B（零迁移）：board 过滤移到 LEFT JOIN scores 的 ON 子句，用 s.match 子查询限定 game_mode，
 	//   SUM 只算该 board 的 scores；player 仍 LEFT JOIN 全保留（无该 board 对局 → COALESCE 0 分上榜）。
 	//   board 白名单枚举 + game_mode 硬编码列表，boardCond 为固定 SQL 片段不拼用户输入 → 无注入。
-	//   双打集合={doubles,feiqiu-doubles}；单刷=其余全部（NOT IN，含未来开放的 one-a/hard*/feiqiu/suiji）。
+	//   双打集合={doubles,feiqiu-doubles,std15,cm}（Batch C 双打引擎大改新增 std15/cm 两个双打
+	//   variant，此前遗漏未加入本判断，会被误判进单刷榜——2026-07-03 数据完整性诊断发现并修复）；
+	//   单刷=其余全部（NOT IN，含未来开放的 one-a/hard*/feiqiu/suiji）。
 	board := e.Request.URL.Query().Get("board")
 	boardCond := ""
 	switch board {
 	case "double":
-		boardCond = " AND s.match IN (SELECT id FROM matches WHERE game_mode IN ('doubles','feiqiu-doubles'))"
+		boardCond = " AND s.match IN (SELECT id FROM matches WHERE game_mode IN ('doubles','feiqiu-doubles','std15','cm'))"
 	case "single":
-		boardCond = " AND s.match IN (SELECT id FROM matches WHERE game_mode NOT IN ('doubles','feiqiu-doubles'))"
+		boardCond = " AND s.match IN (SELECT id FROM matches WHERE game_mode NOT IN ('doubles','feiqiu-doubles','std15','cm'))"
 	default:
 		board = "all" // 空/非法 → 全模式
 	}

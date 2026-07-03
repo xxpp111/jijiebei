@@ -80,6 +80,8 @@ export interface RankingRow {
   player_code: string;
   race_pref?: RacePref;
   total_delta: number;
+  total_wins: number;
+  total_games: number;
   match_count: number;
 }
 

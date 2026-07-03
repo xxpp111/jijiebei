@@ -7,7 +7,7 @@ import type { Match } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 
 const { Title, Paragraph, Text } = Typography;
-const GAME_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'doubles', 'feiqiu-doubles'];
+const GAME_MODES = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'doubles', 'feiqiu-doubles', 'std15', 'cm'];
 
 export default function Matches() {
   const { account } = useAuth();

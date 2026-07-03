@@ -68,6 +68,7 @@ export default function Rankings() {
     { title: 'player_code', dataIndex: 'player_code' },
     { title: '种族', dataIndex: 'race_pref', render: v => v ? <Tag>{(v as string).toUpperCase()}</Tag> : '—' },
     { title: '总积分', dataIndex: 'total_delta', render: v => <b style={{ color: 'rgb(var(--arcoblue-6))' }}>{Number(v).toFixed(2)}</b> },
+    { title: '胜/总', dataIndex: 'total_wins', render: (_, r) => <span>{r.total_wins}<span style={{ color: 'var(--color-text-3)' }}> / {r.total_games}</span></span> },
     { title: '对局数', dataIndex: 'match_count' },
   ];
 
