@@ -1,30 +1,25 @@
-# 集结杯 · 赛事设计与配置
+# docs · 文档索引
 
-> 集结杯（星际2 合作任务比赛）的规则与抽签配置设计区。平台 = CM（承载官方合作内容），赛事内容 = 官方指挥官 + 官方因子，难度基线 = 残酷。
-> 规则/配置调整：改配置或阈值后重跑生成器，重新产出分档表。
+> 集结杯活文档一览。每份文档头部自带「范围 + 真相源」声明；文档与代码冲突时以代码为准。
+> 全仓红线见根目录 `AGENTS.md`，项目入口见根目录 `README.md`。
 
-## 文件
-| 文件 | 类型 | 说明 |
-|---|---|---|
-| `规则一-官突加n-细则v1.md` | 规则 | 双打规则一（官突 + n）正式细则草稿 |
-| `因子点数配置.csv` | **源配置**（人工/Agent 编辑） | 52 官方因子 + 点数 + 单刷/双打 ban 标记 |
-| `官突ABC配置_官突池.csv` | **生成** | 官方 153 突变按点数和分 A/B/C（id<200） |
-| `官突ABC配置_挑战池.csv` | **生成** | 玩家自制突变（id≥200，多含自制因子，暂搁置） |
-| `build_guantu_config.py` | 工具 | 读 `../assets/resources/data/factors.txt` + 官方点数 → 输出上面 3 个 CSV |
+## 活文档
 
-## 难度标尺
-- **因子点数** = 官方体系（灰机 wiki live 核对）。**官突难度 = 其因子点数之和**。
-- **ABC 阈值（可调）**：A 易 ≤8 / B 中 9–12 / C 难 ≥13。
-- 官方残酷+ 点数预算参考：+1=4–6 / +2=7–8 / +3=9–10 / +4=11–12 / +5=15–16 / +6=19–20。
+| 文档 | 一句话定位 |
+|---|---|
+| [architecture.md](architecture.md) | 完整体系图：11 屏前端 + Arco 后台 + PocketBase 7 集合 + devbox 三层同源部署 |
+| [deployment.md](deployment.md) | devbox 部署**唯一真相源**（同步、迁移核对、回滚；历史 runbook 已归档） |
+| [testing.md](testing.md) | 四层测试体系：代码层 / AI-E2E / 双打同步 / vitest 单测，含全部跑法 |
+| [operations.md](operations.md) | 运维手册：账号 / 选手注册 / 赛季 / 系数 / 天梯 / FAQ |
+| [codec-schema.md](codec-schema.md) | 对局码 schema v1 契约（URL 分享 + 落库 + 贴码开局三态同源） |
+| [scoring-proposal.md](scoring-proposal.md) | 积分系数表方案（待 yb/土豆定稿；现 scoring.json 为占位） |
+| [claude-design-loop.md](claude-design-loop.md) | Claude Design 云端出图 → 落地 web/src 的闭环 SOP |
+| [rules-config.md](rules-config.md) | 赛事规则与官突配置区说明（同目录中文 CSV / 生成脚本 / 细则的导读） |
 
-## 重新生成配置
-```
-python3 docs/build_guantu_config.py
-```
+## 规则配置产物（由 rules-config.md 导读）
 
-## 已知数据修正（建议同步回 `assets/resources/data/factors.txt`）
-- `时空立场 → 时空力场`、`生命汲取 → 生命吸取`、`龙卷风 → 龙卷风暴`（脚本已按别名修正评分）
-- 4 条限定突变（捉鸡行动/暴力之夜/灾难之轮/感恩季）含限定因子，官方不进自定义，已自动标记不可用
+`规则一-官突加n-细则v1.md` · `因子点数配置.csv`（源）· `官突ABC配置_官突池.csv` / `_挑战池.csv`（生成）· `build_guantu_config.py`（生成器）
 
-## 待定（见规则细则末尾"待土豆拍"）
-n 上限 / 额外因子点数预算 vs 纯随 / C 档阈值 / 指挥官限制（五后二改·独狼·原神）/ 双打 ban 名单 等。
+## archive/
+
+历史快照与已完成派发契约，只增不改：立项调研（research-\*）、旧 runbook（runbook-\*）、知识库快照（kb-2026-06/）、派发存根（dispatch-\*）、过期体系图（system-maps-\*）等。考古时按文件名日期读。

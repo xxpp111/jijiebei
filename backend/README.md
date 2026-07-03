@@ -88,7 +88,7 @@ mode=practice → hook 跳过算分（不进天梯，开放问题拍板）
 
 ## 部署
 
-见 `deploy/runbook.md`（本地起跑验证 + devbox 裸进程部署 + Litestream 容灾 + caveat）。
+见 `docs/deployment.md`（devbox 部署唯一真相源；历史 runbook 已归档 docs/archive/）。
 
 ---
 

@@ -1,7 +1,7 @@
 # 集结杯 · 部署（Deployment）
 
 > 范围：devbox（10.37.220.128）三层同源部署 + 交叉编译 + nginx conf + Litestream 容灾 + 回滚。
-> 真相源：`backend/deploy/runbook-triple.md`（最新部署 runbook）+ `backend/deploy/{nginx-docker-triple.conf, litestream.yml, jjb-backend.service, Dockerfile, seed-hosts.sh}`。
+> **本文件即部署唯一真相源**，配合 `backend/deploy/` 下的可执行资产（nginx conf / systemd unit / litestream.yml / Dockerfile / seed-hosts.sh）。历史 runbook 三份已归档 `docs/archive/`（内容被本文全覆盖）。AI 侧部署配方（devbox proxy 坑 + 迁移核对门禁）见 `.claude/skills/jjb-deploy`。
 
 ---
 
@@ -27,7 +27,7 @@
          └─ /_/          → proxy_pass → 127.0.0.1:8090（PocketBase Admin UI）
 
 backend（systemd jjb-backend，127.0.0.1:8090，对外不可见）
-├─ PocketBase 二进制（含 6 个 Go embed migrations）
+├─ PocketBase 二进制（含 7 个 Go embed migrations）
 ├─ config/scoring.json（系数表）
 └─ pb_data/data.db + WAL + SHM（SQLite）
    └─ Litestream sidecar（每 1s 增量复制 → S3 兼容对象存储）
@@ -94,11 +94,12 @@ curl -s http://127.0.0.1:8090/api/health
 sudo -u jjb /opt/jjb-backend/pocketbase migrate up --dir /opt/jjb-backend/pb_data
 # 期望输出: Applied 1782000001_init_collections.go / 1782000002_lock_default_users.go / 1782000003_scores_wins_games.go
 #          / 1782000004_event_rules.go / 1782000005_player_accounts.go / 1782000006_matches_practice_rule.go
+#          / 1782000007_matches_timestamps.go
 
 # 注意：serve 启动时会自动跑未应用的迁移（Automigrate: false），migrate up 是显式补跑
 ```
 
-6 个 Go embed 迁移：
+7 个 Go embed 迁移：
 | migration | 内容 |
 |---|---|
 | `1782000001_init_collections.go` | 5 集合 schema + 权限矩阵 |
@@ -107,6 +108,7 @@ sudo -u jjb /opt/jjb-backend/pocketbase migrate up --dir /opt/jjb-backend/pb_dat
 | `1782000004_event_rules.go` | event_rules 集合（赛事临时 ban 因子/地图/指挥官） |
 | `1782000005_player_accounts.go` | player_accounts 选手账号集合（注册/登录，phone 唯一索引） |
 | `1782000006_matches_practice_rule.go` | matches 练习局自助落库权限规则 |
+| `1782000007_matches_timestamps.go` | matches 加 created/updated autodate（修 admin 对局页 sort=-created 400） |
 
 ### 2.4 web + admin · 静态产物构建 + 推
 
@@ -190,6 +192,8 @@ EOF
 backend SQLite 实时增量复制到对象存储，**服务器炸了从桶恢复最多丢几秒**。
 
 ```bash
+# Litestream 二进制获取：devbox 外网受限，本地下载（https://litestream.io/install/）后 scp 推
+#   scp litestream 10.37.220.128:/opt/jjb-backend/
 # devbox 上：密钥走临时 env，不落盘
 ssh 10.37.220.128
 export LITESTREAM_ACCESS_KEY_ID=<your-access-key>     # 临时 env

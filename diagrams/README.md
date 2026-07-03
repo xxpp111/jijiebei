@@ -35,7 +35,11 @@
 - `diagrams/overview-board.png`
 - `diagrams/rules-board.png`
 
-这些是知识库 / 画板相关 PNG，当前未在 git 中跟踪。建议等 wiki 结构拍板后决定入库还是迁到 `docs/evidence/`。
+这些是知识库 / 画板相关 PNG，已在 git 中跟踪（共 ~1.3MB）。等 wiki 结构拍板后决定保留还是迁到 `docs/evidence/`。
+
+## 已归档
+
+- `SYSTEM-MAPS.md`（三张 Mermaid 体系图，2026-06-24 快照）→ `docs/archive/system-maps-2026-06.md`；现行架构图在 `docs/architecture.md` §0/§3。其渲染产物 `jjb-map-1/2/3.png` 已删（可从归档源再生）。
 
 ## 清理原则
 

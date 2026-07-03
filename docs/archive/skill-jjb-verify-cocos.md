@@ -1,9 +1,9 @@
----
-name: jjb-verify
-description: 集结杯验证基建：四套 Playwright 回归、断言纪律、Cocos 截图与交互技术、__jjbDebug 契约、Cocos 2.4 坑库。改 jjbDesign 代码、写断言、做截图验证时使用。
----
+# 集结杯验证手册（原 jjb-verify skill）【已归档】
 
-# 集结杯验证手册
+> **归档声明（2026-07-03 R3 文档合并）**：本文件原是 `.claude/skills/jjb-verify/SKILL.md`，服务 Cocos（jjbDesign）时代的验证工作。
+> React 化后：普适的**断言纪律**已并入 `docs/testing.md` §7（条 8-12），flow 跑法见 `jjb-e2e-flows` skill。
+> 下方保留的 Cocos 回归套件（/tmp/jjb-test，已易失丢失）、Cocos 页面驱动技术、Cocos 2.4 坑库（9 条学费）仅供考古——
+> `assets/` XP 工程已冻结只读（AGENTS.md 红线 1），正常开发不会再碰 Cocos 侧。
 
 ## 回归套件（全部要求 console errors=0）
 

@@ -3,7 +3,7 @@
 // 阶段 2：Vite SSR 加载 jjbSession.ts，注入 window shim，调 startSession 9 次，
 //         读 window.__jjbDebug.select 断言：池=槽恒等式 / 9 格契约 / status=2 / map=3。
 // 设计：零额外依赖（vite 已装；esbuild 走 vite 内部）。React DOM smoke 由 e2e/ui-smoke.mjs 覆盖；
-// Cocos 全量回归仍以 jjb-verify 的四套 Playwright 为准，本门保持 CI 友好的纯逻辑断言。
+// 本门保持 CI 友好的纯逻辑断言（Cocos 侧已冻结，其历史回归套件见 docs/archive/skill-jjb-verify-cocos.md）。
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';

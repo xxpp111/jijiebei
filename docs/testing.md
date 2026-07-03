@@ -273,6 +273,14 @@ steps:
 6. **secret 不落**：e2e 用例里 hardcoded 的是 verify-all.sh 造的测试账号（`host@jjb.test` / `Viewer123456!` 等），**生产账号不进 e2e**。
 7. **Vite SSR 模式**：纯逻辑 e2e 用 `createServer({ appType: 'custom', ssr: { noExternal: true, target: 'node' } })`，避免 React 渲染开销。
 
+### 断言纪律（Cocos 时代事故教训，普适部分固化于此；原 jjb-verify skill 已归档）
+
+8. **期望值从实测推导，禁 magic number**：几何/数值期望从运行态实测（DOM 包围盒、`__jjbDebug` 派生值）推导，不许按坏实现反推常量写死（事故：-360 就是按坏实现反推的）。
+9. **禁断自报常量**：断言的字段必须是实测派生值，不许断「代码里写死的 true」——断言自报常量等于没测。
+10. **硬断言，不许只看 HTTP 200 / 无 error**：每条 flow 必有 `__jjbDebug` 或 DOM count 硬断言；截图存 `/tmp/jjb-flow-<name>.png` 且关键态目检；落库类必 curl 后端基线对比 Δ（matches/scores/rankings），不只信前端 console。
+11. **可见性通检**：字符串非空 ⇒ 对应元素可见且宽 > 0；OBS 屏类多视口（1280/1600/800 宽）覆盖。
+12. **副作用逻辑做同帧重入防御**：真实点击可能 touch+mouse 双触发（同帧两次回调），测试单发 emit 复现不了——写副作用类交互时按幽灵控制条修复的范式防重入。
+
 ---
 
 ## 8. 故障排查速查

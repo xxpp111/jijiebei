@@ -54,7 +54,7 @@ jijiebei/
 ├── AGENTS.md                    ← ★集中红线清单（人与 AI 共读，改代码前先看）
 ├── projectplan.md               ← 决策史 / 迭代记录（append-only 只读引用）
 ├── mode-rules-truth-table.md    ← 9 单打 + 4 双打赛制真相表（单一真相源）
-├── docs/                        ← 开发者文档（architecture / testing / deployment / operations 四大件 + codec-schema 等）
+├── docs/                        ← 开发者文档（索引见 docs/README.md；archive/ 放历史快照，只增不改）
 ├── web/                         ← React + Vite 前端（主战场）
 │   ├── src/
 │   │   ├── screens/             ← 11 个屏组件（home/select/battle/result/obs/ladder/login/register/eventrules/bpconfig/code）
@@ -75,8 +75,7 @@ jijiebei/
 │   ├── scripts/check-migrations.mjs ← 部署前迁移核对（只更新 web 前必跑）
 │   └── verify-all.sh            ← 后端全链路验证脚本（隔离造数据）
 ├── assets/ + Cocos 脚手架       ← ★XP 化石层（只读，见 §1.5 与 assets/README.md）
-├── design/v4-r2/                ← 当前 live 设计基座（只读红线，6 主题 token）
-└── knowledge-base/              ← 飞书 wiki 维护素材（历史，待归档）
+└── design/v4-r2/                ← 当前 live 设计基座（只读红线，6 主题 token）
 ```
 
 ---
@@ -168,13 +167,15 @@ cd backend
 
 ## 6. 相关 skill（harness 视角）
 
+仓内 skill 在 `.claude/skills/`（R2 起入库进 git）：
+
 | skill | 何时用 |
 |---|---|
 | `jjb-knowledge-base` | 维护飞书 wiki（沙盒先行 + design token 同步） |
 | `jjb-run-broadcast` | 本地起服务 / 主播采集 / 公网测试 |
 | `jjb-deploy` | 部署到 devbox / 排查 8080 不可达 / 换机器重建 |
-| `jjb-verify` | 改 jjbDesign 写断言 / 做截图验证 |
+| `jjb-e2e-flows` | 跑/加 AI-E2E flow（清单与纪律见 docs/testing.md §3/§7） |
 | `jjb-dev-loop` | 推进新设计轮 / 派发工程 round / 写派发契约 |
-| `jjb-public-deploy-policy` | 公网暴露方案选型（CF Pages 优先） |
-| `jjb-platform-roadmap` | 6 phase 并行路线图 + 关键决策 |
-| `harness-pro` + `agent-dispatch` | 派发 spoke / 收口 gate / 多 phase 推进 |
+| `harness-pro-repo-adapter` | 本仓 harness round 的 runtime/reviewer 配置入口 |
+
+（`harness-pro` + `agent-dispatch` 为全局 skill，派发 spoke / 收口 gate 时用；已归档的 Cocos 验证手册见 `docs/archive/skill-jjb-verify-cocos.md`。）

@@ -504,7 +504,7 @@ export function exposeBattleDebug(): void {
   }
 }
 
-/** OBS 横条 debug 同形透出（jjb-verify obsbar 回归读 __jjbDebug.obsbar；screen 覆盖为 obsbar）。
+/** OBS 横条 debug 同形透出（e2e 回归读 __jjbDebug.obsbar；screen 覆盖为 obsbar）。
  *  须在 startRandomSession（内部写 screen=battle）之后调用，以覆盖 screen 为 obsbar。 */
 export function exposeObsbarDebug(rows: unknown[], wins: number, total: number): void {
   try {

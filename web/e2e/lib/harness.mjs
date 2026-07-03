@@ -12,7 +12,7 @@
 //   });
 //   done('login');
 //
-// 断言纪律（继承 jjb-verify）：不许只看 HTTP200/无 error；每条 flow 必有 __jjbDebug/DOM count 硬断言 + 截图；
+// 断言纪律（docs/testing.md §7）：不许只看 HTTP200/无 error；每条 flow 必有 __jjbDebug/DOM count 硬断言 + 截图；
 //   落库类 flow 必 curl 后端基线对比（matches/scores/rankings Δ），不只信前端 console。
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
