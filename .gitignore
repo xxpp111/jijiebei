@@ -61,7 +61,8 @@ Thumbs.db
 #//////////////////////////
 
 /.harness-pro*
-/.claude/
+/.claude/*
+!/.claude/skills/
 /.codex/
 /.githooks/
 /config/
@@ -112,3 +113,9 @@ backend/pb_data.bak/
 
 # 海报设计过程稿（脚本+素材，不入代码仓；触发 check-no-debug 噪音的根因）
 design/poster-r1/
+
+# 设计轮过期输入产物不入仓（R2 架构夯地基：已 rm --cached，磁盘保留本机自用）
+design/v3/project/uploads/
+design/v4/input/
+design/v4-input/
+design/v4-input-r2/

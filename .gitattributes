@@ -1,0 +1,6 @@
+# 化石层标注（R2 架构夯地基）：GitHub linguist 统计/diff 折叠层面把 XP 只读层排除，
+# 代码搜索工具与 AI agent 也能读到「这是 vendored/generated 不是活代码」的信号。
+# 只是元数据标注，零行为影响；内容红线见 AGENTS.md 第 1/2 条。
+assets/** linguist-vendored
+creator.d.ts linguist-generated
+web/src/logic/legacy/** linguist-vendored

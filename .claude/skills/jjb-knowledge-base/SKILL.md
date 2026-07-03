@@ -25,7 +25,7 @@ description: 集结杯飞书知识库的维护规范与配方——定位口径/
 ## 五条规范（写 / 改任何篇都守）
 1. **定位锚点（全库统一）**：每篇显著处必带——「集结杯 = 《星际2》合作任务『单刷 / 双打挑战赛』；本软件 = 按比赛规则随机生成『突变因子(Mutator)组合』的工具，记分 / 展示只是外壳」。不要退回「抽签 / 记分前端」。
 2. **配色（全库画板统一调色板）**：主色 深`#1F2D3D` / 中`#3E5871` / 浅`#DCE4ED`；accent 金棕`#B8893A`（只标题分隔线 + 唯一最高优先元素）；中性底`#F7F8FA` / 描边`#C9D1DA`；文字`#2B2B2B`；警示(唯一)`#C0563B`。四原则：三色封顶 / 层级靠明度不靠色相 / 金色只强调 / 留白优先。
-3. **画板 = Codex Visualizer SVG**：走 lark-whiteboard `routes/svg.md`（Codex / GLM 身份 → SVG），在 lark-doc 里用 `<whiteboard>` 嵌；`--check` 0 error；写后 `whiteboard +query --output_as raw` 查 node_count>0。复杂图**隔离 SubAgent**（hub 媒体禁用看不了图，子 agent 能目检自己的渲染 PNG）。
+3. **画板 = Claude Visualizer SVG**：走 lark-whiteboard `routes/svg.md`（Claude / GLM 身份 → SVG），在 lark-doc 里用 `<whiteboard>` 嵌；`--check` 0 error；写后 `whiteboard +query --output_as raw` 查 node_count>0。复杂图**隔离 SubAgent**（hub 媒体禁用看不了图，子 agent 能目检自己的渲染 PNG）。
 4. **准确性**：真相源 = 仓内 `mode-rules-truth-table.md` + jijie2 源码；**不编**，拿不准的进「开放问题」篇。
 5. **公众笔法**：术语首现加白话括注，纯代码符号收进「开发者备注」小节；草稿标「沙盒草稿待校对」。
 

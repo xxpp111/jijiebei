@@ -33,8 +33,8 @@ For a first offline smoke, add `--stub-mode` to `review`. That proves wiring and
 | `config/harness-pro-reviewers.json` | Reviewer config and verify checks. |
 | `config/eval-models.json` | Model aliases and API settings. |
 | `config/harness-pro-adapter.json` | Adapter metadata and runtime root. |
-| `scripts/harness-enforcement.mjs` | Codex hook wrapper. |
-| `.Codex/settings.json` | Codex hook config. |
+| `scripts/harness-enforcement.mjs` | Claude Code hook wrapper. |
+| `.claude/settings.json` | Claude Code hook config. |
 | `.githooks/pre-commit` | Git pre-commit guard for Codex/CI. |
 
 ## Verify checks
@@ -85,7 +85,7 @@ npx harness-pro guard --check pre-commit --repo-root .
 npx harness-pro doctor --runtime-dir .harness-pro
 ```
 
-Codex uses `.Codex/settings.json` hooks. Codex/CI should enable `.githooks/pre-commit`:
+Claude Code uses `.claude/settings.json` hooks. Codex/CI should enable `.githooks/pre-commit`:
 
 ```bash
 sh scripts/install-harness-git-hooks.sh
