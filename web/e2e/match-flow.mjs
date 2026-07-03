@@ -11,6 +11,8 @@ const m0 = before.totalItems;
 
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1360, height: 820 } });
+// 拦掉 Google Fonts CDN（同 ui-smoke R4 范式）：外网慢/挂起会拖 networkidle 或以 ERR_TIMED_OUT 进 console。
+await p.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
 p.on('dialog', async (d) => {
   const msg = d.message();
   if (msg.includes('账号')) await d.accept('host@jjb.test');

@@ -82,6 +82,8 @@ async function main() {
     await waitForServer(preview);
     browser = await chromium.launch({ channel: 'chrome' });
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    // 拦掉 Google Fonts CDN（同 ui-smoke R4 范式）：外网慢/挂起会让 networkidle 永不静默或 ERR_TIMED_OUT 进 console。
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
 
     // ① D12：login 屏记住我默认勾选
     await page.goto(`${baseUrl}/?style=sc2-dark&screen=login`, { waitUntil: 'networkidle' });

@@ -105,6 +105,9 @@ async function main() {
     await waitForServer(preview);
     browser = await chromium.launch({ channel: 'chrome' });
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    // 拦掉 Google Fonts CDN（同 ui-smoke/harness.mjs R4 范式）：外网慢时字体请求 ERR_TIMED_OUT 会进
+    // console error 收集器打红 errors=0 门；字体非断言对象，abort 走系统字体零影响。
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     // 绕登录门（同 ui-smoke task #54 范式）：注入 player auth，否则 ?screen=select/battle 被 App 守卫踢回 home。
     await page.addInitScript(() => {
       try {
@@ -122,6 +125,8 @@ async function main() {
       if ((msg.location?.()?.url || '').includes('/api')) return;
       // 同理放行落库告警：e2e 注入假 auth，结算落库对真/假后端都可能 4xx；前端 catch 兜底不阻断结算
       if (msg.text().includes('落库失败（不阻断结算）')) return;
+      // 放行被 route abort 的 Google Fonts 请求错误（上方主动拦截，非页面缺陷）
+      if (/fonts\.(googleapis|gstatic)\.com/.test(msg.location?.()?.url || '')) return;
       messages.push(`[${msg.type()}] ${msg.text()}`);
     });
     page.on('pageerror', (err) => messages.push(`[pageerror] ${err.message}`));
