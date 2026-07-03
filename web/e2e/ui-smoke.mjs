@@ -76,6 +76,12 @@ async function main() {
     await waitForServer(preview);
     browser = await chromium.launch({ channel: 'chrome' });
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    // 拦掉 Google Fonts CDN：外网慢/挂起会让 networkidle 永不静默（本机复现 30s 超时）。
+    // 字体非断言对象，abort 后走系统字体，DOM/__jjbDebug 断言零影响。
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    // mock 静默续期成功：preview 无后端时 pbRefresh 收到 500 会 clearAuth（backend.ts 不区分网络失败与 401），
+    // 注入的假登录态会被拆、守卫把耗时长的双打段踢回 home。mock 200 贴合本 smoke 的「已登录」前提。
+    await page.route(/auth-refresh/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'e2e', record: {} }) }));
     // 绕登录门（HomeScreen 门 + App 守卫，task #54）：注入 player auth，否则 ?screen=select 被守卫挡回 home。
     await page.addInitScript(() => {
       try {
@@ -87,6 +93,8 @@ async function main() {
       if (msg.type() === 'error' || msg.type() === 'warning') {
         // 放行后端可选的 /api resource error（展示屏 obs/ladder fetch /api，P5 未跑时失败，前端有 catch 兜底；前端 e2e 不应因后端缺席而 FAIL）
         if ((msg.location?.()?.url || '').includes('/api')) return;
+        // 放行被 route abort 的 Google Fonts 请求错误（上方主动拦截，非页面缺陷）
+        if (/fonts\.(googleapis|gstatic)\.com/.test(msg.location?.()?.url || '')) return;
         messages.push(`[${msg.type()}] ${msg.text()}`);
       }
     });

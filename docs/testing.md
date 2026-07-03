@@ -288,7 +288,7 @@ steps:
 | 现象 | 排查 |
 |---|---|
 | `dist/index.html missing` | 跑 `npm run build` |
-| `__jjbDebug.select 未透出` | JijieData 初始化异常；看 console + `?screen=phase0` 跑 startSession |
+| `__jjbDebug.select 未透出` | JijieData 初始化异常；跑 `node e2e/run.mjs` 看具体 mode 的 console（SSR 直调 startSession 复现） |
 | `verify-all.sh` `503 connection refused` | PB 没起 / 端口不对 |
 | `match-flow.mjs` 卡 login | host 账号未造；先跑 verify-all.sh |
 | `r6-doubles-downstream.mjs` 截图空 | Playwright 浏览器未装（首次需 `npx playwright install chromium`） |

@@ -4,6 +4,13 @@
 import { withPreview, expect, done, shot } from '../lib/harness.mjs';
 
 await withPreview(async (page, { baseUrl }) => {
+  // 绕登录门（#54 home 门 + App 守卫）：注入 player auth；并 mock 静默续期成功——
+  // preview 无后端时 pbRefresh 收到 500 会 clearAuth 拆掉假登录态（与 ui-smoke 同款处理）。
+  await page.addInitScript(() => {
+    try { localStorage.setItem('jjb_auth', JSON.stringify({ token: 'e2e', account: { id: 'e2e-player', kind: 'player', nickname: 'e2e' } })); } catch { /* noop */ }
+  });
+  await page.route(/auth-refresh/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'e2e', record: {} }) }));
+
   // 6 号位 官突双打 → facPool=9 抽 CSV 真表
   await page.goto(`${baseUrl}/?screen=home&style=sc2&mode=dark`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(700);

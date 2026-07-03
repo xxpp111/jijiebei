@@ -196,8 +196,6 @@ export interface DoublesConfig {
   matches: number;
   cmdsPerMatch: number;
   extraFactors: number;
-  mutators: string[];        // legacy compat（真引擎恒空，请用 matchMutators）
-  maps: string[];            // legacy compat（真引擎恒空，请用 matchMaps）
   matchMutators: string[][]; // 每场锁定因子（官突=CSV 条目因子 / 非酋=混乱工作室 / std15=空）
   matchMutatorNames: string[]; // 每场官突名（官突=CSV name字段 / 非酋='非酋' / std15='15因子'）
   matchMaps: string[];       // 每场地图
@@ -259,8 +257,6 @@ function debugSnapshot(): DoublesState {
       matches: MATCHES,
       cmdsPerMatch: CMDS_PER_MATCH,
       extraFactors: spec().extraFactors,
-      mutators: [],
-      maps: [],
       matchMutators: _mutEntries.map((e) => e?.factors?.slice() ?? []),
       matchMutatorNames: _mutEntries.map((e) => e?.name ?? ''),
       matchMaps: _mutEntries.map((e) => e?.map ?? ''),

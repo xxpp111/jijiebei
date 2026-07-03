@@ -77,6 +77,8 @@ export async function withPreview(fn, opts = {}) {
     await waitForServer(preview, port);
     browser = await chromium.launch({ channel: 'chrome' });
     const page = await browser.newPage({ viewport: opts.viewport || { width: 1320, height: 800 } });
+    // 拦掉 Google Fonts CDN：外网慢/挂起会让 networkidle 永不静默；字体非断言对象，abort 零影响。
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     const errors = [];
     page.on('console', (m) => { if (m.type() === 'error' && !((m.location?.()?.url || '').includes('/api'))) errors.push(m.text()); });
     page.on('pageerror', (e) => errors.push(e.message));

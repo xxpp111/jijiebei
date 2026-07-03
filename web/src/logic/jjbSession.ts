@@ -85,8 +85,8 @@ function setModeFlags(mode: SessionMode): void {
   const d: any = JijieData;
   d.initStart();
   d.reset();
-  d.modeIsRandom = false; // Phase 0 默认手选契约（与 startManual 一致）
-  d.playerName = 'Phase0 选手';
+  d.modeIsRandom = false; // 段2 Phase 0 时代定下的默认手选契约（与 startManual 一致）
+  d.playerName = '集结杯选手'; // 未填选手名时的占位（与 jjbView.currentPlayerLabel 兜底一致）
   switch (mode) {
     case 'std8':
       d.modelFactorCount = 2; break;
@@ -286,6 +286,9 @@ function toSelectCore(): void {
 
   // 因子填充（第 247-264 行）
   if (d.modeIsLanzi) {
+    // ⚠️ 不可达分支：modeIsLanzi 全仓恒 false（startSession L417 与 legacy JijieData.clear 都只写 false，
+    // 无任何置 true 的入口）。保留原因 = 本函数与 XP 真身逐段对照的可审计性（AGENTS.md 红线：toSelectCore
+    // 结构不重排）；若未来上蓝字模式，入口在 home 加 setter 即可激活。
     // 蓝字模式（InitPanel.onClickLanzi；未上 home，预留）—— 第 247-253 行
     factorCount = 3;
     for (let i = 0; i < factorCount; i++) {
@@ -386,38 +389,6 @@ export function exposeSelectDebug(mode: SessionMode): void {
   } catch (e) {
     /* noop */
   }
-}
-
-/** 暴露 startSession 到 window.__jjb，供 e2e 与 Phase 0 调试调用。 */
-export function exposeStartSession(): void {
-  const w: any = window;
-  w.__jjb = w.__jjb || {};
-  w.__jjb.startSession = startSession;
-  w.__jjb.startRandomSession = startRandomSession;
-  w.__jjb.exposeSelectDebug = exposeSelectDebug;
-  w.__jjb.getSelectState = getSelectState;
-  w.__jjb.randomFillSelection = randomFillSelection;
-  w.__jjb.randomFillAndStart = randomFillAndStart;
-  w.__jjb.jjbLive = jjbLive;
-  w.__jjb.setRandomEnemyEnabled = setRandomEnemyEnabled; // 随机敌方 e2e 钩子
-  w.__jjb.getEnemyRoll = getEnemyRoll;
-  w.__jjb.aiEnemyPool = AI_ENEMY_POOL;
-  // BP 规则钩子（P1b bp-rules e2e 用：规则态 + ban + 自选 + 校验）
-  w.__jjb.setRuleMode = setRuleMode;
-  w.__jjb.getRuleMode = getRuleMode;
-  w.__jjb.toggleBanFactor = toggleBanFactor;
-  w.__jjb.getBanFor = getBanFor;
-  w.__jjb.getBpState = getBpState;
-  w.__jjb.setSelectedCmd = setSelectedCmd;
-  w.__jjb.setSelectedFac = setSelectedFac;
-  w.__jjb.clearCmdSlot = clearCmdSlot;
-  w.__jjb.clearFacSlot = clearFacSlot;
-  w.__jjb.validate = validate;
-  w.__jjb.startFromSelection = startFromSelection;
-  w.__jjb.getBpExclusive = getBpExclusive;
-  // 重揉钩子（reroll e2e 用：限次 + 不重复 + 难度实时重算）
-  w.__jjb.rerollFactor = rerollFactor;
-  w.__jjb.getRerollState = getRerollState;
 }
 
 function fillSelectionSlots(d: any): void {
