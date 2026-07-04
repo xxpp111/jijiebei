@@ -95,6 +95,14 @@ describe('backend auth · 静默续期 pbRefresh', () => {
     expect(getToken()).toBeNull();
   });
 
+  it('5xx → 保留会话 + false（瞬时错误不误登出，回访选手不被后端抖动踢下线）', async () => {
+    g.fetch = okFetch({ id: 'p1', nickname: 'A' });
+    await pbAuthPlayer('138', 'pwd', true);
+    g.fetch = vi.fn(async () => ({ ok: false, status: 500 }));
+    expect(await pbRefresh()).toBe(false);
+    expect(getToken()).not.toBeNull(); // 会话保留，不被 5xx 误清
+  });
+
   it('200 → true + 续期新 token', async () => {
     g.fetch = okFetch({ id: 'p1', nickname: 'A' }, 'old');
     await pbAuthPlayer('138', 'pwd', true);

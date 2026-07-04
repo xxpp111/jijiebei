@@ -123,7 +123,8 @@ export async function registerPlayer(fields: { nickname: string; phone: string; 
 }
 
 /**
- * 启动静默续期：用当前 token 调 PB authRefresh，成功更新内存态+持久化、返 true；401/失败 clearAuth、返 false。
+ * 启动静默续期：用当前 token 调 PB authRefresh，成功更新内存态+持久化、返 true。
+ * 仅 401/403（凭证失效）clearAuth、返 false；5xx/429 等瞬时错误保留会话、返 false（不误踢回访选手）。
  * App mount 调一次（记忆我场景：关标签再开仍登录）。token 缺失直接返 false（不抛错）。
  * kind 区分刷新路径：host→accounts refresh、player→player_accounts refresh。
  */
@@ -133,7 +134,8 @@ export async function pbRefresh(): Promise<boolean> {
   const r = await fetch(`${API}/collections/${col}/auth-refresh`, {
     method: 'POST', headers: { Authorization: authToken },
   });
-  if (!r.ok) { clearAuth(); return false; } // 401/失效 → 清登录态
+  // 仅凭证失效（401/403）才登出；5xx/429 等瞬时错误保留会话，回访选手不被后端抖动误踢下线
+  if (!r.ok) { if (r.status === 401 || r.status === 403) clearAuth(); return false; }
   const d = await r.json();
   authToken = d.token; // 续期后的新 token（PB auth-refresh 返新 token + record）
   persistAuth();
