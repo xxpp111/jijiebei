@@ -11,8 +11,9 @@
     "preview": "vite preview --port 7788",
     "test:unit": "vitest run",
     "test:drift": "node scripts/drift-check.mjs",
+    "test:docs-drift": "node scripts/docs-drift-check.mjs",
     "test:back": "cd ../backend && go test ./...",
-    "test": "npm run test:unit && npm run test:drift && npm run test:back"
+    "test": "npm run test:unit && npm run test:drift && npm run test:docs-drift && npm run test:back"
   },
   "dependencies": {
     "@zumer/snapdom": "^2.12.9",

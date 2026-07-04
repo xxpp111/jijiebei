@@ -90,7 +90,8 @@ flowchart LR
 
 | 模块 | 职责 | 关键导出 |
 |---|---|---|
-| `jjbSession.ts` | 单打状态机 + 9 模式开局 + BP + 难度分 | `startSession / getSelectState / validate / startFromSelection / getSessionMatches / factorScore / difficultyTotal` |
+| `jjbSession.ts` | 纯 re-export barrel（R5 拆分后的兼容层，38 行零逻辑；单打状态机真身在 `session/`） | 45 个公开导出原样透传：`startSession / getSelectState / getSessionMatches / difficultyTotal / …` |
+| `session/`（六文件） | 单打状态机 + 9 模式开局 + 难度分（R5 由 993 行 god-module 拆出）：`sessionConfig`（glob 数据引导 + querySessionMode）/ `sessionEngine`（startSession + toStartCore/toSelectCore XP 逐字复刻）/ `sessionRuntime`（判定写入 + 点金/规则态/BP/reroll runtime）/ `sessionSelection`（select 透出 + 手选写回 + 校验）/ `sessionScoring`（难度总分 + 结算记分）/ `sessionDebug`（`__jjbDebug` 透出器） | 全部经 `jjbSession.ts` barrel 消费，消费方 import 点零改 |
 | `jjbDoubles.ts` | 双打引擎 — per-variant 配置化（`VARIANT_SPECS`：guantu/feiqiu/std15/cm 四种 variant，各自定义 extraFactors/factorPoolSize/cmdACount/cmdBCount；自管 selection + winLose） | `doublesStart(variant) / getDoublesState / setDoublesCmd / setDoublesFac / setDoublesVerdict / randomFillDoubles / doublesScore` |
 | `codec.ts` | 整局 → 自包含短码（schema v1 冻结） | `encodePayload / decodePayload` + 三道闸（version / pool / invalid） |
 | `backend.ts` | PocketBase API 客户端（双登录 / 注册 / match / rankings） | `pbAuthPlayer / pbAuthHost / registerPlayer / getAccount / pbRefresh / postMatch / getPlayerByCode / getRankings` |

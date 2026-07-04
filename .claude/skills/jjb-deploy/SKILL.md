@@ -45,7 +45,7 @@ ssh devbox-tianlang 'docker pull nginx:1.27-alpine'   # 经 dockerd proxy 直连
 ssh devbox-tianlang 'set -e
 cd ~ && rm -rf jijiebei-deploy
 git clone https://github.com/xxpp111/jijiebei jijiebei-deploy
-cd jijiebei-deploy && git checkout jjb-live-dock
+cd jijiebei-deploy && git checkout jjb-platform
 echo "HEAD=$(git rev-parse --short HEAD)"   # 记录基线；应为 origin 已 push 的稳定 commit
 cd web && npm ci && npm run build
 test -f dist/index.html && echo "build ok ($(du -sh dist|cut -f1))"'
@@ -79,8 +79,8 @@ dist 是只读挂载，**rebuild 后重启容器即生效**，无需重建容器
 ssh devbox-tianlang 'set -e
 export http_proxy=http://sys-proxy-rd-relay.byted.org:8118 https_proxy=http://sys-proxy-rd-relay.byted.org:8118 no_proxy=.byted.org,localhost,127.0.0.1
 cd ~/jijiebei-deploy
-git fetch origin jjb-live-dock
-git reset --hard origin/jjb-live-dock
+git fetch origin jjb-platform
+git reset --hard origin/jjb-platform
 H=$(git rev-parse --short HEAD); echo "HEAD=$H"
 [ "$H" = "<期望commit>" ] || { echo "FETCH-FAILED 仍非目标 commit，中止"; exit 1; }
 cd web && npm run build && docker restart jijiebei-nginx'

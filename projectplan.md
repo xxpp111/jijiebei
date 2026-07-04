@@ -2804,3 +2804,50 @@ real-browser 探针确认 select/battle ScreenShell(bg×3 层)+TopBar(meta-row)+
 - tsc=0 / build OK / run.mjs 11 模式 PASS / practice-post PASS / auth.flow PASS / login.flow PASS / login-gate.flow PASS
 - ui-smoke / r6 / match-flow：本 worktree 环境因登录门（未登录 select 被踢 home）+ Chrome channel 卡 random-fill locator → baseline 同样 timeout，非本改动回归（已 stash 还原对照确认）。
 - 未 commit（隔离 worktree，hub 终验合并）。环境补：worktree npm install + copy backend/pocketbase 二进制 + playwright 1.56.0。
+
+
+---
+
+## 架构夯地基 R1–R5（2026-07-03 ~ 07-04 · AI 可接手性 · 决策史补章）
+
+> **补章缘起**：本章为事后（2026-07-05 R8 批次）补记——R1–R5 七个 commit 落地时决策史断更，违反本文件自家 APPEND-ONLY 守则。2026-07-05 多 agent 全景调研做「新维护者冷启动模拟」，坐实注释文化虽好但**导航/红线/单一真相源层在腐烂**，新人（人或 AI）冷启动即踩坑；R1–R5 即针对性夯地基批次。本章据 `git log`/`git show` 亲取七个 commit（`65019b2`/`7f4575c`/`7b70779`/`591722e`+`2f2ebf3`/`7a04e9d`/`36a21a1`），供后来者考古「为什么这么改」。主体零行为改动（文档/仓库卫生/死代码/拆分），夹带两处线上健壮性修复（pbRefresh / e2e 护栏）。
+
+### R1 — 导航与红线层（`65019b2`，07-03 18:40）
+- **动机**：README 目录树漏一半真实目录、fresh clone 按 README 跑不起来、红线散在 CSS 注释与维护者个人记忆里、repo 内无集中声明。
+- **改动面**：新建 `AGENTS.md`（全仓红线唯一集中声明，16 条分四类）+ `assets/README.md`（XP 化石层路标）+ `web/src/data/jjdata/README.md`（运行期副本路标）；README 新增 §1.5 三层演化史 + 目录地图重画 + 修两处断链；`backend/verify-all.sh` 硬编码绝对路径改 dirname、5→7 集合；`backend/README.md` 5→7 集合表。（6 文件，+113/−61）
+- **验证**：文档/路标为主 + 2 行脚本修，零行为改动。
+
+### R2 — 仓库卫生（`7f4575c`，07-03 18:46）
+- **动机**：38MB 过期设计产物仍被 git 跟踪（v3 uploads 17MB + v4 三份重复输入截图 21MB，字节亲验相同）；`.agents/skills/` 五份系双份/坏版本（批量替换事故把 Claude 全错换成 Codex）。
+- **改动面**：git 解除跟踪 5 处过期设计产物（磁盘保留）+ 删 poster-r1；`.agents/` 目录删除，以 `.claude/skills/` 磁盘正确版为准；`.gitignore` 改负向排除 `/.claude/*` + `!/.claude/skills/`（消除「整目录 ignore 但 4 个 SKILL tracked」矛盾）；新建 `.gitattributes` 标化石层 linguist-vendored。（106 文件，+66/−2341）
+- **验证**：全 git 跟踪层操作，磁盘文件保留、零行为改动。
+
+### R3 — 文档合并 · 单一真相源收敛（`7b70779`，07-03 19:04）
+- **动机**：部署 runbook 三份、knowledge-base 七份、测试清单三份并存——多副本必漂（实证：三份 e2e 清单已漂，缺 auth/login-gate 两行）。
+- **改动面**：部署 4→1（`docs/deployment.md` 成唯一真相源，余归档 `docs/archive/`）；KB 7→0（归档 `docs/archive/kb-2026-06/`，飞书 wiki 是 KB 真身）；测试清单 3→1（`docs/testing.md` §3 唯一真相源，e2e README 缩为指针，jjb-verify skill 归档、断言纪律并入 testing.md §7）；导航正名（`docs/README.md`→`rules-config.md`，SYSTEM-MAPS 三图归档）；`projectplan.md` 顶部加 APPEND-ONLY 守则 + 时代目录（正文一字未动）。（31 文件）
+- **验证**：`tsc --noEmit` 0（4 处代码注释改动无行为影响）；被搬路径活引用断链扫描 0 残留。零行为改动。
+
+### R4 — 死代码清理 + e2e 护栏两处环境债（`591722e`，07-03 19:32）
+- **动机**：Phase0/foundation 两调试屏职责已被 run.mjs SSR + 三活屏取代；`window.__jjb` 钩子零消费；两处 e2e 环境债（基线亦红，非本轮引入）。
+- **改动面**：删 Phase0Screen + foundation（−110 行）+ `window.__jjb` 整套（`__jjbDebug` 活契约不动）+ DoublesConfig 恒空 legacy compat 字段；`modeIsLanzi` 保留 + 补「不可达」注释（与 XP 真身逐段对照的可审计性红线）。护栏修：Google Fonts CDN 拦截（networkidle 永不静默→ui-smoke 30s 超时）+ 无后端时 pbRefresh 收 500 误 clearAuth 的 e2e mock。**偏离蓝图一项**：`getMutatorHitCount` 原拍板删，亲验发现 event-ban.mjs/vitest 正消费（时空立场/力场 CSV 对账探针）→ 保留。
+- **验证**：12 门全绿（tsc/build/run.mjs 9 模式恒等式+双打/codec 9+4 往返/applysnapshot/bp-rules/reroll/event-ban/vitest 74/ui-smoke/r6/doubles-match.flow）。
+
+### R4 补 — e2e 字体拦截补齐漏网三脚本（`2f2ebf3`，07-03 20:44）
+- **动机**：R4 只给 ui-smoke/harness.mjs/doubles-match.flow 加了字体拦截，r6-doubles-downstream/match-flow/register-privacy 三个独立起浏览器脚本漏网 → R5 round Phase 2 formal verify 在 r6 反复 BLOCKED（字体 ERR_TIMED_OUT 进 console error 收集器打红 errors=0 门），非拆分改动引入。
+- **改动面**：三脚本 newPage 后统一加 route abort `fonts.(googleapis|gstatic).com` + r6 console 过滤放行主动 abort 的字体请求错误。（3 文件，+9）
+- **验证**：r6 + register-privacy 在 R5 半成品工作区真跑 PASS，match-flow `node --check` 过（联调类需 PB 环境，改动仅纯增 route 行）。
+
+### pbRefresh 健壮性 — 只对 401/403 登出（`7a04e9d`，07-04 13:01）
+- **动机**：原 pbRefresh 对任何非 2xx 都 clearAuth，后端偶发 5xx/502/429 时用「记住我」的回访选手在 App mount 静默续期那刻会被误登出（可重登恢复、不丢数据，但直播 tunnel 高并发下 5xx 不罕见，体验受损）。
+- **改动面**：收窄登出条件为仅 401/403（凭证真失效）clearAuth；5xx/429 等瞬时错误保留会话返 false（本轮不续期，下次 mount 再试）；纯网络失败（fetch throw）本就在 clearAuth 前抛出、天然保留会话，行为不变。补正向单测（5xx→getToken() 非 null）。（`backend.ts` + `backend.test.ts`，+12/−2）
+- **验证**：vitest 75 passed（backend.test.ts 12→13）、tsc 0、build 0。
+
+### R5 — jjbSession god module 拆 6 文件 + barrel（`36a21a1`，07-04 13:33）
+- **动机**：`web/src/logic/jjbSession.ts` 993 行 god module，职责混杂难维护。
+- **改动面**：按职责拆到 `web/src/logic/session/` 下 6 文件（sessionConfig 数据引导 / sessionEngine XP 逐字复刻开局 / sessionRuntime 旧接缝+点金+BP+reroll / sessionSelection 选择透出与写回 / sessionScoring 难度分与结算 / sessionDebug `__jjbDebug` 透出），原文件降级为纯 barrel 只 re-export。（7 文件，+1056/−993）
+- **验证**：多 agent 对抗审查 workflow（9 agent 独立取证）全绿——toStartCore/toSelectCore 搬前搬后 sha256 字节一致（ba436c55…）、barrel 无可执行逻辑、9 消费方 import 零改、HEAD 版 45 公开导出经 barrel 全命中零遗漏、e2e 10/10 绿、tsc/build 0、4 视角审查（跨文件状态共享/初始化时序·glob/导出与 `__jjbDebug` 形状/语义漂移）0 confirmed finding。零行为改动。
+
+### push 现状与 R6/R7（截至本补章撰写 · 2026-07-05）
+- **push 状态（git 实证，非估计）**：R1–R4（`65019b2`/`7f4575c`/`7b70779`/`591722e`）+ R4 补字体拦截（`2f2ebf3`）**已在 `origin/jjb-platform`**；`7a04e9d`（pbRefresh）+ `36a21a1`（R5）为**本地 commit 未 push**（`jjb-platform` ahead `origin/jjb-platform` 2）。〔勘误说明：R5 commit body 自述「与 Group A + R1–R4 + pbRefresh 一起走后续统一部署」，实际 R1–R4+font 已先行 push、pbRefresh/R5 待首波 smoke 通过后再上第二波——本补章据 git 实测记录以正之，不改原 commit。〕
+- **架构夯地基 R6/R7**：未启动（本地无对应 commit / 分支）。〔勿与 e2e 脚本 `r6-doubles-downstream.mjs` 的历史「双打 R6」混淆，二者无关。〕R8「AI 可接手性」批次（本补章 + jjb-deploy skill 分支修正 + docs drift-check 护栏 + backend/pb_data 入库核查）见下一章。
+- **旧分支说明**：`jjb-live-dock`（origin/local 均停在 `ed161d6` 2026-06-20）是 `jjb-platform` 的严格祖先（platform 领先 81 commit、live-dock 0 独占 commit），系已被 platform 取代的过时残留、非活跃发布分支——部署取码一律以 `jjb-platform` 为准（R8 已据此修正 jjb-deploy skill）。

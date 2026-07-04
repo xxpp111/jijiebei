@@ -59,7 +59,8 @@ jijiebei/
 │   ├── src/
 │   │   ├── screens/             ← 11 个屏组件（home/select/battle/result/obs/ladder/login/register/eventrules/bpconfig/code）
 │   │   ├── components/          ← 共享 UI 组件（BrandLockup/MatchRow/FactorFrame/...）
-│   │   ├── logic/               ← 核心逻辑（jjbSession 单打状态机 / jjbDoubles 双打引擎 / jjbView 分流门面 / codec 编解码 / backend API 客户端）
+│   │   ├── logic/               ← 核心逻辑（jjbSession 纯 barrel / jjbDoubles 双打引擎 / jjbView 分流门面 / codec 编解码 / backend API 客户端）
+│   │   ├── logic/session/       ← 单打状态机六文件（sessionConfig/Engine/Runtime/Selection/Scoring/Debug，R5 拆分，经 jjbSession barrel 消费）
 │   │   ├── logic/legacy/        ← ★XP verbatim 复刻引擎（只调用不改，见 §1.5）
 │   │   ├── data/jjdata/         ← 赛制配置运行期副本（原件在 assets/resources/jjdata/，两处须一致）
 │   │   ├── lib/                 ← 工具（capture/snapDOM 截图 / dragdrop / designAssets）

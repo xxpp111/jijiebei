@@ -385,7 +385,7 @@ curl -s http://127.0.0.1:8090/api/health
    `backend/deploy/litestream.yml` 是模板，endpoint / bucket / path 占位待 yb 拍板实际对象存储（国内 OSS / MinIO / COS S3 兼容）。**密钥走 env，不写文件**。
 
 3. **admin 前后端契约一致性**：
-   devbox 三层版本对齐（web 来自 `jjb-live-dock`、admin 来自本地 `jjb-platform` build、backend 独立二进制）— 留 P2 round 验证。
+   devbox 三层取码已统一到 `jjb-platform`（web + admin 同源 build，backend 独立二进制）— 契约对齐留 P2 round 验证。〔2026-07-05 R8 收口：原文曾记「web 来自 `jjb-live-dock`」，该分支停在 `ed161d6`（2026-06-20）已是 `jjb-platform` 的过时祖先（platform 领先 81 commit），部署取码一律以 `jjb-platform` 为准，`.claude/skills/jjb-deploy` 已同步修正。〕
 
 4. **系数表定稿**：
    `backend/config/scoring.json` 取最简纯累加。真实系数（点金 ×2 / 连胜 / 双打 / 赛季周期）须 yb/土豆拍板，改 JSON 重启即生效，**不动 schema**。天梯上线前必须定稿系数。
