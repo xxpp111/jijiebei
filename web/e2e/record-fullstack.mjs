@@ -14,9 +14,10 @@
 //     → 断言真 isopb：matches 有该局(mode=practice, players 指向 pa-<accId> 真 player) + scores 无派生。
 //   P2 match 主播路径：superuser 建 host 账号 → 前端真 UI 主播 tab 登录 → home 比赛 tab → 开 std8
 //     → 判定 → 自动 POST → 断言真 isopb：matches 有该局(mode=match, host=host.id) + scores 有派生（进天梯）。
-//   P3 doubles 双打路径：复用 host 比赛态 → 双打 select 随机填指挥官池 → 开局 → 判定 → 自动 POST
+//   P3 doubles 双打路径：复用 host 比赛态 → HomeScreen 采两名（选手A/B）→ 点双打格 → select 随机填 → 开局 → 判定 → 自动 POST
 //     → 断言真 isopb：matches 有 doubles 局(game_mode=doubles, result/score_total 走 currentMatches/currentScore 双打分流真值)
-//       + scores board=double 派生。= #94 事故靶心（落库读错引擎的双打分支）在"前端真UI→真isopb"链路上的真机坐实，
+//       + #84：players = 两个 distinct 真实 player id（各 ensurePlayer，非单占位「双打战队」）+ scores 两条（两名各一条，各 wins=2）。
+//       = #94 双打分流事故靶心 + #84 两名归属修复在"前端真UI→真isopb"链路上的真机坐实，
 //       补 P1/P2 只覆盖 std8 单打的缺口（doublesLive 分支此前从未穿过真后端）。
 //
 // 红线：只往隔离 isopb 临时 dir 写；绝不碰 backend/pb_data 或 10.37.220.128。前端登录用脚本自建测试账号。
@@ -222,11 +223,25 @@ async function main() {
       }
     }
 
-    // ============ P3 · doubles 双打真机落库 端到端（#94 核心修复的双打分流：currentMatches→doubles 引擎 / currentScore）============
-    console.log('\n[P3] doubles 双打路径：复用 host 比赛态 → 双打 select 随机填 → 开局 → 判定 → 自动落库 → 真 isopb 断言');
-    // 复用 P2 host 登录态 + jjb_rule_mode=match（双打比赛局才派生 scores）。双打需走 select 自选区随机填满，不能 battle 直连。
-    await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=dark&sessionMode=doubles&cb=${Date.now()}`, { waitUntil: 'networkidle', timeout: 45000 });
+    // ============ P3 · doubles 双打真机落库 端到端（#94 双打分流 + #84 两名真选手各记分）============
+    console.log('\n[P3] doubles 双打路径：复用 host 比赛态 → HomeScreen 采两名 → 点双打格 → select 随机填 → 开局 → 判定 → 自动落库 → 真 isopb 断言');
+    // 复用 P2 host 登录态 + jjb_rule_mode=match（双打比赛局才派生 scores）。
+    // #84：从 HomeScreen 走真链路——填「选手A」+「选手B」两个输入框，点 doubles 模式格开局（start 内 setDoublesPlayers 写两名到 jjbDoubles 闭包）。
+    //   navigate 是 client-side（App.tsx setScreen，无 reload），jjbDoubles 模块闭包跨 home→select→battle 存活，两名不丢。
+    const P3_A = `双打甲${String(Date.now()).slice(-5)}`;
+    const P3_B = `双打乙${String(Date.now()).slice(-5)}`;
+    await page.goto(`${baseUrl}/?screen=home&style=sc2&mode=dark&cb=${Date.now()}`, { waitUntil: 'networkidle', timeout: 45000 });
+    await page.waitForSelector('[data-player-input]', { timeout: 15000 });
+    // 切比赛 tab（match 态才派生 scores）+ 填两名
+    await page.click('[data-home-tab="match"]').catch(() => {});
+    await page.fill('[data-player-input]', P3_A);
+    await page.fill('[data-player-input-b]', P3_B);
+    // 点 doubles 模式格（官突双打）→ start(doubles) → setDoublesPlayers(A,B) → onStart → navigate('select')
+    await page.click('[data-mode-btn="doubles"]');
     await page.waitForSelector('[data-doubles-select]', { timeout: 15000 });
+    // 两名已写进闭包（__jjbDebug.doubles.players）——select 屏「参赛战队」展示与落库同源
+    const p3Players = await page.evaluate(() => window.__jjbDebug?.doubles?.players || []);
+    expect(JSON.stringify(p3Players) === JSON.stringify([P3_A, P3_B]), `P3 #84 HomeScreen 采两名写入 jjbDoubles 闭包（__jjbDebug.doubles.players=${JSON.stringify(p3Players)} 期望 [${P3_A},${P3_B}]）`);
     await page.click('[data-doubles-random-fill-btn]');
     await page.waitForFunction(() => document.querySelectorAll('[data-doubles-cmd]').length === 6, { timeout: 10000 });
     await page.click('[data-doubles-start-btn]');
@@ -249,12 +264,22 @@ async function main() {
       expect(dblMatch.host === hostId, `P3 host=host.id ${hostId}（实际 ${dblMatch.host}）`);
       expect(JSON.stringify(dblMatch.result) === JSON.stringify([1, 2, 0]), `P3 result=[1,2,0]（win/bonus/lose，双打引擎 currentMatches 真值非单打陈旧值）实际 ${JSON.stringify(dblMatch.result)}`);
       expect(dblMatch.score_total === 2, `P3 score_total=2（currentScore 双打分流）实际 ${dblMatch.score_total}`);
+      // #84 靶心：players = 两名各 ensurePlayer 的两个真实 player id（非单个占位「双打战队」）。
       const dpl = dblMatch.players || [];
-      expect(dpl.length >= 1, `P3 双打 players 非空 relation 真解析落库（=[${dpl}]，当前占位"双打战队"实体，#84 待换真两名）`);
+      expect(dpl.length === 2, `P3 #84 双打 players 含两个真实 player id（不再单占位）实际 =[${dpl}] len=${dpl.length}`);
+      // 两 id 各解析为 P3_A / P3_B（players 表 player_code=输入名，host 昵称兜底建）——两 distinct 真选手
+      const plExpand = await suGet(base, su, `/api/collections/players/records?perPage=200&filter=${encodeURIComponent(`player_code='${P3_A}' || player_code='${P3_B}'`)}`);
+      const codeById = Object.fromEntries((plExpand.data.items || []).map((p) => [p.id, p.player_code]));
+      const resolvedCodes = dpl.map((id) => codeById[id]).sort();
+      expect(JSON.stringify(resolvedCodes) === JSON.stringify([P3_A, P3_B].sort()), `P3 #84 两 player id 各解析为真两名（player_code=${JSON.stringify(resolvedCodes)} 期望 ${JSON.stringify([P3_A, P3_B].sort())}）`);
+      expect(dpl[0] !== dpl[1], `P3 #84 两名是两个 distinct player 实体（idA=${dpl[0]} ≠ idB=${dpl[1]}），各自独立上天梯`);
+      // scores：#84 后端 scoreMatch 为每个 player 各写一条 → 两名各得分（进正式天梯 board=double）。
       const sP3 = await suGet(base, su, `/api/collections/scores/records?perPage=200&filter=${encodeURIComponent(`match='${dblMatch.id}'`)}`);
-      expect(sP3.data.totalItems >= 1, `P3 scores 有该双打局派生（进正式天梯 board=double）实际 totalItems=${sP3.data?.totalItems}`);
+      expect(sP3.data.totalItems === 2, `P3 #84 scores 两条派生（两名各一条，board=double 各得分）实际 totalItems=${sP3.data?.totalItems}`);
       if (sP3.data.totalItems >= 1) {
-        expect(sP3.data.items[0].wins === 2, `P3 派生 scores.wins=2（win+bonus 计胜场）实际 ${sP3.data.items[0].wins}`);
+        const scoredPlayers = (sP3.data.items || []).map((s) => s.player).sort();
+        expect(JSON.stringify(scoredPlayers) === JSON.stringify([...dpl].sort()), `P3 #84 两条 scores 各归两名真 player（scores.player=${JSON.stringify(scoredPlayers)} = players ${JSON.stringify([...dpl].sort())}）`);
+        expect((sP3.data.items || []).every((s) => s.wins === 2), `P3 #84 两名各 wins=2（win+bonus 计胜场，两人同局各记分）实际 ${JSON.stringify((sP3.data.items || []).map((s) => s.wins))}`);
       }
     }
 

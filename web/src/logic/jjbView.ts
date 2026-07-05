@@ -15,6 +15,7 @@ import {
   doublesMatches,
   doublesModeLabel,
   doublesScore,
+  getDoublesPlayers,
   getDoublesState,
   setDoublesVerdict,
   type MatchVM,
@@ -56,7 +57,15 @@ export function currentLockedFactors(match: CurrentMatch): string[] | undefined 
 }
 
 export function currentPlayerName(): string {
-  return doublesLive() ? '双打战队' : (getSelectState().playerName || '集结杯选手');
+  // 单打：选手名（JijieData）。双打：两名以 ' & ' 连接的展示名（#84：不再返回占位「双打战队」字面量）。
+  // 落库不读这里而读 currentPlayers()（各 ensurePlayer 落两个真实 player）；本函数只供单值展示消费方（Obs/Battle/Result/Ladder）。
+  return doublesLive() ? getDoublesPlayers().join(' & ') : (getSelectState().playerName || '集结杯选手');
+}
+
+/** 落库/记分用的选手名数组（#84）：单打 `[单名]`（保持单元素落库不变）、双打 `[A, B]` 两名。
+ *  matchRecord 各 ensurePlayer → players=[idA, idB]，后端 scoreMatch 循环为两人各记分。 */
+export function currentPlayers(): string[] {
+  return doublesLive() ? getDoublesPlayers() : [currentPlayerName()];
 }
 
 export function currentSessionMode(): SessionMode {

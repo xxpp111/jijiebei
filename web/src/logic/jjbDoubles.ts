@@ -40,6 +40,9 @@ const CMDS_PER_MATCH = 2;
 const TIER_ORDER: Array<'A' | 'B' | 'C'> = ['A', 'B', 'C'];
 const SLOT_LABELS = ['第 1 场', '第 2 场', 'BOSS 战'];
 
+// 双打两名选手默认名（#84）：深链接/贴码开局不经 HomeScreen 时的合理兜底，落库各得分不再归占位「双打战队」。
+const DEFAULT_PLAYERS: [string, string] = ['选手A', '选手B'];
+
 // ---- per-variant 规格（Batch C 配置化：guantu/feiqiu 取值与改造前逐项相同） ----
 export type DoublesVariant = 'guantu' | 'feiqiu' | 'std15' | 'cm';
 
@@ -76,6 +79,7 @@ let _factorPool: string[] = [];
 let _commanderPool: string[] = [];
 let _slots: { cmds: (string | null)[]; factors: (string | null)[] }[] = [];
 let _winLoseList: (number | undefined)[] = [];
+let _players: [string, string] = [...DEFAULT_PLAYERS]; // #84：双打两名选手名（落库 players=[A,B] 两真实 player 的来源）
 
 function spec(): VariantSpec { return VARIANT_SPECS[_variant]; }
 
@@ -162,6 +166,7 @@ export function doublesStart(variant: DoublesVariant = 'guantu'): void {
   ];
   _slots = freshSlots();
   _winLoseList = new Array(MATCHES);
+  _players = [...DEFAULT_PLAYERS]; // #84：新局重置两名为默认（HomeScreen 开局后立即 setDoublesPlayers 覆盖真名）
   _live = true;
   rollEnemiesForSession(MATCHES); // 随机敌方：开关 ON 时每场 roll 种族+AI，OFF 则清空
   exposeDebug();
@@ -175,6 +180,7 @@ export function doublesReset(): void {
   _commanderPool = [];
   _slots = freshSlots();
   _winLoseList = [];
+  _players = [...DEFAULT_PLAYERS]; // #84：重置两名为默认
   clearEnemyRolls();
   exposeDebug();
 }
@@ -187,6 +193,13 @@ export function doublesModeLabel(): string {
   if (_variant === 'std15') return '双打模式 · 15因子';
   if (_variant === 'cm') return '双打模式 · CM';
   return '双打模式 · 官突';
+}
+/** #84：双打两名选手名（trim + 空回落默认；落库/展示都读这里，不再有「双打战队」占位）。 */
+export function getDoublesPlayers(): [string, string] {
+  return [
+    (_players[0] || '').trim() || DEFAULT_PLAYERS[0],
+    (_players[1] || '').trim() || DEFAULT_PLAYERS[1],
+  ];
 }
 export type { MatchVM };
 
@@ -215,6 +228,7 @@ export interface DoublesState {
   winCount: number;
   winbCount: number;
   totalCount: number;
+  players: [string, string]; // #84：双打两名选手名（e2e 读数契约；trim+回落默认后的展示/落库名）
 }
 
 export function doublesMatches(): Array<MatchVM & { mutators?: string[] }> {
@@ -277,12 +291,19 @@ function debugSnapshot(): DoublesState {
     winCount: wl.filter((v) => v === 1 || v === 2).length,
     winbCount: wl.filter((v) => v === 2).length,
     totalCount: wl.filter((v) => v === 0 || v === 1 || v === 2).length,
+    players: getDoublesPlayers(),
   };
 }
 
 export function getDoublesState(): DoublesState { return debugSnapshot(); }
 
 // ---- 槽位写入 ----
+
+/** #84：写入双打两名选手名（HomeScreen 开局后调用，镜像单打 set JijieData.playerName）。空串保留、getDoublesPlayers 读时回落默认。 */
+export function setDoublesPlayers(a: string, b: string): void {
+  _players = [a ?? '', b ?? ''];
+  exposeDebug();
+}
 
 export function setDoublesCmd(slot: number, idx: number, name: string): void {
   ensureSlot(slot); _slots[slot].cmds[idx] = name; exposeDebug();

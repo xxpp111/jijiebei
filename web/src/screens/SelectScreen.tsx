@@ -32,7 +32,7 @@ import {
 import { facFlatIdx } from '../logic/legacy/JJBData';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
 import {
-  doublesLive, doublesMatches, doublesModeLabel, getDoublesState,
+  doublesLive, doublesMatches, doublesModeLabel, getDoublesState, getDoublesPlayers,
   setDoublesCmd, clearDoublesCmd, setDoublesFac, clearDoublesFac,
   validateDoubles, randomFillDoubles,
 } from '../logic/jjbDoubles';
@@ -569,7 +569,7 @@ function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
     >
       <div className="jjb-inner sel">
         <TopBar styleName={style} modeName={mode}>
-          <MetaRow k="参赛战队" v="双打战队" vProps={{ 'data-meta-player': true }} />
+          <MetaRow k="参赛战队" v={getDoublesPlayers().join(' & ')} vProps={{ 'data-meta-player': true }} />
           <MetaRow k="比赛模式" v={doublesModeLabel()} vProps={{ 'data-meta-mode': true, 'data-doubles-mode': true }} />
           <MetaRow k={lockLabel} v={allMatchMuts} vProps={{ 'data-doubles-mutators': true, style: { fontWeight: 700, color: 'var(--accent, #e8b84b)' } }} />
         </TopBar>
