@@ -27,6 +27,7 @@
 │       applysnapshot / event-ban / reroll                                     │
 │     · fetch：backend-integ / record-to-score                                 │
 │     · 隔离 PB（自起临时实例）：auth-perm / practice-post / player-hook       │
+│       · 真 UI+真隔离 PB（/api 真代理不 mock）：record-fullstack              │
 │     · flows（自然语言驱动：导航+交互+断言+截图）：web/e2e/flows/ 7 条        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │  ① 代码层（前端 build / 后端 Go）                                            │
@@ -90,12 +91,13 @@ node e2e/r6-doubles-downstream.mjs       # 双打下游 R6 — 3 屏 PNG + 落�
 # 截图落到 /tmp/jjb-r6-doubles-downstream/（可配 JJB_R6_SCREENSHOT_DIR）
 ```
 
-### 1.4b 落库触发链路（#94，vite preview 自起，无需 PB）
+### 1.4b 落库触发链路（#94，vite preview 自起）
 
 ```bash
 cd web
 npm run build
-node e2e/auto-post.mjs                   # 判定完成自动 POST + 改判防重 + 双打真值 + practice 静默 + 非 host 警示
+node e2e/auto-post.mjs                   # 判定完成自动 POST + 改判防重 + 双打真值 + practice 静默 + 非 host 警示（mock 后端，无需 PB）
+node e2e/record-fullstack.mjs            # 全栈真接缝：前端真 UI + 真隔离 isopb（/api 真代理，不 mock）→ P1 practice/#89 relation + P2 match/scores 派生 + P3 doubles 双打真机落库（backend pocketbase 已编译，自起隔离 PB 8090）
 ```
 
 ### 1.5 后台 admin
@@ -131,7 +133,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 
 ---
 
-## 3. 17 个 e2e 脚本覆盖矩阵
+## 3. 18 个 e2e 脚本覆盖矩阵
 
 | 脚本 | 行数 | 类型 | 覆盖什么 | 前置 |
 |---|---|---|---|---|
@@ -152,6 +154,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | **auth-perm.mjs** | 73 | fetch (node v23+) + 隔离 PB | player_accounts 权限矩阵：① 无 auth 注册 200 ② 选手 token list totalItems=1（只看自己）③ 无 token list=0（挡匿名）④ 重复 phone 400 validation_not_unique ⑤ 选手 token 改别人档案 ≠200 改不了 | backend pocketbase 已编译（自起临时 PB 8090，不碰现网 pb_data） |
 | **practice-post.mjs** | 49 | fetch (node v23+) + 隔离 PB | Step6 practice 落库权限矩阵：① 选手 token 落 mode=practice → 200 ② 选手 token 落 mode=match → ≠200（限 host/admin）③ 匿名落 practice → ≠200 | backend pocketbase 已编译（自起临时 PB） |
 | **player-hook.mjs** | 116 | fetch (node v23+) + 隔离 PB | player_accounts→players 自动建 hook：① 注册选手自动建 players（nickname/player_code=pa-`<id>`）② player relation 回设 ③ 重复同 phone 不重复建 ④ 账号预绑 player 时 hook 跳过（幂等） | backend pocketbase 已编译（自起临时 PB） |
+| **record-fullstack.mjs** | 273 | Playwright + 隔离 PB（真 /api 代理，不 mock） | 全栈真接缝（补 auto-post mock 后端 与 practice-post 不走 UI 之间的缺口，覆盖 #94 触发链路 × #89 relation 解析）：起隔离 isopb（8090）+ vite preview（/api 真代理→8090）。**P1 practice**：API 注册真 player_account → 前端真 UI 填手机号+密码登录（非注入假 token）→ 练习 std8 → 走完 3 场判定 → 等 autoPostIfComplete 5s 缓冲自动 POST → 断言真 isopb：matches 有 practice 局（mode=practice / result=[1,2,0] / score_total=2）+ **#89**：players 指向注册 hook 建的 `pa-<accId>` 真 player id（relation 经 ensurePlayer 解析成功、未被 CreateRule 挡 4xx）+ scores 无派生（练习不进天梯）。**P2 match**：superuser 建 host 账号 → 前端真 UI 主播 tab 登录 → 比赛 std8 → chip=done → 断言真 isopb：matches 有 match 局（host=host.id）+ scores 有派生（wins=2，进正式天梯）。**P3 doubles**：复用 host 比赛态 → 双打 select 随机填指挥官池 → 判定 → 断言真 isopb：matches 有 doubles 局（game_mode=doubles / result=[1,2,0] / score_total=2，走 currentMatches/currentScore 双打分流真值）+ players 占位「双打战队」实体真解析 + scores board=double 派生（wins=2）——补 #94 事故靶心双打分支在真机链路上的覆盖（P1/P2 仅 std8 单打，doublesLive 分支此前从未穿真后端） | backend pocketbase 已编译（自起隔离 PB 8090，不碰现网 pb_data）+ `npm run build` |
 | **admin-smoke.mjs** | 80 | fetch (node v23+) | 三角色登录 + 对局/选手/天梯/系数 fetch + role 守卫（viewer 不能读 logs，host 不能读 accounts）+ admin 调分 | PB 8090 + verify-all.sh 已造 |
 
 ### flows 覆盖矩阵（`web/e2e/flows/`，7 条 AI-E2E flow）
