@@ -4,6 +4,7 @@ import { getAccount } from '../logic/backend';
 import { ScreenShell } from '../components/ScreenShell';
 import { BrandLockup } from '../components/BrandLockup';
 import { PromoBar } from '../components/PromoBar';
+import { useToast, ToastV } from '../components/Toast';
 import JijieData from '../logic/legacy/JijieData';
 import { MODE_DEFS } from '../config/modes';
 
@@ -41,12 +42,18 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
   // 登录入口的登录/已登录两态（修复"循环登录"反馈：老王登录成功后右上角仍显示登录按钮，
   // 因为此按钮此前无条件渲染、从不读 getAccount()，看起来像没登上）。
   const account = getAccount();
+  // 比赛前自检 toast（#94）：非主播账号开比赛局的软提示，复用 SelectScreen 同款 useToast+ToastV。
+  const [toast, setToast] = useToast();
 
   const start = (m: SessionMode | 'doubles', soon?: boolean) => {
     if (soon) return; // soon 占位项不启动（当前无 soon 项；doubles 已接通）
     // 登录门（需求1·全模式）：未登录点开局 → 引导登录、不开局、不污染 XP 状态。
     // 公开读（天梯/OBS横条/观众）不经此路径，零影响。
     if (!getAccount()) { onLogin(); return; }
+    // 直播前自检（#94）：比赛 tab 开局但账号非主播 → 软提示战绩不会录入天梯，不阻断开局。
+    if (isMatch && account?.kind !== 'host') {
+      setToast({ msg: '比赛模式：当前账号非主播，本局战绩不会录入天梯', count: 1, kind: 'soft' });
+    }
     const name = (playerName || '').trim() || '集结杯选手';
     // P1b 规则态下沉：home 练习/比赛 tab → setRuleMode（hub 拍板方案A；startSession 不重置规则态，由此处决定）。
     setRuleMode(isMatch ? 'match' : 'practice');
@@ -198,6 +205,8 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
             <PromoBar />
           </div>
         )}
+
+        <ToastV toast={toast} />
       </div>
 
       {/* QQ 群大码浮层：直播画面/远距离扫码用，点任意处关闭 */}

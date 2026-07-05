@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
-import { startSession, getSelectState, exposeBattleDebug, randomFillAndStart, querySessionMode, type SessionMode } from '../logic/jjbSession';
+import { startSession, getSelectState, exposeBattleDebug, randomFillAndStart, querySessionMode, getRuleMode, type SessionMode } from '../logic/jjbSession';
 import { currentDifficulty, currentEnemyAi, currentEnemyRace, currentIsDoubles, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, setCurrentVerdict } from '../logic/jjbView';
+import { autoPostIfComplete, canPostResult, getRecordState, retryRecordPost, subscribeRecordState, type RecordState } from '../logic/matchRecord';
 import { ScreenShell } from '../components/ScreenShell';
 import { TopBar, MetaRow } from '../components/TopBar';
 
@@ -13,6 +14,9 @@ const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one
 export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: string; onGenCode: () => void }) {
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0); // 判定后强制重渲
+  // 落库状态 chip（#94）：recordState 是 matchRecord 模块级状态（跨屏不丢），这里订阅它驱动重渲。
+  const [recordState, setRecordState] = useState<RecordState>(getRecordState());
+  useEffect(() => subscribeRecordState(() => setRecordState(getRecordState())), []);
 
   useEffect(() => {
     try {
@@ -93,6 +97,7 @@ export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: 
               data={r}
               onVerdict={(v) => {
                 setCurrentVerdict(r.idx, v);
+                void autoPostIfComplete(); // #94：判定完成即后台自动落库（5s 改判缓冲，见 matchRecord.ts）
                 setTick((x) => x + 1);
               }}
             />
@@ -106,6 +111,28 @@ export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: 
               <b>直播判定</b>胜利 / 带奖励 / 失败
             </span>
           </span>
+          {/* 落库状态常驻 chip（#94）：比赛态才显示，练习态保留现有静默语义。 */}
+          {getRuleMode() === 'match' && (
+            canPostResult() ? (
+              <span data-record-chip data-record-state={recordState} style={{ fontSize: 13, color: recordState === 'error' ? '#e8815a' : recordState === 'done' ? '#3ddc84' : 'var(--muted)' }}>
+                {recordState === 'done' && '✓ 战绩已录入天梯'}
+                {recordState === 'posting' && '录入中…'}
+                {recordState === 'error' && (
+                  <button
+                    type="button"
+                    data-record-retry
+                    onClick={() => retryRecordPost()}
+                    style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', cursor: 'pointer', padding: 0 }}
+                  >
+                    ⚠ 录入失败 · 点击重试
+                  </button>
+                )}
+                {recordState === 'idle' && '比赛完成后自动录入天梯'}
+              </span>
+            ) : (
+              <span data-record-warn style={{ fontSize: 13, color: '#e8b84b' }}>⚠ 当前身份无法录入天梯，需主播账号</span>
+            )
+          )}
           <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode} style={{ marginLeft: 'auto' }}>生成对局码 →</button>
         </div>
       </div>

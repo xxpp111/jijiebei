@@ -33,7 +33,10 @@ export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: 
 
   useEffect(() => {
     if (ensureDoublesSessionFromUrl()) setTick((x) => x + 1);
-    if (canRecord) void runRecord(); // 比赛局自动落库（沿用原自动落库；按钮给主播显式反馈/失败重试）
+    // #94：主触发链路已下沉到 BattleScreen（判定完成即 autoPostIfComplete，5s 改判缓冲）；
+    // 这里保留为兜底重试面——主播不开结算屏也能落库，但万一提前/直接打开本屏，挂载即尝试落库仍有意义。
+    // 局指纹防重（matchRecord.fingerprintKey）保证与 BattleScreen 的自动落库不会产生第二条 matches。
+    if (canRecord) void runRecord();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
