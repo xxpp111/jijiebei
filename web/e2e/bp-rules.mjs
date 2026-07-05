@@ -38,11 +38,12 @@ try {
 
   // ===== done-when 6：bpConfig feiqiu-doubles 键 locked(显式键) + 既有6键状态不变 =====
   if (getBpModeState('feiqiu-doubles') !== 'locked') fail(`done6: feiqiu-doubles 应 locked, got=${getBpModeState('feiqiu-doubles')}`);
-  const expectKeys = { std8: 'on', std10: 'on', std12: 'offable', rescue: 'offable', feiqiu: 'offable', doubles: 'locked' };
+  // std15/cm = Batch C 新增双打 variant，BP 未实装 → 与 doubles/feiqiu-doubles 同锁死（防再次遗漏出白名单）。
+  const expectKeys = { std8: 'on', std10: 'on', std12: 'offable', rescue: 'offable', feiqiu: 'offable', doubles: 'locked', std15: 'locked', cm: 'locked' };
   for (const [k, v] of Object.entries(expectKeys)) {
     if (getBpModeState(k) !== v) fail(`done6: 既有键 ${k} 应 ${v}, got=${getBpModeState(k)}`);
   }
-  pass('done-when 6: feiqiu-doubles=locked(显式键不再 fallback) + 既有6键(std8/std10 on·std12/rescue/feiqiu offable·doubles locked) 不变');
+  pass('done-when 6: feiqiu-doubles=locked(显式键不再 fallback) + 既有8键(std8/std10 on·std12/rescue/feiqiu offable·doubles/std15/cm locked) 不变');
 
   // ===== done-when 5：双打(doubles + feiqiu-doubles)走独立池 cmdPool=6 + validateDoubles 无 2A1B 配额(不拦) =====
   for (const dmode of ['doubles', 'feiqiu-doubles']) {

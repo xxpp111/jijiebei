@@ -8,6 +8,8 @@
     "build": "vite build",
     "e2e:ui": "npm run build --silent && node e2e/ui-smoke.mjs",
     "e2e:r6": "npm run build --silent && node e2e/r6-doubles-downstream.mjs",
+    "e2e:core": "npm run build --silent && node e2e/run.mjs && node e2e/codec.mjs && node e2e/bp-rules.mjs && node e2e/auto-post.mjs",
+    "e2e:back": "cd ../backend && go build -o pocketbase . && cd ../web && npm run build --silent && node e2e/rankings-board.mjs && node e2e/practice-post.mjs && node e2e/record-fullstack.mjs",
     "preview": "vite preview --port 7788",
     "test:unit": "vitest run",
     "test:drift": "node scripts/drift-check.mjs",

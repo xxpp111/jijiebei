@@ -1,7 +1,7 @@
 # 集结杯 · 测试体系（Testing）
 
 > 范围：项目四层测试体系——①代码层（前端 build / 后端 Go）②AI-E2E（Playwright + 纯 Node fetch + flows）③双打同步（两 profile 对战）④vitest 单元测试（纯函数 / 状态机）。
-> 真相源：`web/e2e/*.mjs`（17 个前端 e2e）+ `web/e2e/flows/*.flow.mjs`（7 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（8 个 vitest 单测文件）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
+> 真相源：`web/e2e/*.mjs`（19 个前端 e2e）+ `web/e2e/flows/*.flow.mjs`（7 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（9 个 vitest 单测文件）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
 
 ---
 
@@ -98,6 +98,7 @@ cd web
 npm run build
 node e2e/auto-post.mjs                   # 判定完成自动 POST + 改判防重 + 双打真值 + practice 静默 + 非 host 警示（mock 后端，无需 PB）
 node e2e/record-fullstack.mjs            # 全栈真接缝：前端真 UI + 真隔离 isopb（/api 真代理，不 mock）→ P1 practice/#89 relation + P2 match/scores 派生 + P3 doubles 双打真机落库（backend pocketbase 已编译，自起隔离 PB 8090）
+node e2e/rankings-board.mjs              # 天梯分榜 board=single/double 分流 + std15/cm 归双打榜（防遗漏事故回归网，自起隔离 PB 8090）
 ```
 
 ### 1.5 后台 admin
@@ -121,6 +122,8 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | `npm run preview` | `vite preview --port 7788` | 预览构建产物 |
 | `npm run e2e:ui` | `npm run build --silent && node e2e/ui-smoke.mjs` | UI 冒烟（构建 + 跑） |
 | `npm run e2e:r6` | `npm run build --silent && node e2e/r6-doubles-downstream.mjs` | R6 双打下游 |
+| `npm run e2e:core` | `build + run + codec + bp-rules + auto-post` | 纯前端引擎回归一键跑（9 模式恒等式 / 编解码往返 / BP 规则 / #94 触发链路），无需后端 |
+| `npm run e2e:back` | `go build backend + build + rankings-board + practice-post + record-fullstack` | 真隔离 PB 一键跑（先重编译 backend 防二进制旧）：分榜分流 + practice 落库 + 全栈真接缝 |
 | `npm run test:unit` | `vitest run` | vitest 单测：`web/src/logic/__tests__/` 8 文件 87 用例 |
 | `npm run test:drift` | `node scripts/drift-check.mjs` | 配置漂移守护（重跑 gen-config 比对 committed 无 diff） |
 | `npm run test:back` | `cd ../backend && go test ./...` | 后端 go test |
@@ -133,7 +136,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 
 ---
 
-## 3. 18 个 e2e 脚本覆盖矩阵
+## 3. 19 个 e2e 脚本覆盖矩阵
 
 | 脚本 | 行数 | 类型 | 覆盖什么 | 前置 |
 |---|---|---|---|---|
@@ -149,6 +152,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | **match-flow.mjs** | 56 | Playwright + fetch | dev 登录（host）→ home match 选手 P001 → std8 开局 → 判定 3 场 → result → 落库 → 选手关联 → hook 派生 scores | dev 7788 + PB 8090 + verify-all.sh 已造 P001/P002 |
 | **backend-integ.mjs** | 56 | fetch (node v23+) | host auth → postMatch → hook 派生 scores → 天梯增量（与 match-flow 不同：纯 fetch，不渲染 UI） | dev 7788 + PB 8090 |
 | **record-to-score.mjs** | 103 | fetch (node v23+) | 天梯兜底落库全链路：ensurePlayer 兜底建档（getByCode 精确匹配优先/找不到以输入名建 active 选手）→ 不重复建 → postMatch → hook 派生 scores → rankings 增量 → 幂等同名累加 | dev 7788 + PB 8090 |
+| **rankings-board.mjs** | 110 | 隔离 PB（自起临时实例，无需 UI） | 天梯分榜 `board=single/double` 分流回归（补 routes.go rankingsHandler 零测试缺口）：造 4 局不同 game_mode（std8 单刷 + doubles/std15/cm 双打）→ hook 派生 scores → 经真 `/api/rankings` SQL 断言：board=single 只统计单刷、board=double 只统计双打、board=all 全含。**核心**：std15/cm 必进双打榜——钉死 2026-07-03「Batch C 新双打 variant 曾遗漏出 boardCond 白名单被误判进单刷榜」事故（该测试首跑即抓到旧 `backend/pocketbase` 二进制未随源码重编译的隐患） | backend pocketbase 已编译（自起隔离 PB 8090） |
 | **r6-doubles-downstream.mjs** | 280 | Playwright + spawn | 双打下游 R6：3 屏 PNG 截图 + 落库断言（截图存 `/tmp/jjb-r6-doubles-downstream/`） | dev 7788 + PB 8090 |
 | **auto-post.mjs** | #94 | Playwright + route mock | 落库触发链路：① 单打 3 场全判 5s 后 BattleScreen 自动 POST 一次 + chip=done ② 改判一场后局指纹不变，6s 内仍只 1 次 POST（不产生第二条 matches）③ 双打局 payload 的 result/score_total 取双打引擎真值 ④ 练习态 battle 屏不渲染任何落库 chip/警示 ⑤ 比赛态非主播账号常驻警示且判满 3 场不触发 POST；拦截 `/api/collections/{players,matches}/records` 不起真后端，只测前端触发时机与 payload | `npm run build`（vite preview 自起，无需 PB） |
 | **auth-perm.mjs** | 73 | fetch (node v23+) + 隔离 PB | player_accounts 权限矩阵：① 无 auth 注册 200 ② 选手 token list totalItems=1（只看自己）③ 无 token list=0（挡匿名）④ 重复 phone 400 validation_not_unique ⑤ 选手 token 改别人档案 ≠200 改不了 | backend pocketbase 已编译（自起临时 PB 8090，不碰现网 pb_data） |
