@@ -1,7 +1,7 @@
 # 集结杯 · 测试体系（Testing）
 
 > 范围：项目四层测试体系——①代码层（前端 build / 后端 Go）②AI-E2E（Playwright + 纯 Node fetch + flows）③双打同步（两 profile 对战）④vitest 单元测试（纯函数 / 状态机）。
-> 真相源：`web/e2e/*.mjs`（19 个前端 e2e）+ `web/e2e/flows/*.flow.mjs`（7 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（10 个 vitest 单测文件）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
+> 真相源：`web/e2e/*.mjs`（20 个前端 e2e）+ `web/e2e/flows/*.flow.mjs`（7 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（10 个 vitest 单测文件）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
 
 ---
 
@@ -136,7 +136,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 
 ---
 
-## 3. 19 个 e2e 脚本覆盖矩阵
+## 3. 20 个 e2e 脚本覆盖矩阵
 
 | 脚本 | 行数 | 类型 | 覆盖什么 | 前置 |
 |---|---|---|---|---|
@@ -153,6 +153,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | **backend-integ.mjs** | 56 | fetch (node v23+) | host auth → postMatch → hook 派生 scores → 天梯增量（与 match-flow 不同：纯 fetch，不渲染 UI） | dev 7788 + PB 8090 |
 | **record-to-score.mjs** | 103 | fetch (node v23+) | 天梯兜底落库全链路：ensurePlayer 兜底建档（getByCode 精确匹配优先/找不到以输入名建 active 选手）→ 不重复建 → postMatch → hook 派生 scores → rankings 增量 → 幂等同名累加 | dev 7788 + PB 8090 |
 | **rankings-board.mjs** | 110 | 隔离 PB（自起临时实例，无需 UI） | 天梯分榜 `board=single/double` 分流回归（补 routes.go rankingsHandler 零测试缺口）：造 4 局不同 game_mode（std8 单刷 + doubles/std15/cm 双打）→ hook 派生 scores → 经真 `/api/rankings` SQL 断言：board=single 只统计单刷、board=double 只统计双打、board=all 全含。**核心**：std15/cm 必进双打榜——钉死 2026-07-03「Batch C 新双打 variant 曾遗漏出 boardCond 白名单被误判进单刷榜」事故（该测试首跑即抓到旧 `backend/pocketbase` 二进制未随源码重编译的隐患） | backend pocketbase 已编译（自起隔离 PB 8090） |
+| **audit-actor.mjs** | 96 | 隔离 PB（自起临时实例，无需 UI） | #90 审计日志 `logs.actor` 填充回归（补 hooks.go match.create actor 零测试缺口）：superuser 造 host 账号 → 造 match 局（host=该账号）→ 等 hook → 用 superuser 查 `logs`（`action='match.create' && target_id=<matchId>`，logs ListRule=admin-only 必须带 superuser token）断言 **actor=host 账号 id**（填充生效）；再造 practice 局（host 空）→ 断言 **actor 为空**（无 host 保持 nil、practice 行为不变、不报错）。钉死「match.create 审计 actor 恒 nil、有壳无芯」缺口 | backend pocketbase 已编译（自起隔离 PB 8090，不碰现网 pb_data） |
 | **r6-doubles-downstream.mjs** | 280 | Playwright + spawn | 双打下游 R6：3 屏 PNG 截图 + 落库断言（截图存 `/tmp/jjb-r6-doubles-downstream/`） | dev 7788 + PB 8090 |
 | **auto-post.mjs** | #94 | Playwright + route mock | 落库触发链路：① 单打 3 场全判 5s 后 BattleScreen 自动 POST 一次 + chip=done ② 改判一场后局指纹不变，6s 内仍只 1 次 POST（不产生第二条 matches）③ 双打局 payload 的 result/score_total 取双打引擎真值 ④ 练习态 battle 屏不渲染任何落库 chip/警示 ⑤ 比赛态非主播账号常驻警示且判满 3 场不触发 POST；拦截 `/api/collections/{players,matches}/records` 不起真后端，只测前端触发时机与 payload | `npm run build`（vite preview 自起，无需 PB） |
 | **auth-perm.mjs** | 73 | fetch (node v23+) + 隔离 PB | player_accounts 权限矩阵：① 无 auth 注册 200 ② 选手 token list totalItems=1（只看自己）③ 无 token list=0（挡匿名）④ 重复 phone 400 validation_not_unique ⑤ 选手 token 改别人档案 ≠200 改不了 | backend pocketbase 已编译（自起临时 PB 8090，不碰现网 pb_data） |

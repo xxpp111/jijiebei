@@ -25,8 +25,16 @@ func registerHooks(app core.App) {
 	app.OnRecordAfterCreateSuccess("matches").BindFunc(func(e *core.RecordEvent) error {
 		rec := e.Record
 
-		// 审计：match.create（practice 主动保存也记录）
-		if err := writeLog(e.App, nil, "match.create", "matches", rec.Id, map[string]any{
+		// 审计：match.create（practice 主动保存也记录）。
+		// actor：match 局用 host（matches.host relation）查对应 accounts 记录填入；
+		// practice 局 / host 空 / 账号已删 → actor 保持 nil（行为不变、不报错）。
+		var actor *core.Record
+		if hostId := rec.GetString("host"); hostId != "" {
+			if hostRec, err := e.App.FindRecordById("accounts", hostId); err == nil {
+				actor = hostRec
+			}
+		}
+		if err := writeLog(e.App, actor, "match.create", "matches", rec.Id, map[string]any{
 			"mode":      rec.GetString("mode"),
 			"game_mode": rec.GetString("game_mode"),
 			"host":      rec.GetString("host"),
