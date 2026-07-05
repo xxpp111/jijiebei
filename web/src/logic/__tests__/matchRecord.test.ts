@@ -105,6 +105,32 @@ describe('postMatchResult · 双打读错引擎修正（#94 done-when 3）', () 
   });
 });
 
+describe('postMatchResult · 双打 ensurePlayer 失败负路径（#84 review 补测：热路径新增网络往返的失败面）', () => {
+  it('双打两名解析失败 → 抛错不落库、防重 key 未置；后端恢复后重试成功落库（同局不被误挡 duplicate）', async () => {
+    startSession('doubles');
+    setDoublesVerdict(0, 'win');
+    setDoublesVerdict(1, 'bonus');
+    setDoublesVerdict(2, 'lose');
+
+    // 后端抖动：players 查/建全 500 → ensurePlayer 抛错 → Promise.all reject（与守卫 throw 同一负路径出口）。
+    const failingFetch = vi.fn(async (url: string, opts?: any) => {
+      const u = String(url);
+      if (u.includes('/collections/players/records')) {
+        return { ok: false, status: 500, text: async () => 'transient' };
+      }
+      return (routedFetch() as any)(url, opts);
+    });
+    g.fetch = failingFetch;
+    await expect(postMatchResult()).rejects.toThrow(); // 拒绝落库，不静默吞
+
+    // 防重 key 未置（matchRecord.ts:65 成功后才置）→ 故障恢复后同一局重试必须能真落库
+    g.fetch = routedFetch();
+    const retry = await postMatchResult();
+    expect(retry).toBe('posted');
+    expect(matchPostCalls(g.fetch).length).toBe(1); // 失败那次没打到 matches，重试这次才落
+  });
+});
+
 describe('postMatchResult · 局指纹防重（#94 done-when 2，改判不产生第二条 matches）', () => {
   it('同局改判后 fingerprint key 不变 → 第二次 POST 命中 duplicate，不二次落库', async () => {
     startSession('std8');

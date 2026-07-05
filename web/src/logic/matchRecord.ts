@@ -2,7 +2,7 @@
 // 落库语义层（瘦身 Batch4 + #94 落库触发链路修复）：从 ResultScreen 下沉 postMatchResult + 落库资格谓词，
 // 新增 autoPostIfComplete（判定完成即后台自动落库，5 秒改判缓冲）+ 模块级 recordState（BattleScreen 常驻状态 chip）。
 // screen 只调语义函数；资格谓词 canPostResult() 单点导出，消除 ResultScreen 内双写（自动落库判定 + 录入按钮可见性）漂移。
-import { currentMatches, currentPlayerName, currentScore, currentSessionMode } from './jjbView';
+import { currentMatches, currentPlayers, currentScore, currentSessionMode } from './jjbView';
 import { encodePayload, capturePayload, PAYLOAD_VER, type PayloadSnapshot } from './codec';
 import { getRuleMode } from './jjbSession';
 import { postMatch, getToken, getAccount, ensurePlayer } from './backend';
@@ -41,13 +41,24 @@ export async function postMatchResult(): Promise<RecordOutcome> {
   posting = true;
   try {
     const ruleMode = getRuleMode();
-    const player = await ensurePlayer(currentPlayerName()); // 兜底：找不到则建/关联，让现场选手随便输名上天梯
+    // #84：落库 players 从 currentPlayers() 派生 —— 单打单元素、双打两名各 ensurePlayer（兜底建/关联），
+    // 得 [idA, idB] 两个真实 player；后端 scoreMatch 循环为每人各写一条 scores（两人各得分，不再归占位「双打战队」）。
+    // 只改 players 来源：result/score_total（jjbView 分流）/ 触发时机 / 局指纹 / autoPost 一字未动。
+    const names = currentPlayers();
+    const players = (await Promise.all(names.map((name) => ensurePlayer(name))))
+      .filter((p): p is NonNullable<typeof p> => !!p);
+    // 归属完整性守卫（#84 fail-closed，仅双打）：双打两名中任一 ensurePlayer 返回 null 被 filter 静默丢弃时，
+    // players 会退化为单元素、只有一人上天梯——正是 #84 要修的归属丢失。此时宁可抛错不落库（防重 key 未置、可重试），
+    // 绝不落一条归属残缺的双打局。单打分支保留原「player?[player.id]:[]」容错语义（names.length===1 时不进此守卫），行为一字不变。
+    if (names.length > 1 && players.length !== names.length) {
+      throw new Error(`[matchRecord] 双打 players 解析不完整：期望 ${names.length} 名、实得 ${players.length}（拒绝落库归属残缺局，#84）`);
+    }
     await postMatch({
       // mode 按 ruleMode 落：match 进正式天梯（hook 算分），practice 仅自存（hook 跳过算分）。
       mode: ruleMode === 'match' ? 'match' : 'practice',
       game_mode: currentSessionMode(), payload_code: code, payload_ver: PAYLOAD_VER,
-      players: player ? [player.id] : [], host: ruleMode === 'match' ? getAccount()?.id : undefined,
-      // result/score_total 经 jjbView 分流（currentMatches/currentScore）：单打→XP 引擎，双打→jjbDoubles 引擎，
+      players: players.map((p) => p.id), host: ruleMode === 'match' ? getAccount()?.id : undefined,
+      // result/score_total 经 jjbView 分流（currentMatches/currentScore）：单打→XP 引擎，双打→jjbDoubles 引擎,
       // 不再直读 JijieData.winLoseList（双打判定写在 jjbDoubles 闭包，直读会拿单打陈旧/空值 — #94 落库读错引擎）。
       result: ms.map((m) => RESULT_VAL[m.result as string]), score_total: currentScore(),
     });

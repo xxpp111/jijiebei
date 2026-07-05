@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { startSession, setRuleMode, type SessionMode } from '../logic/jjbSession';
+import { doublesLive, setDoublesPlayers } from '../logic/jjbDoubles';
 import { getAccount } from '../logic/backend';
 import { ScreenShell } from '../components/ScreenShell';
 import { BrandLockup } from '../components/BrandLockup';
@@ -34,6 +35,8 @@ export interface HomeScreenProps {
 
 export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogin, onLogout }: HomeScreenProps) {
   const [playerName, setPlayerName] = useState('集结杯选手');
+  // 双打第二名选手（#84）：双打模式落库 players=[A,B] 两真实 player 的 B 名来源；单打忽略此值。
+  const [playerNameB, setPlayerNameB] = useState('');
   // 练习/比赛双模式（纯前端首页态；比赛侧登录/积分为占位，后端 P5 才接）。切 tab 不丢选手名（同一 state）。
   const [homeMode, setHomeMode] = useState<'practice' | 'match'>('practice');
   // QQ 群二维码浮层（第 9 格入口；加群不设登录门）。大图浮层保证直播/远距离可扫。
@@ -61,6 +64,12 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
     // 这里 startSession 后再覆盖 JijieData.playerName（不破坏 9 模式 status/map/lock/pool 任何契约）。
     startSession(m as SessionMode);
     try { (JijieData as any).playerName = name; } catch { /* noop */ }
+    // 双打（#84）：startSession→doublesStart 已把 _players 重置为默认，这里覆盖两名真选手（B 空则 jjbDoubles 回落默认名）。
+    // 落库 currentPlayers()→players=[A,B]，后端 scoreMatch 为两人各记分。单打 doublesLive()=false 不进此分支、players 仍单元素。
+    // （review 修：doublesLive() 即单一真相源——startSession 刚按 m 分流完引擎；不另维护双打模式键集合，防新增 variant 漏更漂移。）
+    if (doublesLive()) {
+      setDoublesPlayers(name, (playerNameB || '').trim());
+    }
     onStart(m as SessionMode, name);
   };
 
@@ -155,6 +164,26 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
             <span className="caret"></span>
           </span>
           {isMatch && <span className="player-live"><span className="pl-dot"></span>LIVE</span>}
+        </div>
+
+        {/* 选手 B（#84 双打第二名）：功能性最简采集——始终渲染，双打模式落库 players=[A,B] 取此值，单打忽略。视觉打磨归 #75。 */}
+        <div className="player-row player-row-b">
+          <label className="player-label">选手 B</label>
+          <span className="player-field" style={{ display: 'flex', alignItems: 'center' }}>
+            <input
+              className="player-ph"
+              data-player-input-b
+              style={{
+                background: 'transparent', border: 'none', outline: 'none',
+                color: 'var(--ink)', fontSize: 17, flex: 1, padding: 0,
+              }}
+              value={playerNameB}
+              onChange={(e) => setPlayerNameB(e.target.value)}
+              maxLength={24}
+              placeholder="双打第二名选手（单打可留空）"
+            />
+            <span className="caret"></span>
+          </span>
         </div>
 
         <div className="mode-block">
