@@ -31,6 +31,8 @@ func TestLoadAndCalcDelta(t *testing.T) {
 		{"suiji", 3, 1.0},
 		{"doubles", 2, 1.0},
 		{"feiqiu-doubles", 2, 1.0},
+		{"std15", 2, 1.4},        // 显式占位（#91 拍板可调）——此前缺 key 静默回退 1.0 错分
+		{"cm", 2, 1.3},           // 同上
 		{"unknown-mode", 3, 1.0}, // 未知模式回退 default_coefficient=1.0
 	}
 

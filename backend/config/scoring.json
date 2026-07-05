@@ -12,8 +12,10 @@
     "feiqiu": 1.0,
     "suiji": 1.0,
     "doubles": 1.0,
-    "feiqiu-doubles": 1.0
+    "feiqiu-doubles": 1.0,
+    "std15": 1.4,
+    "cm": 1.3
   },
-  "_coefficients_note": "delta = 获胜场数(score_total) × coefficients[game_mode]。最简纯累加，开放问题 #1 拍板：Elo/连胜/点金×2 计分后续迭代。系数表改不动 schema（scores.delta+reason+season 已留空间）。",
+  "_coefficients_note": "delta = 获胜场数(score_total) × coefficients[game_mode]。最简纯累加，开放问题 #1 拍板：Elo/连胜/点金×2 计分后续迭代。系数表改不动 schema（scores.delta+reason+season 已留空间）。std15/cm 为显式占位（15 因子按难度 >std12、CM 类比 hard），准确权重随 #91 拍板可调——占位是为了消除「live 模式静默回退 default 1.0」的错分雷。",
   "default_coefficient": 1.0
 }
