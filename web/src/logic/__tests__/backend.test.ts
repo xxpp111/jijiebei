@@ -4,7 +4,7 @@
 //   - Storage：Map-based mock 装到 window（setup.ts 已令 window=globalThis）
 //   - fetch：vi.fn 按用例返回，断言请求体（phone→{phone}@phone.jjb 兜底、fav_commanders 透传）+ 响应映射（kind）
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { pbAuthPlayer, pbAuthHost, registerPlayer, pbRefresh, getAccount, getToken, clearAuth } from '../backend';
+import { pbAuthPlayer, pbAuthHost, registerPlayer, pbRefresh, getAccount, getToken, clearAuth, ensurePlayer } from '../backend';
 
 const g = globalThis as any;
 function mockStorage(): Storage {
@@ -142,5 +142,53 @@ describe('backend auth · 选手注册 registerPlayer', () => {
     const body = JSON.parse(f.mock.calls[0][1].body);
     expect(body.social).toBeNull();
     expect(body.fav_commanders).toBeNull();
+  });
+});
+
+describe('backend · ensurePlayer 口径修复（#89/#94：player_accounts.player relation 优先）', () => {
+  it('kind=player 且账号带 player relation → 精确取该 players 记录，不走昵称查建', async () => {
+    g.fetch = okFetch({ id: 'p1', nickname: '登录选手' });
+    await pbAuthPlayer('13800138000', 'pwd12345', false); // 建立 kind=player 登录态（account.id=p1）
+    const f = vi.fn(async (u: string) => {
+      const url = String(u);
+      if (url.includes('player_accounts/records/p1') && url.includes('expand=player')) {
+        return { ok: true, json: async () => ({ id: 'p1', player: 'pl1', expand: { player: { id: 'pl1', nickname: '小明', player_code: 'pa-p1' } } }) };
+      }
+      throw new Error('不应查/建 players（relation 命中就该短路返回）: ' + url);
+    });
+    g.fetch = f;
+    const r = await ensurePlayer('随便输的名字');
+    expect(r).toEqual({ id: 'pl1', nickname: '小明', player_code: 'pa-p1' });
+    expect(f.mock.calls.length).toBe(1); // 只发了一次 relation 查询，没有走 getPlayerByCode/createPlayer
+  });
+
+  it('kind=player 但 relation 查询失败（404/网络错误）→ 兜底走昵称查建', async () => {
+    g.fetch = okFetch({ id: 'p2', nickname: '登录选手2' });
+    await pbAuthPlayer('13800138001', 'pwd12345', false);
+    const f = vi.fn(async (u: string, o?: any) => {
+      const url = String(u);
+      if (url.includes('player_accounts/records/')) return { ok: false, status: 404 };
+      if (url.includes('players/records?filter=')) return { ok: true, json: async () => ({ items: [] }) };
+      if (url.includes('players/records') && o?.method === 'POST') {
+        return { ok: true, json: async () => ({ id: 'newp', nickname: '随便输的名字', player_code: '随便输的名字' }) };
+      }
+      throw new Error('unexpected url: ' + url);
+    });
+    g.fetch = f;
+    const r = await ensurePlayer('随便输的名字');
+    expect(r).toEqual({ id: 'newp', nickname: '随便输的名字', player_code: '随便输的名字' });
+  });
+
+  it('kind=host（非选手账号）→ 跳过 relation 分支，走原昵称查建（行为不变）', async () => {
+    await pbAuthHost('host@jjb.test', 'pwd', false);
+    const f = vi.fn(async (u: string, o?: any) => {
+      const url = String(u);
+      if (url.includes('player_accounts/records/')) throw new Error('host 账号不该查 player_accounts relation: ' + url);
+      if (url.includes('players/records?filter=')) return { ok: true, json: async () => ({ items: [{ id: 'existing', nickname: '老选手', player_code: '老选手' }] }) };
+      throw new Error('unexpected url: ' + url);
+    });
+    g.fetch = f;
+    const r = await ensurePlayer('老选手');
+    expect(r).toEqual({ id: 'existing', nickname: '老选手', player_code: '老选手' });
   });
 });

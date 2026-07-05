@@ -179,14 +179,30 @@ export async function createPlayer(name: string): Promise<PlayerRecord> {
 
 /**
  * 兜底取/建选手 — 让现场选手随便输名就能上天梯。
- *  ① 先按 player_code 精确匹配（已注册选手优先，不重复建 — 沿用 getPlayerByCode 的稳定锚语义）。
- *  ② 找不到则以 name 为 player_code 建一个 active:true 选手（入天梯）。
- *  幂等：同名多局命中①返回同一 player（player_code unique），自然累加到同一选手，不每局新建。
+ *  ① 登录账号 kind=player 时优先取 player_accounts 记录上的 player relation（注册 hook c5f853d 已自动建/回填），
+ *     精确锚定「这个账号唯一对应的 players 实体」，不受输入名影响（改昵称不换 player、不会同名归并到别人）。
+ *  ② 拿不到 relation（非 player 账号 / 关系未落 / 请求失败）→ 走原昵称兜底：先按 player_code 精确匹配
+ *     （已注册选手优先，不重复建 — 沿用 getPlayerByCode 的稳定锚语义），找不到则以 name 为 player_code 建一个
+ *     active:true 选手（入天梯）。
+ *  幂等：同名多局命中②返回同一 player（player_code unique），自然累加到同一选手，不每局新建。
  *  并发：unique 索引冲突（另一端已建同名）时回查精确匹配返回，不抛错。
- *  注：兜底以"输入名"为身份锚 — 同名不同人会归并到同一选手（yb 拍板放宽，已知取舍，详见交付 caveat）。
+ *  注：②兜底以"输入名"为身份锚 — 同名不同人会归并到同一选手（yb 拍板放宽，已知取舍，详见交付 caveat）。
  *  无 host token 时 createPlayer 会 4xx 抛错，由调用方 catch（练习/未登录本就不该走到这）。
  */
 export async function ensurePlayer(name: string): Promise<PlayerRecord | null> {
+  const acc = getAccount();
+  if (acc?.kind === 'player' && acc.id) {
+    try {
+      const r = await fetch(`${API}/collections/player_accounts/records/${encodeURIComponent(acc.id)}?expand=player`, {
+        headers: authToken ? { Authorization: authToken } : {},
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const linked = d.expand?.player as PlayerRecord | undefined;
+        if (linked?.id) return linked;
+      }
+    } catch { /* noop：relation 取不到，走下面昵称兜底 */ }
+  }
   if (!name) return null;
   const existing = await getPlayerByCode(name);
   if (existing) return existing;
