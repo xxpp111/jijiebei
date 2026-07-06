@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { BattleScreen } from './screens/BattleScreen';
 import { ObsScreen } from './screens/ObsScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -17,6 +17,7 @@ import { currentSessionMode, currentTotal } from './logic/jjbView';
 import { applySnapshot } from './logic/codec';
 import JijieData from './logic/legacy/JijieData';
 import { pbAuth, pbRefresh, getAccount, clearAuth } from './logic/backend';
+import { AdaptiveViewport, type StageHeightMode } from './lib/dynres';
 
 // 路由（query）：?screen=home|select|battle|obs|result|bpconfig|eventrules|code|ladder|login|register；
 // ?style=metal|sc2|minimal & ?mode=dark|light 控视觉主题；?sessionMode=std8|std10|... 控赛事模式。
@@ -46,6 +47,10 @@ const MODE_LABELS: Record<(typeof MODES)[number], string> = {
   light: '浅色',
 };
 type Screen = 'home' | 'select' | 'battle' | 'obs' | 'result' | 'bpconfig' | 'eventrules' | 'code' | 'ladder' | 'login' | 'register';
+
+function stageHeightMode(screen: Screen): StageHeightMode {
+  return screen === 'home' ? 'content' : 'fixed';
+}
 
 function q(k: string, d = ''): string {
   if (typeof window === 'undefined') return d;
@@ -149,12 +154,7 @@ export default function App() {
 
   const switcher = (
     <div
-      className={`jjb style-${style} mode-${mode}`}
-      style={{
-        position: 'fixed', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 100,
-        width: 'auto', height: 'auto', display: 'flex', gap: 6, alignItems: 'center',
-        padding: '5px 8px', background: 'var(--panel-bg)', border: '1px solid var(--panel-edge)',
-      }}
+      className={`jjb jjb-stage-switcher style-${style} mode-${mode}`}
     >
       <button
         className={'ctrl-btn' + (screen === 'home' ? ' on' : '')}
@@ -182,16 +182,16 @@ export default function App() {
         title="查看结算（需三场判定完）"
         data-nav-result
       >{SCREEN_LABELS.result}</button>
-      <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
+      <span className="ctrl-sep" />
       {STYLES.map((s) => (
         <button key={s} className={'ctrl-btn' + (s === style ? ' on' : '')} onClick={() => chooseStyle(s)} data-style-btn={s}>{STYLE_LABELS[s]}</button>
       ))}
-      <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
+      <span className="ctrl-sep" />
       {MODES.map((m) => (
         <button key={m} className={'ctrl-btn' + (m === mode ? ' on' : '')} onClick={() => chooseMode(m)} data-mode-btn={m}>{MODE_LABELS[m]}</button>
       ))}
-      <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
-      <span style={{ width: 1, height: 18, background: 'var(--panel-edge)' }} />
+      <span className="ctrl-sep" />
+      <span className="ctrl-sep" />
       <button className={'ctrl-btn' + (screen === 'bpconfig' ? ' on' : '')} type="button" onClick={() => navigate('bpconfig')} data-nav-bpconfig>BP设置</button>
       <button className={'ctrl-btn' + (screen === 'eventrules' ? ' on' : '')} type="button" onClick={() => navigate('eventrules')} data-nav-eventrules>赛事规则</button>
       <button className={'ctrl-btn' + (screen === 'code' && codeVariant === 'gen' ? ' on' : '')} type="button" onClick={() => goCode('gen')} data-nav-code-gen>生成码</button>
@@ -208,19 +208,27 @@ export default function App() {
     </div>
   );
 
+  const renderStage = (node: ReactNode) => (
+    <AdaptiveViewport screen={screen} heightMode={stageHeightMode(screen)}>
+      {node}
+    </AdaptiveViewport>
+  );
+
   if (screen === 'home') {
     return (
       <>
-        <HomeScreen
-          key={`home-${rerenderTick}`}
-          style={style}
-          mode={mode}
-          onStart={(_m: SessionMode, _name: string) => navigate('select')}
-          onLadder={() => navigate('ladder')}
-          onPasteCode={() => goCode('paste')}
-          onLogin={() => navigate('login')}
-          onLogout={() => { clearAuth(); setRerenderTick((x) => x + 1); }}
-        />
+        {renderStage(
+          <HomeScreen
+            key={`home-${rerenderTick}`}
+            style={style}
+            mode={mode}
+            onStart={(_m: SessionMode, _name: string) => navigate('select')}
+            onLadder={() => navigate('ladder')}
+            onPasteCode={() => goCode('paste')}
+            onLogin={() => navigate('login')}
+            onLogout={() => { clearAuth(); setRerenderTick((x) => x + 1); }}
+          />,
+        )}
         {!bare && switcher}
       </>
     );
@@ -229,13 +237,15 @@ export default function App() {
   if (screen === 'select') {
     return (
       <>
-        <SelectScreen
-          key={`select-${rerenderTick}`}
-          style={style}
-          mode={mode}
-          onStart={() => navigate('battle')}
-          onGenCode={() => goCode('gen')}
-        />
+        {renderStage(
+          <SelectScreen
+            key={`select-${rerenderTick}`}
+            style={style}
+            mode={mode}
+            onStart={() => navigate('battle')}
+            onGenCode={() => goCode('gen')}
+          />,
+        )}
         {!bare && switcher}
       </>
     );
@@ -244,7 +254,7 @@ export default function App() {
   if (screen === 'battle') {
     return (
       <>
-        <BattleScreen key={`battle-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />
+        {renderStage(<BattleScreen key={`battle-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />)}
         {!bare && switcher}
       </>
     );
@@ -252,33 +262,35 @@ export default function App() {
 
   if (screen === 'obs') {
     return (
-      <ObsScreen
-        key={`obs-${rerenderTick}`}
-        style={style}
-        mode={mode}
-        onBack={() => {
-          if (doublesLive()) {
-            navigate('battle');
-            return;
-          }
-          // OBS 返回两级（yb 06-18 确认）：先回 battle（对战），仅当 battle 无分配因子（因子+官全空 或 未开局）才回 select。
-          // 判定口径镜像 BattleScreen:22-23 兜底（allNullFac && allNullCmd），保证返回 battle 后不会被兜底再次随机覆盖。
-          const s = getSelectState();
-          const fac = s.selectedFactorList || [];
-          const cmd = s.selectedCommanderList || [];
-          const allNullFac = fac.length === 0 || fac.every((f) => f == null);
-          const allNullCmd = cmd.length === 0 || cmd.every((c) => c == null);
-          const battleEmpty = !s.jjbLive || (allNullFac && allNullCmd);
-          navigate(battleEmpty ? 'select' : 'battle');
-        }}
-      />
+      <div className="jjb-obs-viewport" data-adaptive-stage="obs" data-stage-scale="1">
+        <ObsScreen
+          key={`obs-${rerenderTick}`}
+          style={style}
+          mode={mode}
+          onBack={() => {
+            if (doublesLive()) {
+              navigate('battle');
+              return;
+            }
+            // OBS 返回两级（yb 06-18 确认）：先回 battle（对战），仅当 battle 无分配因子（因子+官全空 或 未开局）才回 select。
+            // 判定口径镜像 BattleScreen:22-23 兜底（allNullFac && allNullCmd），保证返回 battle 后不会被兜底再次随机覆盖。
+            const s = getSelectState();
+            const fac = s.selectedFactorList || [];
+            const cmd = s.selectedCommanderList || [];
+            const allNullFac = fac.length === 0 || fac.every((f) => f == null);
+            const allNullCmd = cmd.length === 0 || cmd.every((c) => c == null);
+            const battleEmpty = !s.jjbLive || (allNullFac && allNullCmd);
+            navigate(battleEmpty ? 'select' : 'battle');
+          }}
+        />
+      </div>
     );
   }
 
   if (screen === 'result') {
     return (
       <>
-        <ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />
+        {renderStage(<ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />)}
         {!bare && switcher}
       </>
     );
@@ -287,7 +299,7 @@ export default function App() {
   if (screen === 'ladder') {
     return (
       <>
-        <LadderScreen key={`ladder-${rerenderTick}`} style={style} mode={mode} />
+        {renderStage(<LadderScreen key={`ladder-${rerenderTick}`} style={style} mode={mode} />)}
         {!bare && switcher}
       </>
     );
@@ -296,14 +308,16 @@ export default function App() {
   if (screen === 'login') {
     return (
       <>
-        <LoginScreen
-          key={`login-${rerenderTick}`}
-          style={style}
-          mode={mode}
-          onBack={() => navigate('home')}
-          onSuccess={() => navigate('home')}
-          onRegister={() => navigate('register')}
-        />
+        {renderStage(
+          <LoginScreen
+            key={`login-${rerenderTick}`}
+            style={style}
+            mode={mode}
+            onBack={() => navigate('home')}
+            onSuccess={() => navigate('home')}
+            onRegister={() => navigate('register')}
+          />,
+        )}
         {!bare && switcher}
       </>
     );
@@ -312,13 +326,15 @@ export default function App() {
   if (screen === 'register') {
     return (
       <>
-        <RegisterScreen
-          key={`register-${rerenderTick}`}
-          style={style}
-          mode={mode}
-          onBack={() => navigate('login')}
-          onSuccess={() => navigate('home')}
-        />
+        {renderStage(
+          <RegisterScreen
+            key={`register-${rerenderTick}`}
+            style={style}
+            mode={mode}
+            onBack={() => navigate('login')}
+            onSuccess={() => navigate('home')}
+          />,
+        )}
         {!bare && switcher}
       </>
     );
@@ -327,7 +343,7 @@ export default function App() {
   if (screen === 'bpconfig') {
     return (
       <>
-        <BpConfigScreen key={`bpconfig-${rerenderTick}`} style={style} mode={mode} />
+        {renderStage(<BpConfigScreen key={`bpconfig-${rerenderTick}`} style={style} mode={mode} />)}
         {!bare && switcher}
       </>
     );
@@ -336,7 +352,7 @@ export default function App() {
   if (screen === 'eventrules') {
     return (
       <>
-        <EventRulesScreen key={`eventrules-${rerenderTick}`} style={style} mode={mode} />
+        {renderStage(<EventRulesScreen key={`eventrules-${rerenderTick}`} style={style} mode={mode} />)}
         {!bare && switcher}
       </>
     );
@@ -345,17 +361,19 @@ export default function App() {
   if (screen === 'code') {
     return (
       <>
-        <CodeScreen
-          key={`code-${rerenderTick}-${codeVariant}`}
-          style={style}
-          mode={mode}
-          variant={codeVariant}
-          onBack={() => navigate('home')}
-          onStart={(snap) => {
-            applySnapshot(snap);
-            navigate('select');
-          }}
-        />
+        {renderStage(
+          <CodeScreen
+            key={`code-${rerenderTick}-${codeVariant}`}
+            style={style}
+            mode={mode}
+            variant={codeVariant}
+            onBack={() => navigate('home')}
+            onStart={(snap) => {
+              applySnapshot(snap);
+              navigate('select');
+            }}
+          />,
+        )}
         {!bare && switcher}
       </>
     );

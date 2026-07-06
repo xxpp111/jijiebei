@@ -14,12 +14,16 @@
 
 - `projectplan.md` 记录 `diagrams/2026-06-15T000000/diagram.svg` 为知识库画板新配色源。
 
+标注（2026-07-06 调研发现）：上述 `diagrams/2026-06-15T000000/diagram.svg` 资产已不在磁盘，成因待 yb 确认。
+
 ## React Phase 证据图
 
 - `diagrams/phase1-select-screens/`
 - `diagrams/phase1-jump/`
 - `diagrams/phase2-select-screens/`
 - `diagrams/phase2-end2end/`
+
+标注（2026-07-06 调研发现）：上述 `phase1-*` / `phase2-*` 资产目录已不在磁盘，成因待 yb 确认。
 
 这些截图在 `projectplan.md` 中被作为 Phase 1 / Phase 2 验收证据引用。尤其：
 
@@ -46,4 +50,3 @@
 1. 已被 `projectplan.md` 引用的证据图，不直接删除。
 2. 可重生成中间件放 `.gitignore`，源文件和不可再生证据才考虑入库。
 3. 若要移动文件，先同步更新 `projectplan.md` 的引用路径。
-

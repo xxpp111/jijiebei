@@ -19,6 +19,12 @@ Claude Design 产出的设计稿放这里，**受 git 管**（开发模式见记
 - 每版配套截图放 `design/vN/shots/`。
 - ⚠️ 设计稿是 web（HTML/CSS/React）；本项目落地是 **Cocos Creator（节点+Label+Sprite）**。设计稿＝视觉/布局/数据**规范参照**，由我翻译成 Cocos，不直接进项目。
 
+## 版本存续状态（2026-07-06）
+
+- `design/v4-r2/`：现行活跃设计基座。工程层通过 `web/src/styles/index.css` import；本目录只读，适配/修视觉一律在 `web/src/styles/` 追加双类 specificity 覆盖或外层 wrapper。
+- `design/v1/`、`design/v2/`、`design/v3/`、`design/v4/`：历史存档，已被 `v4-r2` 取代。不要在这些目录继续改稿或补丁。
+- `design/random-enemy/`：随机敌方设计已消化进当前实现，保留 SPEC/历史稿作为追溯材料。
+
 ## ✅ 已锁定设计决策（2026-06-08，yb 确认）
 1. **赛事名：集结杯**（弃用「回归杯」旧名，UI 不得再出现回归杯）
 2. **联名 logo：** CM 金属 dM/CM 字标 + 赛事名「集结杯」**左右并排、加分隔线**

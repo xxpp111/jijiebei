@@ -10,9 +10,7 @@
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  ④ vitest 单元测试（纯函数 / 状态机，最快、无需 build）                      │
-│     · web/src/logic/__tests__/：12 文件 126 用例（backend / codec /            │
-│       commanderWeight / eventBan / goldRuntime / jjbSession / matchRecord /  │
-│       mutatorPool / visual-diff）                                             │
+│     · web/src/logic/__tests__/：12 文件 126 用例（详见 §9 当前文件清单）       │
 │     · npm run test:unit（vitest run）                                        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │  ③ 双打同步（端到端 + 两 profile 对战）                                      │
@@ -100,6 +98,17 @@ node e2e/auto-post.mjs                   # 判定完成自动 POST + 改判防�
 node e2e/record-fullstack.mjs            # 全栈真接缝：前端真 UI + 真隔离 isopb（/api 真代理，不 mock）→ P1 practice/#89 relation + P2 match/scores 派生 + P3 doubles 双打真机落库（#84：HomeScreen 采两名→matches.players=两 distinct 真 id→scores 两条各归两名 wins=2；backend pocketbase 已编译，自起隔离 PB 8090）
 node e2e/rankings-board.mjs              # 天梯分榜 board=single/double 分流 + std15/cm 归双打榜（防遗漏事故回归网，自起隔离 PB 8090）
 ```
+
+### 1.4c 动态分辨率与视觉门禁
+
+```bash
+cd web
+npm run snap:visual                      # 1280×720 基线视口，home/select/battle/result/obs 五屏 pixelmatch
+node tmp/dynres-probe.mjs                # 4 视口 × 6 屏 stage 完整可见 + 截图路径清单（临时探针，gitignored）
+node tmp/dynres-interaction-probe.mjs    # 1024×640 缩放态：home QR 可见 + select 拖拽/点金/BP/reroll 真交互
+```
+
+动态分辨率适配采用 stage 外层 fit-scale：非 OBS 屏按 `min(viewportW/1280, viewportH/logicalHeight)` 完整收进视口；home 使用内容高（当前比赛态 845px）参与缩放，QR 与第三行模式格必须完整可见；OBS 屏保持 `1280×232`、`scale=1`，不走适配层。`snapDOM` 导出必须截 `.jjb` 逻辑 stage，本轮验证要求 capture target `transform:none`，避免外层缩放污染 PNG 尺寸。
 
 ### 1.5 后台 admin
 

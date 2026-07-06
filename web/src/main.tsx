@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/index.css';
+import './styles/dynres.css';
 import './styles/bp-config.css';
 import './styles/random-enemy.css';
 import './styles/promo-bar.css';
