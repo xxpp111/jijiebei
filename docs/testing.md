@@ -10,7 +10,7 @@
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  ④ vitest 单元测试（纯函数 / 状态机，最快、无需 build）                      │
-│     · web/src/logic/__tests__/：12 文件 125 用例（backend / codec /            │
+│     · web/src/logic/__tests__/：12 文件 126 用例（backend / codec /            │
 │       commanderWeight / eventBan / goldRuntime / jjbSession / matchRecord /  │
 │       mutatorPool / visual-diff）                                             │
 │     · npm run test:unit（vitest run）                                        │
@@ -124,8 +124,8 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | `npm run e2e:r6` | `npm run build --silent && node e2e/r6-doubles-downstream.mjs` | R6 双打下游 |
 | `npm run e2e:core` | `build + run + codec + bp-rules + auto-post` | 纯前端引擎回归一键跑（9 模式恒等式 / 编解码往返 / BP 规则 / #94 触发链路），无需后端 |
 | `npm run e2e:back` | `go build backend + build + rankings-board + practice-post + record-fullstack` | 真隔离 PB 一键跑（先重编译 backend 防二进制旧）：分榜分流 + practice 落库 + 全栈真接缝 |
-| `npm run snap:visual` | `build + scripts/snap-verify.mjs` | snapDOM 视觉回归：自起 preview，固定随机源，采集 select/result/obs 三屏 actual，与 `web/e2e/snapshots/baseline/` 做 pixelmatch；更新基线用 `npm run snap:visual -- --update` |
-| `npm run test:unit` | `vitest run` | vitest 单测：`web/src/logic/__tests__/` 12 文件 125 用例 |
+| `npm run snap:visual` | `build + scripts/snap-verify.mjs` | snapDOM 视觉回归：自起 preview，固定随机源 + 每屏全新 page（防跨屏状态/随机序列残留）+ capture-until-stable（同屏连截至相邻两次逐字节一致，收敛 snapDOM 瞬态单图未就绪的二态漂移），采集 home/select/battle/result/obs 五屏 actual，与 `web/e2e/snapshots/baseline/` 做 pixelmatch；更新基线用 `npm run snap:visual -- --update` |
+| `npm run test:unit` | `vitest run` | vitest 单测：`web/src/logic/__tests__/` 12 文件 126 用例 |
 | `npm run test:drift` | `node scripts/drift-check.mjs` | 配置漂移守护（重跑 gen-config 比对 committed 无 diff） |
 | `npm run test:back` | `cd ../backend && go test ./...` | 后端 go test |
 | `npm run test` | `test:unit && test:drift && test:back` | 三段聚合 |
@@ -165,7 +165,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | **auth-perm.mjs** | 73 | fetch (node v23+) + 隔离 PB | player_accounts 权限矩阵：① 无 auth 注册 200 ② 选手 token list totalItems=1（只看自己）③ 无 token list=0（挡匿名）④ 重复 phone 400 validation_not_unique ⑤ 选手 token 改别人档案 ≠200 改不了 | backend pocketbase 已编译（自起临时 PB 8090，不碰现网 pb_data） |
 | **practice-post.mjs** | 49 | fetch (node v23+) + 隔离 PB | Step6 practice 落库权限矩阵：① 选手 token 落 mode=practice → 200 ② 选手 token 落 mode=match → ≠200（限 host/admin）③ 匿名落 practice → ≠200 | backend pocketbase 已编译（自起临时 PB） |
 | **player-hook.mjs** | 116 | fetch (node v23+) + 隔离 PB | player_accounts→players 自动建 hook：① 注册选手自动建 players（nickname/player_code=pa-`<id>`）② player relation 回设 ③ 重复同 phone 不重复建 ④ 账号预绑 player 时 hook 跳过（幂等） | backend pocketbase 已编译（自起临时 PB） |
-| **record-fullstack.mjs** | 298 | Playwright + 隔离 PB（真 /api 代理，不 mock） | 全栈真接缝（补 auto-post mock 后端 与 practice-post 不走 UI 之间的缺口，覆盖 #94 触发链路 × #89 relation 解析 × #84 双打两名归属）：起隔离 isopb（8090）+ vite preview（/api 真代理→8090）。**P1 practice**：API 注册真 player_account → 前端真 UI 填手机号+密码登录（非注入假 token）→ 练习 std8 → 走完 3 场判定 → 等 autoPostIfComplete 5s 缓冲自动 POST → 断言真 isopb：matches 有 practice 局（mode=practice / result=[1,2,0] / score_total=2）+ **#89**：players 指向注册 hook 建的 `pa-<accId>` 真 player id（relation 经 ensurePlayer 解析成功、未被 CreateRule 挡 4xx）+ scores 无派生（练习不进天梯）。**P2 match**：superuser 建 host 账号 → 前端真 UI 主播 tab 登录 → 比赛 std8 → chip=done → 断言真 isopb：matches 有 match 局（host=host.id）+ scores 有派生（wins=2，进正式天梯）。**P3 doubles（#84）**：复用 host 比赛态 → HomeScreen 采两名（选手A/B 两 distinct 名）→ 点双打格开局 → 双打 select 随机填 → 判定 → 断言真 isopb：matches 有 doubles 局（game_mode=doubles / result=[1,2,0] / score_total=2，走 currentMatches/currentScore 双打分流真值）+ **#84**：players=两个 distinct 真 player id（各 ensurePlayer，非单占位「双打战队」）、各解析回两名 player_code + scores 两条 board=double 派生（两名各一条、各 wins=2，两人各得分）——补 #94 事故靶心双打分支 + #84 两名归属修复在真机链路上的覆盖（P1/P2 仅 std8 单打，doublesLive 分支此前从未穿真后端） | backend pocketbase 已编译（自起隔离 PB 8090，不碰现网 pb_data）+ `npm run build` |
+| **record-fullstack.mjs** | 298 | Playwright + 隔离 PB（真 /api 代理，不 mock） | 全栈真接缝（补 auto-post mock 后端 与 practice-post 不走 UI 之间的缺口，覆盖 #94 触发链路 × #89 relation 解析 × #84 双打两名归属）：起隔离 isopb（8090）+ vite preview（/api 真代理→8090）。**P1 practice**：API 注册真 player_account → 前端真 UI 填手机号+密码登录（非注入假 token）→ 练习 std8 → 走完 3 场判定 → 等 autoPostIfComplete 5s 缓冲自动 POST → 断言真 isopb：matches 有 practice 局（mode=practice / result=[1,2,0] / score_total=2）+ **#89**：players 指向注册 hook 建的 `pa-<accId>` 真 player id（relation 经 ensurePlayer 解析成功、未被 CreateRule 挡 4xx）+ scores 无派生（练习不进天梯）。**P2 match**：superuser 建 host 账号 → 前端真 UI 主播 tab 登录 → 比赛 std8 → chip=done → 断言真 isopb：matches 有 match 局（host=host.id）+ scores 有派生（wins=2，进正式天梯）。**P3 doubles（#84）**：复用 host 比赛态 → HomeScreen 采两名（选手A/B 两 distinct 名）→ 点双打格开局 → 双打 select 随机填 → 判定 → 断言真 isopb：matches 有 doubles 局（game_mode=doubles / result=[1,2,0] / score_total=2，走 currentMatches/currentScore 双打分流真值）+ **#84**：players=两个 distinct 真 player id（各 ensurePlayer，非单占位「双打战队」）、各解析回两名 player_code + scores 两条 board=double 派生（两名各一条、各 wins=2，两人各得分）——补 #94 事故靶心双打分支 + #84 两名归属修复在真机链路上的覆盖（P1/P2 仅 std8 单打，doublesLive 分支此前从未穿真后端）。**P4 deep-link（#84 defer）**：不经 HomeScreen 直达 `?screen=select&sessionMode=doubles` → 默认名兜底「选手A/B」→ 判定落库 → 断言两 distinct 真 player id 各解析为默认名 + scores 两条各归属（deep-link/贴码路径不回退占位单归属） | backend pocketbase 已编译（自起隔离 PB 8090，不碰现网 pb_data）+ `npm run build` |
 | **admin-smoke.mjs** | 80 | fetch (node v23+) | 三角色登录 + 对局/选手/天梯/系数 fetch + role 守卫（viewer 不能读 logs，host 不能读 accounts）+ admin 调分 | PB 8090 + verify-all.sh 已造 |
 
 ### flows 覆盖矩阵（`web/e2e/flows/`，7 条 AI-E2E flow）
@@ -325,7 +325,7 @@ steps:
 
 ## 9. TODO（待补 / 留后续 round）
 
-- [x] **vitest 已引入**：`web/src/logic/__tests__/` 12 文件 125 用例（backend/codec/commanderWeight/eventBan/goldRuntime/jjbSession/matchRecord/mutatorPool/config-modes/jjbDoubles/scoring-contract/visual-diff），`npm run test:unit` 跑；`test:drift`/`test:back` 另覆盖配置漂移守护与后端 go test。
+- [x] **vitest 已引入**：`web/src/logic/__tests__/` 12 文件 126 用例（backend/codec/commanderWeight/eventBan/goldRuntime/jjbSession/matchRecord/mutatorPool/config-modes/jjbDoubles/scoring-contract/visual-diff），`npm run test:unit` 跑；`test:drift`/`test:back` 另覆盖配置漂移守护与后端 go test。
 - [ ] **admin 前后端契约一致性验证**：devbox 三层版本对齐（web 来自 jjb-live-dock、admin 来自本地 build、backend 独立二进制）— 留 P2 round。
 - [ ] **覆盖率上报**：跑完 e2e 后输出 codec/jjbSession/jjbDoubles 覆盖率（c8 或 vitest --coverage）。
 - [ ] **CI 缓存**：`node_modules` / `~/.cache/go-build` / `~/.cache/vite` 三段缓存可大幅加速。

@@ -90,13 +90,28 @@ async function main() {
       } catch { /* noop */ }
     });
 
-    // ensurePlayer 兜底链路 mock：getPlayerByCode（GET ?filter=）查无 → createPlayer（POST）建一个假选手。
+    // ensurePlayer 兜底链路 mock：getPlayerByCode（GET ?filter=）查无 → createPlayer（POST）按 player_code 稳定建档。
+    // 双打 deep-link 默认名会各 ensurePlayer 一次；这里按名字回 distinct id，钉住 body.players=[A,B] 形状。
     let matchPosts = [];
+    const mockPlayersByCode = new Map();
     await page.route('**/collections/players/records**', (route) => {
       if (route.request().method() === 'POST') {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'e2e-player-1', nickname: 'e2e选手', player_code: 'e2e选手' }) });
+        const body = JSON.parse(route.request().postData() || '{}');
+        const code = body.player_code || body.nickname || `e2e选手${mockPlayersByCode.size + 1}`;
+        if (!mockPlayersByCode.has(code)) {
+          mockPlayersByCode.set(code, {
+            id: `e2e-player-${mockPlayersByCode.size + 1}`,
+            nickname: body.nickname || code,
+            player_code: code,
+          });
+        }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockPlayersByCode.get(code)) });
       }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) });
+      const url = new URL(route.request().url());
+      const filter = url.searchParams.get('filter') || '';
+      const code = decodeURIComponent(filter).match(/player_code='([^']+)'/)?.[1];
+      const existing = code ? mockPlayersByCode.get(code) : null;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: existing ? [existing] : [] }) });
     });
     await page.route('**/collections/matches/records', (route) => {
       if (route.request().method() !== 'POST') return route.continue();
@@ -159,7 +174,9 @@ async function main() {
       if (JSON.stringify(body.result) !== JSON.stringify([1, 0, 2])) fail(`③ 双打 result=${JSON.stringify(body.result)} != [1,0,2]（win/lose/bonus→RESULT_VAL）`);
       if (body.score_total !== 2) fail(`③ 双打 score_total=${body.score_total} != 2（doublesScore：win+bonus）`);
       if (body.game_mode !== 'doubles') fail(`③ 双打 game_mode=${body.game_mode} != doubles`);
-      pass(`③ 双打 3 场全判：result=${JSON.stringify(body.result)} score_total=${body.score_total}（双打引擎真值，非单打陈旧值）`);
+      if (!Array.isArray(body.players) || body.players.length !== 2) fail(`③ 双打 players=${JSON.stringify(body.players)} 不是两元素数组`);
+      else if (body.players[0] === body.players[1]) fail(`③ 双打 players 两元素不 distinct：${JSON.stringify(body.players)}`);
+      pass(`③ 双打 3 场全判：result=${JSON.stringify(body.result)} score_total=${body.score_total} players=${JSON.stringify(body.players)}（双打引擎真值，非单打陈旧值）`);
     }
 
     // ④ 练习态：battle 屏不渲染任何落库 chip/警示（现有静默语义保留），无论账号是谁。
