@@ -122,3 +122,7 @@ design/v3/project/uploads/
 design/v4/input/
 design/v4-input/
 design/v4-input-r2/
+
+# 设计素材站：素材本体不入仓（含 112MB 官方 logo 包），仅 README 索引入库（目录级排除会连 re-include 失效，用 /* + 白名单）
+design/inputs/*
+!design/inputs/README.md
