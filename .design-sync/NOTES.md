@@ -62,3 +62,9 @@
 - **CSS 闭包** styles.css @import 次序(Google Fonts 置顶→design/v4-r2 theme/styles/v4/obs→本地 brand-gold/obs-fuller/jjb-select→功能层)，design/v4-r2 css 复制进 ds-bundle/css/(平铺无相互 @import)；token 26 defined，accent #D8B15A 生效。
 - **hub 亲验**：package-validate 格式全过(唯一 [RENDER_SKIPPED] 因 .ds-sync 缺 playwright，非产物问题) + hub web playwright 验 3 组件×三皮肤渲染(root非空+无glob error+token生效) + **抓修 ModeButton [GRID_OVERFLOW]**(.ds-grid 360px 并排→改单列三皮肤纵向全宽)。32 文件 DesignSync 上传 fd3ab5f6，list_files 确认。
 - **pin 更新** config.json projectId e956fe00(404)→fd3ab5f6；ds-bundle/.ds-sync/ 已 gitignore。**下次同步**：list_files fd3ab5f6 已有 3 组件，增量补 CommanderCard/FactorFrame/MatchRow/BrandLockup 或新组件；converter 仍不可用(glob)，继续 off-script + hub Playwright 验。
+
+## 2026-07-06 第 3 次账号迁移 + Design System 全量重建（108585f1）
+- **账号链取证**（三份 claude.ai 数据导出 `~/Downloads/claude 数据备份/` 的 users.json 硬证据）：maura.woodellis（06-23 导出）→ Novruzov/arrowpointk@gmail.com（06-30 导出，fd3ab5f6 的 design_chats 归此身份）→ **Tad Long/amondadachey@alumni.com（07-04 导出，yb 确认为新注册号）**。NOTES 此前只记到 maura；后两次切换由备份取证补齐。备份 zip 均无 DS 文件结构（只有对话历史），重建素材 100% 取自 repo ds-bundle。
+- **新号全量重建**：`/design-login` 授权（新号 `list_projects`=[]，fd3ab5f6 不可及、归属旧身份）→ `create_project 集结杯 Design System` = **`108585f1-06e8-48fb-94af-3ce266a70b7d`** → ds-bundle **184 文件**（10 组件四件套 + 126 assets PNG + 11 css + _vendor react UMD + 根 5 件）分 4 批 write_files（58+29+44+53，全走 localPath 直读盘、内容不经模型上下文，规避 base64 手抄损坏坑；126 张一批会 Socket closed，≤60/批稳）→ `list_files` 核对 184 全在。
+- **pin 更新** config.json projectId fd3ab5f6（不可及）→ 108585f1。
+- **下次同步**：增量 off-script（converter 仍不可用，glob 根因见上条）；Prototype 出稿绑定新 DS「集结杯 Design System」（108585f1）。
