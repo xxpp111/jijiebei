@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { startSession, setVerdict, setRuleMode } from '../jjbSession';
 import { setDoublesVerdict } from '../jjbDoubles';
 import { currentMatches, currentScore } from '../jjbView';
-import { pbAuthHost } from '../backend';
+import { pbAuthHost, pbAuthPlayer } from '../backend';
 import { RESULT_VAL } from '../legacy/JJBData';
 import JijieData from '../legacy/JijieData';
 import {
@@ -39,6 +39,18 @@ function routedFetch() {
     const u = String(url);
     if (u.includes('/collections/accounts/auth-with-password')) {
       return { ok: true, json: async () => ({ token: 'host-tok', record: { id: 'h1', role: 'host' } }) };
+    }
+    if (u.includes('/collections/player_accounts/auth-with-password')) {
+      return { ok: true, json: async () => ({ token: 'player-tok', record: { id: 'pa1', nickname: '测试选手账号' } }) };
+    }
+    if (u.includes('/collections/player_accounts/records/pa1?expand=player')) {
+      return {
+        ok: true,
+        json: async () => ({
+          id: 'pa1',
+          expand: { player: { id: 'linked-player-1', nickname: '测试选手账号', player_code: 'pa-pa1' } },
+        }),
+      };
     }
     if (u.includes('/collections/players/records?filter=')) {
       return { ok: true, json: async () => ({ items: [] }) }; // 首次查无 → 走建
@@ -128,6 +140,26 @@ describe('postMatchResult · 双打 ensurePlayer 失败负路径（#84 review �
     const retry = await postMatchResult();
     expect(retry).toBe('posted');
     expect(matchPostCalls(g.fetch).length).toBe(1); // 失败那次没打到 matches，重试这次才落
+  });
+});
+
+describe('postMatchResult · practice player-kind 双打 payload（#84 review 补测：账号 relation 归属）', () => {
+  it('practice + player-kind 账号 + 双打：前端提交 body.players=[同 id, 同 id]（PB 真库随后会多关系去重）', async () => {
+    await pbAuthPlayer('13900000001', 'pwd', false); // 覆盖 beforeEach 的 host 登录态，确保 ensurePlayer 走 player relation
+    setRuleMode('practice');
+    startSession('doubles');
+    setDoublesVerdict(0, 'win');
+    setDoublesVerdict(1, 'bonus');
+    setDoublesVerdict(2, 'lose');
+
+    const f = g.fetch as ReturnType<typeof vi.fn>;
+    const outcome = await postMatchResult();
+    expect(outcome).toBe('posted');
+    const call = matchPostCalls(f)[0] as [string, any];
+    const body = JSON.parse(call[1].body);
+    expect(body.mode).toBe('practice');
+    expect(body.game_mode).toBe('doubles');
+    expect(body.players).toEqual(['linked-player-1', 'linked-player-1']);
   });
 });
 

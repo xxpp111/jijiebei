@@ -283,6 +283,51 @@ async function main() {
       }
     }
 
+    // ============ P4 · doubles deep-link 默认名落库（#84 review defer：不经 HomeScreen）============
+    console.log('\n[P4] doubles deep-link 默认名路径：复用 host 比赛态 → 直达 select&sessionMode=doubles → 判定 → 自动落库 → 真 isopb 断言');
+    // 不经 HomeScreen，不填 A/B。App 的 select 兜底按 URL sessionMode=doubles 开新局，
+    // jjbDoubles.doublesStart 重置 players 为默认「选手A」「选手B」，验证 deep-link/贴码兜底路径不回退占位单归属。
+    await page.evaluate(() => sessionStorage.setItem('jjb_rule_mode', 'match'));
+    await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=dark&sessionMode=doubles&cb=deep-link-${Date.now()}`, { waitUntil: 'networkidle', timeout: 45000 });
+    await page.waitForSelector('[data-doubles-select]', { timeout: 15000 });
+    const p4Defaults = await page.evaluate(() => window.__jjbDebug?.doubles?.players || []);
+    expect(JSON.stringify(p4Defaults) === JSON.stringify(['选手A', '选手B']), `P4 deep-link 默认名写入 jjbDoubles（__jjbDebug.doubles.players=${JSON.stringify(p4Defaults)} 期望 [选手A,选手B]）`);
+    await page.click('[data-doubles-random-fill-btn]');
+    await page.waitForFunction(() => document.querySelectorAll('[data-doubles-cmd]').length === 6, { timeout: 10000 });
+    await page.click('[data-doubles-start-btn]');
+    await page.waitForSelector('[data-doubles-battle]', { timeout: 15000 });
+    for (let i = 0; i < 3; i++) {
+      await page.click(`.matches .match:nth-child(${i + 1}) .v-btn:has-text("${['胜利', '失败', '带奖励'][i]}")`);
+    }
+    await page.waitForFunction(() => window.__jjbDebug?.doubles?.totalCount === 3, { timeout: 8000 }).catch(() => {});
+    const p4GotChip = await page.waitForSelector('[data-record-chip][data-record-state="done"]', { timeout: 8000 }).then(() => true).catch(() => false);
+    if (!p4GotChip) await page.waitForTimeout(6500);
+
+    const mP4 = await suGet(base, su, '/api/collections/matches/records?perPage=200&sort=-created');
+    const deepMatch = (mP4.data.items || []).find((m) => m.game_mode === 'doubles' && (!dblMatch || m.id !== dblMatch.id));
+    if (!expect(!!deepMatch, `P4 真 isopb 落库：matches 有新的 deep-link doubles 局（不同于 P3，totalItems=${mP4.data?.totalItems}）`)) {
+      console.error('  [P4 诊断] matches 全量:', JSON.stringify(mP4.data.items || []).slice(0, 700));
+    } else {
+      expect(deepMatch.mode === 'match', `P4 mode=match（复用 host 比赛态）实际 ${deepMatch.mode}`);
+      expect(deepMatch.host === hostId, `P4 host=host.id ${hostId}（实际 ${deepMatch.host}）`);
+      expect(JSON.stringify(deepMatch.result) === JSON.stringify([1, 0, 2]), `P4 result=[1,0,2]（win/lose/bonus，deep-link 双打真值）实际 ${JSON.stringify(deepMatch.result)}`);
+      expect(deepMatch.score_total === 2, `P4 score_total=2（win+bonus）实际 ${deepMatch.score_total}`);
+      const p4pl = deepMatch.players || [];
+      expect(p4pl.length === 2, `P4 deep-link players 含两个真实 player id（默认名各 ensurePlayer）实际 =[${p4pl}] len=${p4pl.length}`);
+      const p4Expand = await suGet(base, su, `/api/collections/players/records?perPage=200&filter=${encodeURIComponent(`player_code='选手A' || player_code='选手B'`)}`);
+      const p4CodeById = Object.fromEntries((p4Expand.data.items || []).map((p) => [p.id, p.player_code]));
+      const p4ResolvedCodes = p4pl.map((id) => p4CodeById[id]).sort();
+      expect(JSON.stringify(p4ResolvedCodes) === JSON.stringify(['选手A', '选手B'].sort()), `P4 deep-link 两 player id 各解析为默认名（player_code=${JSON.stringify(p4ResolvedCodes)} 期望 ${JSON.stringify(['选手A', '选手B'].sort())}）`);
+      expect(p4pl[0] !== p4pl[1], `P4 deep-link 默认名是两个 distinct player 实体（idA=${p4pl[0]} ≠ idB=${p4pl[1]}）`);
+      const sP4 = await suGet(base, su, `/api/collections/scores/records?perPage=200&filter=${encodeURIComponent(`match='${deepMatch.id}'`)}`);
+      expect(sP4.data.totalItems === 2, `P4 deep-link scores 两条派生（默认两名各一条）实际 totalItems=${sP4.data?.totalItems}`);
+      if (sP4.data.totalItems >= 1) {
+        const p4ScoredPlayers = (sP4.data.items || []).map((s) => s.player).sort();
+        expect(JSON.stringify(p4ScoredPlayers) === JSON.stringify([...p4pl].sort()), `P4 deep-link 两条 scores 各归默认两名（scores.player=${JSON.stringify(p4ScoredPlayers)} = players ${JSON.stringify([...p4pl].sort())}）`);
+        expect((sP4.data.items || []).every((s) => s.wins === 2), `P4 deep-link 两名各 wins=2（win+bonus 计胜场）实际 ${JSON.stringify((sP4.data.items || []).map((s) => s.wins))}`);
+      }
+    }
+
     if (pageErrors.length) for (const e of pageErrors) fail('page console error: ' + e);
   } finally {
     if (browser) await browser.close();
@@ -294,5 +339,5 @@ async function main() {
 await main();
 
 if (failed) { console.error('[record-fullstack] ❌ FAIL'); process.exit(1); }
-console.log('[record-fullstack] ✅ PASS — #94 前端真UI→真isopb落库接缝通 + #89 注册选手 relation 真解析');
+console.log('[record-fullstack] ✅ PASS — #94 前端真UI→真isopb落库接缝通 + #89 注册选手 relation 真解析 + #84 deep-link 默认名双打归属');
 process.exit(0);
