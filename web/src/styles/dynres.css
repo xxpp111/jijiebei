@@ -1,0 +1,113 @@
+/* Dynamic resolution adapter.
+   design/v4-r2 stays read-only: this layer wraps the 1280px stage and applies a
+   viewport fit transform outside the design base. OBS is excluded in App.tsx. */
+
+html,
+body,
+#react-root {
+  min-width: 0;
+  min-height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+#react-root {
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  gap: 0;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.jjb-fit-viewport {
+  --jjb-stage-scale: 1;
+  --jjb-stage-height: 720px;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0a0b0e;
+}
+
+.jjb-fit-scale {
+  width: calc(1280px * var(--jjb-stage-scale));
+  height: calc(var(--jjb-stage-height) * var(--jjb-stage-scale));
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.jjb-fit-transform {
+  width: 1280px;
+  height: var(--jjb-stage-height);
+  transform: scale(var(--jjb-stage-scale));
+  transform-origin: top left;
+}
+
+.jjb-fit-viewport[data-stage-height-mode="content"] .jjb-fit-transform {
+  height: auto;
+}
+
+.jjb-fit-viewport[data-stage-height-mode="content"] .jjb-fit-transform > .jjb {
+  min-height: var(--jjb-stage-height);
+  height: auto;
+}
+
+.jjb-fit-viewport[data-stage-height-mode="content"] .jjb-fit-transform > .jjb > .jjb-bg {
+  min-height: var(--jjb-stage-height);
+}
+
+.jjb-fit-viewport[data-adaptive-stage="home"] .jjb-inner.home {
+  min-height: 720px;
+  height: auto;
+}
+
+/* The dev switcher is outside the scaled stage but should stay accessible at
+   any viewport size. It uses the same .jjb token container for button styling. */
+.jjb-stage-switcher {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  width: auto;
+  height: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 8px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-edge);
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.jjb-stage-switcher .ctrl-sep {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  background: var(--panel-edge);
+}
+
+.jjb-obs-viewport {
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  background: #0a0b0e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.jjb-obs-viewport .obs-host {
+  transform: none;
+}
+
+.jjb-obs-viewport .obs-host[data-bare] {
+  margin-top: 0;
+}

@@ -81,7 +81,7 @@ decode 三道闸（`decodeResult(code)`）：
 | 1 | `v` | `1` | payload_ver |
 | 2 | `p` | `number` | poolFingerprint |
 | 3 | `kind` | `'d'` | 双打标记 |
-| 4 | `variant` | `'guantu'\|'feiqiu'` | 官突 / 非酋之轮 |
+| 4 | `variant` | `'guantu'\|'feiqiu'\|'std15'\|'cm'` | 官突 / 非酋之轮 / 15 因子双打 / CM 双打 |
 | 5 | `mutEntries` | `{name,map,factors[]}[3]` | 每场官突（factors 存名，非酋=「混乱工作室」） |
 | 6 | `facPool` | `number[]` | factorPool → FACTORS idx（guantu=9 / feiqiu=3） |
 | 7 | `cmdPool` | `string[6]` | 指挥官池（存名） |
@@ -106,5 +106,5 @@ P5 后端只需存取字符串，decode 逻辑前端复用 `codec.ts`（或后�
 ## 6. 边界（本 round scope）
 
 - **编解码往返等价**：`encodePayload(capturePayload()) ↔ decodePayload` 全字段等价（9 模式 + 双打）= 本 round 硬 gate（`e2e/codec.mjs`）。
-- **applySnapshot 还原进 select/battle**：留后续 round。单打可直写 `JijieData` + 已有 setter（不改引擎），双打需新增 `applyDoublesSnapshot`（直写 jjbDoubles `_*` 私有闭包，超本 round scope）。屏 D「按此码开局」本 round 做到 decode 成功 + 写 URL #hash + 导航 select 接通，真正还原留后续。
+- **applySnapshot 还原进 select/battle**：已实现并纳入 `web/e2e/applysnapshot.mjs`。当前覆盖 std10 单打 + doubles/std15/cm 双打：`capturePayload → encode → decode → applySnapshot → capturePayload` 后核心字段深比对等价。
 - **引用式短码**（`JJB-8F-3K9Q-2M7X`）：需后端存 payload + 查表，依赖 P5，本 round 留占位。
