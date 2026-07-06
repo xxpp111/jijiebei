@@ -77,10 +77,23 @@ claude.ai/design 下有两种项目类型，用途完全不同，**新设计轮 
 - token 直接 `var()` 复用（见附录），不照搬设计稿的占位简化（保 repo 真实可用状态），落地后用 element 截图 + 量化核对溢出（见附录）。
 
 ### 替代路径 · Export（不走连接器时）
-设计稿右上 **Export** 提供三种导出：**Download .zip / standalone HTML / Send to Claude Code**。当 DesignSync 不可用或想要离线产物时用它兜底。
+设计稿右上 **Export** 提供多种导出：**Download .zip / standalone HTML / PDF / PPTX / Send to Claude Code**（另有 Canva/Miro/Vercel 等集成）。当 DesignSync 不可用或想要离线产物时用它兜底。
 
 ### 认证
-claude.ai 登录会自动升级 `user:design:read/write` scope，**无需** `/design-login`。
+claude.ai 登录会自动升级 `user:design:read/write` scope；hub 侧 MCP 连接器的 design scope 会过期，读稿前如报「needs design-system authorization」则跑一次 `/design-login`（2026-07-07 实测隔天过期）。
+
+---
+
+## 3.5 素材投喂与本地代码链接（2026-07-07 官方文档调研增补）
+
+**素材唯一入口 = `design/inputs/`**（gitignored 素材站，见其 README 索引：CM 官方 logo 包 7 配色 + 现状 5 屏参考图 + 品牌参考）。设计轮开工时从这里挑 2-4 张拖进 claude.ai/design 对话窗；支持图片与 DOCX/PPTX/XLSX 文档。
+
+**本地代码 → 云端 Design System 的三条官方渠道**（本仓现状:渠道①已走完,无需重复）：
+1. **DesignSync MCP 手动上传**（本仓采用）：ds-bundle 184 文件已全量在「集结杯 Design System」`108585f1`，Prototype 绑定即自动继承组件与 token——**日常设计轮什么都不用再链**。
+2. **Claude Code `/design-sync` 命令**：官方等价路径（拉本地组件库同步 DS），本仓因 import.meta.glob 走了 off-script 变体（见 NOTES）。
+3. **GitHub 仓库链接**：在 claude.ai/design 项目里可 link 代码仓库让它理解现有组件/样式。本仓 `github.com/xxpp111/jijiebei` 可链，但注意云端读到的是 **origin 已 push 的版本**——本地领先未 push 时以 DS 底座为准，不建议依赖此渠道。
+
+**官方最佳实践（对本仓有效的几条）**：反馈给精确值（「表单字段间距调到 8px」而非「不太对」）；**按名引用 DS 组件**（ModeButton / DropCell / GoldBadge / BpBadge / RerollBadge / CommanderCard / EnemyBadge / FactorFrame / MapThumb / ObsBar）；可要求一次出 2-3 个布局方案对比再收敛；收尾让它自查可访问性与信息层级。
 
 ---
 
