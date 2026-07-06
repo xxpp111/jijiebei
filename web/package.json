@@ -10,6 +10,7 @@
     "e2e:r6": "npm run build --silent && node e2e/r6-doubles-downstream.mjs",
     "e2e:core": "npm run build --silent && node e2e/run.mjs && node e2e/codec.mjs && node e2e/bp-rules.mjs && node e2e/auto-post.mjs",
     "e2e:back": "cd ../backend && go build -o pocketbase . && cd ../web && npm run build --silent && node e2e/rankings-board.mjs && node e2e/practice-post.mjs && node e2e/record-fullstack.mjs",
+    "snap:visual": "npm run build --silent && node scripts/snap-verify.mjs",
     "preview": "vite preview --port 7788",
     "test:unit": "vitest run",
     "test:drift": "node scripts/drift-check.mjs",
@@ -23,10 +24,13 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/node": "^22.20.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "pixelmatch": "^7.2.0",
     "playwright": "^1.61.0",
+    "pngjs": "^7.0.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.9"

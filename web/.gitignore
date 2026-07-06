@@ -6,3 +6,5 @@ tmp/
 shot.mjs
 .harness-pro-*
 e2e-*.png
+e2e/snapshots/actual/
+e2e/snapshots/diff/

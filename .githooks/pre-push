@@ -1,0 +1,29 @@
+#!/bin/sh
+# 集结杯最小 push 门禁（2026-07-06 对抗审查拍板：无 CI=整条质量链单点人肉依赖，先立无人值守快检）。
+# 范围 = 快而确定的四检（~1 分钟）：web tsc + vitest（含 scoring 跨系统契约）+ backend go build + go test。
+# 完整 e2e（e2e:core/e2e:back，含 Playwright+隔离 PB，数分钟）不进本门禁——留在部署窗口由 hub 亲跑。
+# 逃生口：JJB_SKIP_GATE=1 git push（仅救急，如只推文档；用了要在 PR/commit 里说明）。
+# 接线（每个 clone 一次）：git config core.hooksPath .githooks
+
+set -e
+
+if [ "${JJB_SKIP_GATE:-}" = "1" ]; then
+  echo "[pre-push] JJB_SKIP_GATE=1 — 跳过门禁（救急通道，请在交付说明里注明）"
+  exit 0
+fi
+
+ROOT=$(git rev-parse --show-toplevel)
+
+echo "[pre-push] 1/4 web tsc --noEmit"
+(cd "$ROOT/web" && npx tsc --noEmit)
+
+echo "[pre-push] 2/4 web vitest run"
+(cd "$ROOT/web" && npx vitest run --silent)
+
+echo "[pre-push] 3/4 backend go build"
+(cd "$ROOT/backend" && go build -o /tmp/jjb-prepush-pb .)
+
+echo "[pre-push] 4/4 backend go test"
+(cd "$ROOT/backend" && go test ./...)
+
+echo "[pre-push] ✅ 四检全绿，放行 push"

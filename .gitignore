@@ -64,7 +64,10 @@ Thumbs.db
 /.claude/*
 !/.claude/skills/
 /.codex/
-/.githooks/
+# .githooks：harness scaffold 生成件默认不入库，但项目自有 push 门禁 pre-push 显式入库
+# （2026-07-06 复盘拍板的四检门禁——目录级排除会连 re-include 都失效，故改通配+白名单）
+/.githooks/*
+!/.githooks/pre-push
 /config/
 /scripts/
 /HARNESS-PRO-ADAPTER.md

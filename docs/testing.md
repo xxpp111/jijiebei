@@ -1,7 +1,7 @@
 # 集结杯 · 测试体系（Testing）
 
 > 范围：项目四层测试体系——①代码层（前端 build / 后端 Go）②AI-E2E（Playwright + 纯 Node fetch + flows）③双打同步（两 profile 对战）④vitest 单元测试（纯函数 / 状态机）。
-> 真相源：`web/e2e/*.mjs`（20 个前端 e2e）+ `web/e2e/flows/*.flow.mjs`（7 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（11 个 vitest 单测文件）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
+> 真相源：`web/e2e/*.mjs`（20 个前端 e2e）+ `web/e2e/flows/*.flow.mjs`（7 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（12 个 vitest 单测文件）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
 
 ---
 
@@ -10,9 +10,9 @@
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  ④ vitest 单元测试（纯函数 / 状态机，最快、无需 build）                      │
-│     · web/src/logic/__tests__/：11 文件 123 用例（backend / codec /            │
+│     · web/src/logic/__tests__/：12 文件 125 用例（backend / codec /            │
 │       commanderWeight / eventBan / goldRuntime / jjbSession / matchRecord /  │
-│       mutatorPool）                                                          │
+│       mutatorPool / visual-diff）                                             │
 │     · npm run test:unit（vitest run）                                        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │  ③ 双打同步（端到端 + 两 profile 对战）                                      │
@@ -124,7 +124,8 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | `npm run e2e:r6` | `npm run build --silent && node e2e/r6-doubles-downstream.mjs` | R6 双打下游 |
 | `npm run e2e:core` | `build + run + codec + bp-rules + auto-post` | 纯前端引擎回归一键跑（9 模式恒等式 / 编解码往返 / BP 规则 / #94 触发链路），无需后端 |
 | `npm run e2e:back` | `go build backend + build + rankings-board + practice-post + record-fullstack` | 真隔离 PB 一键跑（先重编译 backend 防二进制旧）：分榜分流 + practice 落库 + 全栈真接缝 |
-| `npm run test:unit` | `vitest run` | vitest 单测：`web/src/logic/__tests__/` 11 文件 123 用例 |
+| `npm run snap:visual` | `build + scripts/snap-verify.mjs` | snapDOM 视觉回归：自起 preview，固定随机源，采集 select/result/obs 三屏 actual，与 `web/e2e/snapshots/baseline/` 做 pixelmatch；更新基线用 `npm run snap:visual -- --update` |
+| `npm run test:unit` | `vitest run` | vitest 单测：`web/src/logic/__tests__/` 12 文件 125 用例 |
 | `npm run test:drift` | `node scripts/drift-check.mjs` | 配置漂移守护（重跑 gen-config 比对 committed 无 diff） |
 | `npm run test:back` | `cd ../backend && go test ./...` | 后端 go test |
 | `npm run test` | `test:unit && test:drift && test:back` | 三段聚合 |
@@ -315,6 +316,8 @@ steps:
 | `verify-all.sh` `503 connection refused` | PB 没起 / 端口不对 |
 | `match-flow.mjs` 卡 login | host 账号未造；先跑 verify-all.sh |
 | `r6-doubles-downstream.mjs` 截图空 | Playwright 浏览器未装（首次需 `npx playwright install chromium`） |
+| `snap:visual` 报 missing baseline | 首次建立或有意接受视觉变化：`npm run snap:visual -- --update`，再跑普通 `npm run snap:visual` 确认 0 diff |
+| `snap:visual` 报 pixel diff | 看 `web/e2e/snapshots/diff/*.png`；若是预期 UI 变化，更新 baseline；若是随机/图片未加载，先修脚本等待条件，不要放宽阈值掩盖 |
 | `admin-smoke.mjs` logs 403 | viewer 误用 admin token；检查 auth 函数返回值 |
 | 双打 `difficultyTotal` 漂移 | jjbDoules 污染了 JijieData — 走 P5 真代码审查回归（看记忆 `R5 select bugfix`） |
 
@@ -322,7 +325,7 @@ steps:
 
 ## 9. TODO（待补 / 留后续 round）
 
-- [x] **vitest 已引入**：`web/src/logic/__tests__/` 11 文件 123 用例（backend/codec/commanderWeight/eventBan/goldRuntime/jjbSession/matchRecord/mutatorPool/config-modes/jjbDoubles/scoring-contract），`npm run test:unit` 跑；`test:drift`/`test:back` 另覆盖配置漂移守护与后端 go test。
+- [x] **vitest 已引入**：`web/src/logic/__tests__/` 12 文件 125 用例（backend/codec/commanderWeight/eventBan/goldRuntime/jjbSession/matchRecord/mutatorPool/config-modes/jjbDoubles/scoring-contract/visual-diff），`npm run test:unit` 跑；`test:drift`/`test:back` 另覆盖配置漂移守护与后端 go test。
 - [ ] **admin 前后端契约一致性验证**：devbox 三层版本对齐（web 来自 jjb-live-dock、admin 来自本地 build、backend 独立二进制）— 留 P2 round。
 - [ ] **覆盖率上报**：跑完 e2e 后输出 codec/jjbSession/jjbDoubles 覆盖率（c8 或 vitest --coverage）。
 - [ ] **CI 缓存**：`node_modules` / `~/.cache/go-build` / `~/.cache/vite` 三段缓存可大幅加速。
