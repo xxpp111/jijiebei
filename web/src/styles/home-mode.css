@@ -66,16 +66,10 @@
 .lb-s { font-family: var(--font-num); font-size: 9.5px; letter-spacing: 2px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
 .lb-s b { color: var(--accent); font-weight: 700; }
 
-/* 已登录态（修"循环登录"：账号名徽标 + 退出，不复用未登录按钮的 cursor:default） */
+/* 已登录态（修"循环登录"：账号名徽标 + 退出，不复用未登录按钮的 cursor:default）
+   退出按钮样式 → home-redesign.css .jjbx-logout（#75） */
 .loginbtn.logged { border-color: color-mix(in srgb, var(--accent) 45%, var(--panel-edge)); }
 .loginbtn.logged .lb-ico { color: var(--accent); }
-.logoutbtn {
-  margin-left: 4px; padding: 6px 12px; font-size: 12px; letter-spacing: 1px; cursor: pointer;
-  background: transparent; color: var(--muted); border: 1px solid var(--panel-edge);
-  transition: color .16s, border-color .16s;
-}
-.style-minimal .logoutbtn { border-radius: 6px; }
-.logoutbtn:hover { color: var(--warn); border-color: var(--warn); }
 
 /* ===== 模式提示行（练习 / 比赛） ===== */
 .practice-hint { display: inline-flex; align-items: center; gap: 9px; margin-top: 16px; font-size: 14px; color: var(--muted); }
@@ -84,16 +78,7 @@
 .match-hint b { color: var(--accent); font-weight: 700; }
 .match-hint .mh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); flex: none; }
 
-/* ===== 选手 ID 突出输入（比赛态 · 直播展示） ===== */
-.player-row.match { align-items: center; }
-.player-row.match .player-label { color: var(--accent); }
-.player-field.big {
-  height: 52px; max-width: 560px; padding: 0 22px;
-  box-shadow: inset 0 0 0 1px var(--accent), 0 0 16px color-mix(in srgb, var(--accent) 14%, transparent);
-}
-.style-metal .player-field.big { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
-.style-minimal .player-field.big { border-radius: 7px; }
-.player-field.big .caret { height: 26px; }
+/* ===== LIVE 徽章（选手 A 槽内沿用;选手输入行本体 → home-redesign.css .jjbx-duo #75） ===== */
 .player-live {
   display: inline-flex; align-items: center; gap: 6px; margin-left: 2px;
   font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent);
@@ -137,33 +122,7 @@
    (裁掉底部宣传条 / 积分卡)。这里压缩 home 各段间距(双类 specificity 取胜，覆盖 design/v4-r2 单类、
    不改 design 只读源)，使两态都 fit 720。 */
 .jjb-inner.home { padding-top: 12px; padding-bottom: 12px; }
-.jjb-inner.home .tabrow { margin-top: 12px; }
-.jjb-inner.home .practice-hint,
-.jjb-inner.home .match-hint { margin-top: 8px; }
-.jjb-inner.home .mode-block { margin-top: 14px; }
 .jjb-inner.home .promo-head { margin-bottom: 4px; }
 
-/* 比赛态额外压缩：放大的选手 ID 框(.player-field.big 52px+glow) + match-hint + player-row.match 比练习态多占 ~30px，
-   会把 8 模式格 07/08 挤出 720。这里只压缩比赛态 player 区垂直占用（双类 specificity 覆盖 design 单类，不改 design 源），
-   8 格在比赛态也全部可见。练习态不受影响（仅 .match 选择器命中）。 */
-.jjb-inner.home .player-row.match { margin-top: 12px; }
-.jjb-inner.home .player-field.big { height: 46px; }
-.jjb-inner.home .player-field.big .caret { height: 22px; }
-
-/* Bug A 补修（hub·数值验证）：比赛态 8 格溢出 824>720 差 104px。modeBlock(8 格 3 行·mode-btn min-height 104)是最大项、两态共用，
-   压 mode-btn 行高 + mode-grid gap/margin 凑够 104px —— 练习态本已 fit、压后更宽松不破坏，比赛态由此收进 720。 */
-.jjb-inner.home .mode-btn { min-height: 80px; }
-.jjb-inner.home .mode-grid { gap: 12px; margin-top: 8px; }
-.jjb-inner.home .mode-block { margin-top: 8px; }
-
-/* QQ 群二维码：第 9 格入口（补齐 3×3）+ 点击浮层大码（直播/远距离扫码保底）。
-   小码贴格子右侧作预览暗示，真正扫码走浮层 300px 大图。 */
-.jjb-inner.home .qr-btn { position: relative; }
-.jjb-inner.home .qr-btn .qr-mini { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; pointer-events: none; }
-.jjb-inner.home .qr-btn .qr-mini img { width: 52px; height: auto; border-radius: 4px; display: block; }
-.jjb .qr-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(8, 10, 14, 0.85); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.jjb .qr-overlay .qr-pop { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; justify-content: center; }
-.jjb .qr-overlay .qr-card { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.jjb .qr-overlay .qr-card img { width: 300px; height: auto; border-radius: 10px; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); display: block; }
-.jjb .qr-overlay .qr-card span { font-size: 14px; color: #dfe6ee; letter-spacing: 1px; }
-.jjb .qr-overlay .qr-hint { width: 100%; text-align: center; font-size: 12px; color: #8b96a3; letter-spacing: 2px; }
+/* 720 时代的比赛态/模式格压缩段与 qr-btn/qr-overlay 旧浮层已随 #75 重设计移除:
+   布局参数与第 9 格/大码浮层现由 home-redesign.css(.jjbx-*)接管(动态分辨率后整页 ~790 不再挤 720)。 */

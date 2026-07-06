@@ -1,0 +1,122 @@
+/* 集结杯首页重设计(#75) —— 承接 Claude Design 项目「集结杯首页重设计」(272c1255) 集结杯首页.dc.html。
+   核心:双选手组合控件(.jjbx-duo A主槽+2P连接件+B副槽 64px 单条) + 第9格辅助层级(.jjbx-aux 虚线弱底)
+   + QQ大码浮层卡片化(.jjbx-qro) + 登录卡 ADMIN 章(.jjbx-admin)。
+   页面高度随内容(~790),配合 AdaptiveViewport content 模式;token 全 var() 三皮肤×明暗自动适配。
+   import 须在 index.css 各 css 之后(布局覆盖段与 home-mode.css 同特异度,靠顺序取胜;对冲旧段已删)。 */
+
+.jjbx-home a { color: var(--accent); text-decoration: none; }
+.jjbx-home a:hover { color: var(--ink); }
+
+/* ===== 页面根:1280 固定宽 · 高度自适应(min 720 / 整页 ~790) ===== */
+.jjb.jjbx-home { height: auto; min-height: 720px; }
+.jjb-inner.jjbx-inner { padding: 24px 38px 26px; min-height: 720px; }
+.jjbx-home .loginbtn { cursor: pointer; }
+
+/* ===== 登录状态卡:ADMIN/PLAYER 章 + 退出按钮 ===== */
+.jjbx-admin {
+  font-family: var(--font-num); font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+  padding: 2px 7px; margin-left: 2px; white-space: nowrap; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.style-metal .jjbx-admin { clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px)); }
+.style-minimal .jjbx-admin { border-radius: 4px; }
+.jjbx-logout {
+  margin-left: 8px; padding: 9px 14px; font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  color: var(--muted); border: 1px solid var(--panel-edge) !important; background: var(--vbtn-bg);
+  cursor: pointer; transition: color .15s, border-color .15s;
+}
+.jjbx-logout:hover { color: var(--lose); border-color: var(--lose) !important; }
+.style-metal .jjbx-logout { clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px)); }
+.style-minimal .jjbx-logout { border-radius: 7px; }
+
+/* ===== 双选手组合控件 (A 主槽 + 2P 连接 + B 副槽) ===== */
+.jjbx-duo {
+  display: flex; align-items: stretch; height: 64px; margin-top: 18px;
+  background: var(--panel-bg); box-shadow: inset 0 0 0 1px var(--panel-edge);
+  transition: box-shadow .16s;
+}
+.jjbx-duo.match { box-shadow: inset 0 0 0 1px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 14%, transparent); }
+.style-metal .jjbx-duo { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.style-minimal .jjbx-duo { border-radius: 9px; }
+.style-sc2 .jjbx-duo { position: relative; }
+.style-sc2 .jjbx-duo::before { content: ""; position: absolute; left: -1px; top: -1px; width: 14px; height: 14px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); pointer-events: none; }
+.style-sc2 .jjbx-duo::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 14px; height: 14px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); pointer-events: none; }
+.jjbx-seg { display: flex; align-items: center; gap: 14px; padding: 0 20px; min-width: 0; }
+.jjbx-seg-a { flex: 1.55; }
+.jjbx-lab { display: flex; flex-direction: column; gap: 4px; line-height: 1; flex: none; }
+.jjbx-lab .cn { font-size: 15px; font-weight: 700; letter-spacing: 2px; color: var(--ink); white-space: nowrap; }
+.jjbx-lab .en { font-family: var(--font-num); font-size: 8.5px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
+.jjbx-duo.match .jjbx-seg-a .cn { color: var(--accent); }
+.jjbx-input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  color: var(--ink); font-size: 17px; font-family: var(--font-cn); padding: 0; letter-spacing: .5px;
+}
+.jjbx-input::placeholder { color: var(--muted); opacity: .55; }
+.jjbx-duo-div {
+  flex: none; width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border-left: 1px solid var(--panel-edge); border-right: 1px dashed var(--drop-edge);
+}
+.jjbx-duo-div .n { font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--accent); opacity: .9; }
+.jjbx-duo-div .t { font-size: 10px; letter-spacing: 2px; color: var(--muted); }
+.jjbx-seg-b { flex: 1; background: var(--drop-bg); transition: background .16s; }
+.jjbx-seg-b .cn { color: var(--muted); }
+.jjbx-seg-b .jjbx-input { color: var(--muted); font-size: 15px; }
+.jjbx-seg-b:focus-within { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.jjbx-seg-b:focus-within .cn, .jjbx-seg-b.filled .cn { color: var(--ink); }
+.jjbx-seg-b:focus-within .jjbx-input, .jjbx-seg-b.filled .jjbx-input { color: var(--ink); }
+
+/* ===== 模式区:设计稿放宽参数(动态分辨率后不再挤 720,覆盖 8fcc8cc 压缩值) ===== */
+.jjb-inner.jjbx-inner .tabrow { margin-top: 22px; }
+.jjb-inner.jjbx-inner .practice-hint,
+.jjb-inner.jjbx-inner .match-hint { margin-top: 15px; }
+.jjb-inner.jjbx-inner .mode-block { margin-top: 26px; flex: none; }
+.jjb-inner.jjbx-inner .mode-grid { margin-top: 14px; gap: 14px; grid-auto-rows: minmax(86px, auto); flex: none; }
+.jjb-inner.jjbx-inner .mode-btn { width: 100%; height: 100%; min-height: 86px; }
+.jjb-inner.jjbx-inner .pcard.ladder { margin-top: 26px; }
+.jjbx-ghost {
+  margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 18px; font-size: 14px; font-weight: 700; letter-spacing: 1px; white-space: nowrap;
+  color: var(--ink); border: 1px solid var(--panel-edge) !important; background: var(--vbtn-bg);
+  cursor: pointer; transition: color .15s, border-color .15s, box-shadow .15s;
+}
+.jjbx-ghost:hover { border-color: var(--accent) !important; color: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent); }
+.style-metal .jjbx-ghost { clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+.style-minimal .jjbx-ghost { border-radius: 7px; }
+
+/* ===== 第 9 格:扫码加群 辅助层级(虚线 · 弱底 · 编号弱化) ===== */
+.jjbx-aux {
+  position: relative; display: flex; align-items: center; gap: 16px; min-height: 86px;
+  padding: 0 20px 0 24px; text-align: left; width: 100%; height: 100%;
+  background: var(--drop-bg); border: 1px dashed var(--drop-edge) !important;
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.jjbx-aux:hover { border-color: var(--accent) !important; background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.style-metal .jjbx-aux { clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px)); }
+.style-minimal .jjbx-aux { border-radius: 6px; }
+.jjbx-aux-no { font-family: var(--font-num); font-size: 20px; color: var(--muted); opacity: .65; min-width: 34px; }
+.jjbx-aux-qrs { display: flex; gap: 8px; flex: none; }
+.jjbx-aux-qrs img { width: 44px; height: 44px; background: #fff; padding: 3px; display: block; }
+.jjbx-aux-tx { display: flex; flex-direction: column; gap: 5px; line-height: 1.1; min-width: 0; }
+.jjbx-aux-t { font-size: 17px; font-weight: 700; letter-spacing: 1px; color: var(--ink); }
+.jjbx-aux-s { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.jjbx-aux-go { margin-left: auto; font-family: var(--font-num); font-size: 10px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; transition: color .15s; }
+.jjbx-aux:hover .jjbx-aux-go { color: var(--accent); }
+
+/* ===== QQ 群大码浮层(absolute 盖整 stage;transform 祖先下 fixed 会退化,absolute 更可控) ===== */
+.jjbx-qro {
+  position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(4, 8, 14, .66); backdrop-filter: blur(4px); cursor: pointer;
+}
+.jjbx-qrp { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.jjbx-qrow { display: flex; gap: 26px; }
+.jjbx-qrc {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 26px 18px;
+  background: var(--bg-b, #05090f); border: 1px solid var(--panel-edge); box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+.style-metal .jjbx-qrc { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); border-color: var(--drop-edge); }
+.style-minimal .jjbx-qrc { border-radius: 10px; }
+.jjbx-qrc img { width: 200px; height: 200px; background: #fff; padding: 10px; display: block; margin-bottom: 8px; }
+.jjbx-qrc b { font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--ink); }
+.jjbx-qrc i { font-style: normal; font-family: var(--font-num); font-size: 11px; letter-spacing: 1.5px; color: var(--muted); }
+.jjbx-qrh { font-size: 12.5px; letter-spacing: 2px; color: var(--muted); }

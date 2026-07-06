@@ -75,10 +75,10 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
 
   return (
     <ScreenShell
-      className={`jjb style-${style} mode-${mode}`}
+      className={`jjb jjbx-home style-${style} mode-${mode}`}
       data-screen-label={`home-${style}-${mode}`}
     >
-      <div className="jjb-inner home">
+      <div className="jjb-inner home jjbx-inner">
         <div className="home-head">
           <BrandLockup styleName={style} modeName={mode} size="lg" />
         </div>
@@ -119,10 +119,13 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
                   </svg>
                 </span>
                 <span className="lb-tx">
-                  <span className="lb-t">{account.kind === 'host' ? (account.display_name || '主播') : (account.nickname || '选手')}</span>
-                  <span className="lb-s">{account.kind === 'host' ? 'ADMIN · 已登录' : 'PLAYER · 已登录'}</span>
+                  <span className="lb-t" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    {account.kind === 'host' ? (account.display_name || '主播') : (account.nickname || '选手')}
+                    <span className="jjbx-admin">{account.kind === 'host' ? 'ADMIN' : 'PLAYER'}</span>
+                  </span>
+                  <span className="lb-s">已登录 · <b>{account.kind === 'host' ? '比赛后台' : '参赛选手'}</b></span>
                 </span>
-                <button className="logoutbtn" type="button" data-nav-logout onClick={onLogout}>退出</button>
+                <button className="jjbx-logout" type="button" data-nav-logout onClick={onLogout}>退出</button>
               </div>
             ) : (
               <button className="loginbtn" type="button" data-login-placeholder data-nav-login onClick={onLogin}>
@@ -146,51 +149,41 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
           <p className="practice-hint"><span className="ph-dot"></span>练习模式 · 随意练习不计分</p>
         )}
 
-        <div className={'player-row' + (isMatch ? ' match' : '')}>
-          <label className="player-label">{isMatch ? '选手 ID' : '参赛选手'}</label>
-          <span className={'player-field' + (isMatch ? ' big' : '')} style={{ display: 'flex', alignItems: 'center' }}>
+        {/* 双选手组合控件（#75 重设计）：A 主槽 + 2P 连接件 + B 副槽 单条 64px。
+            A/B state 与落库逻辑不变（#84 players=[A,B]），仅视觉重构;B 有值时 .filled 点亮。 */}
+        <div className={'jjbx-duo' + (isMatch ? ' match' : '')}>
+          <div className="jjbx-seg jjbx-seg-a">
+            <span className="jjbx-lab"><span className="cn">{isMatch ? '选手 ID' : '参赛选手'}</span><span className="en">PLAYER A</span></span>
             <input
-              className="player-ph"
+              className="jjbx-input"
               data-player-input
-              style={{
-                background: 'transparent', border: 'none', outline: 'none',
-                color: 'var(--ink)', fontSize: 17, flex: 1, padding: 0,
-              }}
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               maxLength={24}
               placeholder="请输入选手 ID"
             />
             <span className="caret"></span>
-          </span>
-          {isMatch && <span className="player-live"><span className="pl-dot"></span>LIVE</span>}
-        </div>
-
-        {/* 选手 B（#84 双打第二名）：功能性最简采集——始终渲染，双打模式落库 players=[A,B] 取此值，单打忽略。视觉打磨归 #75。 */}
-        <div className="player-row player-row-b">
-          <label className="player-label">选手 B</label>
-          <span className="player-field" style={{ display: 'flex', alignItems: 'center' }}>
+            {isMatch && <span className="player-live"><span className="pl-dot"></span>LIVE</span>}
+          </div>
+          <div className="jjbx-duo-div"><span className="n">2P</span><span className="t">双打</span></div>
+          <div className={'jjbx-seg jjbx-seg-b' + (playerNameB.trim() ? ' filled' : '')}>
+            <span className="jjbx-lab"><span className="cn">选手 B</span><span className="en">PLAYER B</span></span>
             <input
-              className="player-ph"
+              className="jjbx-input"
               data-player-input-b
-              style={{
-                background: 'transparent', border: 'none', outline: 'none',
-                color: 'var(--ink)', fontSize: 17, flex: 1, padding: 0,
-              }}
               value={playerNameB}
               onChange={(e) => setPlayerNameB(e.target.value)}
               maxLength={24}
-              placeholder="双打第二名选手（单打可留空）"
+              placeholder="双打第二名选手 · 单打可留空"
             />
-            <span className="caret"></span>
-          </span>
+          </div>
         </div>
 
         <div className="mode-block">
           <div className="block-head">
             <span className="block-kicker">SELECT MODE</span>
             <span className="block-title">比赛模式</span>
-            <button type="button" className="btn-ghost" data-nav-pastecode onClick={onPasteCode} style={{ marginLeft: 'auto', alignSelf: 'center' }}>贴码开局 →</button>
+            <button type="button" className="jjbx-ghost" data-nav-pastecode onClick={onPasteCode}>贴码开局 →</button>
           </div>
           <div className="mode-grid">
             {MODES.map((m) => (
@@ -206,14 +199,18 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
                 <span className="mode-tag">{m.soon ? '开发中' : m.tag}</span>
               </button>
             ))}
-            {/* 第 9 格：QQ 群入口（补齐 3×3；点击弹大码浮层） */}
-            <button className="mode-btn qr-btn" data-qr-open type="button" onClick={() => setQrOpen(true)}>
-              <span className="mode-no">09</span>
-              <span className="mode-name">扫码加群</span>
-              <span className="qr-mini">
+            {/* 第 9 格：QQ 群入口（#75 降为辅助层级：虚线弱底横排，区别于模式格；点击弹大码浮层） */}
+            <button className="jjbx-aux" data-qr-open type="button" onClick={() => setQrOpen(true)}>
+              <span className="jjbx-aux-no">09</span>
+              <span className="jjbx-aux-qrs">
                 <img src="/qr/qq-saishi.png" alt="集结杯赛事群" />
                 <img src="/qr/qq-oncall.png" alt="CM 合作练习 OnCall 群" />
               </span>
+              <span className="jjbx-aux-tx">
+                <span className="jjbx-aux-t">扫码加群</span>
+                <span className="jjbx-aux-s">赛事群 · OnCall 群</span>
+              </span>
+              <span className="jjbx-aux-go">查看大图 →</span>
             </button>
           </div>
         </div>
@@ -238,19 +235,23 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
         <ToastV toast={toast} />
       </div>
 
-      {/* QQ 群大码浮层：直播画面/远距离扫码用，点任意处关闭 */}
+      {/* QQ 群大码浮层（#75 卡片化）：直播画面/远距离扫码用，点任意处关闭 */}
       {qrOpen && (
-        <div className="qr-overlay" data-qr-overlay onClick={() => setQrOpen(false)}>
-          <div className="qr-pop">
-            <div className="qr-card">
-              <img src="/qr/qq-saishi.png" alt="合作模式集结杯赛事群" />
-              <span>集结杯赛事群 · 965786418</span>
+        <div className="jjbx-qro" data-qr-overlay onClick={() => setQrOpen(false)}>
+          <div className="jjbx-qrp">
+            <div className="jjbx-qrow">
+              <div className="jjbx-qrc">
+                <img src="/qr/qq-saishi.png" alt="集结杯赛事群" />
+                <b>集结杯赛事群</b>
+                <i>965786418</i>
+              </div>
+              <div className="jjbx-qrc">
+                <img src="/qr/qq-oncall.png" alt="CM 合作练习 OnCall 群" />
+                <b>CM 合作练习 OnCall 群</b>
+                <i>517072</i>
+              </div>
             </div>
-            <div className="qr-card">
-              <img src="/qr/qq-oncall.png" alt="CM 合作练习图 OnCall 群" />
-              <span>CM 合作练习 OnCall 群 · 517072</span>
-            </div>
-            <span className="qr-hint">QQ 扫一扫加入群聊 · 点击任意处关闭</span>
+            <span className="jjbx-qrh">QQ 扫一扫加入群聊 · 点击任意处关闭</span>
           </div>
         </div>
       )}
