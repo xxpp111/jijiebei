@@ -184,8 +184,8 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
       kind: 'factor',
       name,
       el,
-      origin: { slot, idx },
       onDrop: (targetSlot, targetIdx) => {
+        // 源槽 slot/idx 由闭包捕获，移动=清源+写目标；dragdrop 不需感知来源
         if (targetSlot === slot && targetIdx === idx) return;
         // banned 因子 setSelectedFac 会拒写（落槽防御）；先清源再写会凭空丢失，前置拦下并提示
         if (getBanFor(name)) { setToast({ msg: '因子已被禁用，无法移动', count: 1, kind: 'soft' }); return; }

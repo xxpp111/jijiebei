@@ -139,8 +139,8 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
       kind: 'factor',
       name,
       el,
-      origin: { slot, idx },
       onDrop: (targetSlot, targetIdx) => {
+        // 源槽 slot/idx 由闭包捕获，移动=清源+写目标；dragdrop 不需感知来源
         if (targetSlot === slot && targetIdx === idx) return;
         clearDoublesFac(slot, idx);
         setDoublesFac(targetSlot, targetIdx, name);
