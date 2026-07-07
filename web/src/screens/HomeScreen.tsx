@@ -37,7 +37,7 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
   const [playerNameB, setPlayerNameB] = useState('');
   // 练习/比赛双模式（纯前端首页态；比赛侧登录/积分为占位，后端 P5 才接）。切 tab 不丢选手名（同一 state）。
   const [homeMode, setHomeMode] = useState<'practice' | 'match'>('practice');
-  // QQ 群二维码浮层（第 9 格入口；加群不设登录门）。大图浮层保证直播/远距离可扫。
+  // QQ 群二维码浮层（底部外链资源行入口；加群不设登录门）。大图浮层保证直播/远距离可扫。
   const [qrOpen, setQrOpen] = useState(false);
   const isMatch = homeMode === 'match';
   // 登录入口的登录/已登录两态（修复"循环登录"反馈：老王登录成功后右上角仍显示登录按钮，
@@ -197,19 +197,6 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
                 <span className="mode-tag">{m.soon ? '开发中' : m.tag}</span>
               </button>
             ))}
-            {/* 第 9 格：QQ 群入口（#75 降为辅助层级：虚线弱底横排，区别于模式格；点击弹大码浮层） */}
-            <button className="jjbx-aux" data-qr-open type="button" onClick={() => setQrOpen(true)}>
-              <span className="jjbx-aux-no">09</span>
-              <span className="jjbx-aux-qrs">
-                <img src="/qr/qq-saishi.png" alt="集结杯赛事群" />
-                <img src="/qr/qq-oncall.png" alt="CM 合作练习 OnCall 群" />
-              </span>
-              <span className="jjbx-aux-tx">
-                <span className="jjbx-aux-t">扫码加群</span>
-                <span className="jjbx-aux-s">赛事群 · OnCall 群</span>
-              </span>
-              <span className="jjbx-aux-go">查看大图 →</span>
-            </button>
           </div>
         </div>
 
@@ -229,6 +216,28 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
             <PromoBar />
           </div>
         )}
+
+        {/* 底部外部链接资源行（加群安置 1A）：加群移出九宫格独立成资源行，两个 QQ 群各一卡、点开大码浮层。
+            两态都显示（加群不分练习/比赛）；预留续排 B站直播间 / 规则 位。 */}
+        <div className="extrow">
+          <span className="extrow-head">
+            <span className="block-kicker">JOIN</span>
+            <span className="extrow-t">加入社群</span>
+            <span className="extrow-hint">扫码进群 · 点开看大图</span>
+          </span>
+          <div className="extrow-cards">
+            <button className="extcard" type="button" data-qr-open onClick={() => setQrOpen(true)}>
+              <img src="/qr/qq-saishi.png" alt="集结杯赛事群" />
+              <span className="extcard-tx"><b>集结杯赛事群</b><i>QQ 965786418</i></span>
+              <span className="extcard-go">查看大图 →</span>
+            </button>
+            <button className="extcard" type="button" data-qr-open onClick={() => setQrOpen(true)}>
+              <img src="/qr/qq-oncall.png" alt="CM 合作练习 OnCall 群" />
+              <span className="extcard-tx"><b>CM OnCall 群</b><i>QQ 517072</i></span>
+              <span className="extcard-go">查看大图 →</span>
+            </button>
+          </div>
+        </div>
 
         <ToastV toast={toast} />
       </div>
