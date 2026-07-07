@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { startSession, setRuleMode, type SessionMode } from '../logic/jjbSession';
+import { startSession, setPlayerName as setSessionPlayerName, setRuleMode, type SessionMode } from '../logic/jjbSession';
 import { doublesLive, setDoublesPlayers } from '../logic/jjbDoubles';
 import { getAccount } from '../logic/backend';
 import { ScreenShell } from '../components/ScreenShell';
 import { BrandLockup } from '../components/BrandLockup';
 import { PromoBar } from '../components/PromoBar';
 import { useToast, ToastV } from '../components/Toast';
-import JijieData from '../logic/legacy/JijieData';
-import { MODE_DEFS } from '../config/modes';
+import { HOME_MODE_KEYS, MODE_DEFS } from '../config/modes';
 
 // 集结杯 × CM — 首页（练习/比赛双模式入口 + 选手名）。承接 design/v4-r2/home + Claude Design 项目
 // 「集结杯练习比赛切换」(19b54387) 的 JJBHomeFrame：品牌字标下加「练习/比赛」tab（纯前端切换、不丢选手名）。
@@ -16,8 +15,7 @@ import { MODE_DEFS } from '../config/modes';
 // 模式集合以当前直播入口为准：8/10/极难 + 拯救 + 两个双打（5 号位非酋之轮=非酋双打 / 6 号位官突双打）。
 // 5、6 号位皆双打：非酋之轮(feiqiu-doubles=混乱工作室锁定+3固定可分配因子+随机真地图) 与 官突双打(doubles=抽CSV真表) 各占一格。
 // 首页 8 格从 MODE_DEFS 派生（单一真相源，no/key/name/tag/soon 结构不变；当前无 soon 项）。
-const HOME_MODE_KEYS: (SessionMode | 'doubles')[] = ['std8', 'std10', 'std12', 'rescue', 'feiqiu-doubles', 'doubles', 'std15', 'cm'];
-const MODES: { no: string; key: SessionMode | 'doubles'; name: string; tag: string; soon?: boolean }[] =
+const MODES: { no: string; key: SessionMode; name: string; tag: string; soon?: boolean }[] =
   HOME_MODE_KEYS.map((key) => {
     const d = MODE_DEFS[key];
     return { no: d.no!, key, name: d.name!, tag: d.tag! };
@@ -48,7 +46,7 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
   // 比赛前自检 toast（#94）：非主播账号开比赛局的软提示，复用 SelectScreen 同款 useToast+ToastV。
   const [toast, setToast] = useToast();
 
-  const start = (m: SessionMode | 'doubles', soon?: boolean) => {
+  const start = (m: SessionMode, soon?: boolean) => {
     if (soon) return; // soon 占位项不启动（当前无 soon 项；doubles 已接通）
     // 登录门（需求1·全模式）：未登录点开局 → 引导登录、不开局、不污染 XP 状态。
     // 公开读（天梯/OBS横条/观众）不经此路径，零影响。
@@ -62,15 +60,15 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
     setRuleMode(isMatch ? 'match' : 'practice');
     // startSession 末尾 exposeSelectDebug 把 mode 写到 __jjbDebug.select.mode，
     // 这里 startSession 后再覆盖 JijieData.playerName（不破坏 9 模式 status/map/lock/pool 任何契约）。
-    startSession(m as SessionMode);
-    try { (JijieData as any).playerName = name; } catch { /* noop */ }
+    startSession(m);
+    setSessionPlayerName(name);
     // 双打（#84）：startSession→doublesStart 已把 _players 重置为默认，这里覆盖两名真选手（B 空则 jjbDoubles 回落默认名）。
     // 落库 currentPlayers()→players=[A,B]，后端 scoreMatch 为两人各记分。单打 doublesLive()=false 不进此分支、players 仍单元素。
     // （review 修：doublesLive() 即单一真相源——startSession 刚按 m 分流完引擎；不另维护双打模式键集合，防新增 variant 漏更漂移。）
     if (doublesLive()) {
       setDoublesPlayers(name, (playerNameB || '').trim());
     }
-    onStart(m as SessionMode, name);
+    onStart(m, name);
   };
 
   return (

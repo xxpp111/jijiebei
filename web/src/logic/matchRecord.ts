@@ -4,9 +4,8 @@
 // screen 只调语义函数；资格谓词 canPostResult() 单点导出，消除 ResultScreen 内双写（自动落库判定 + 录入按钮可见性）漂移。
 import { currentMatches, currentPlayers, currentScore, currentSessionMode } from './jjbView';
 import { encodePayload, capturePayload, PAYLOAD_VER, type PayloadSnapshot } from './codec';
-import { getRuleMode } from './jjbSession';
+import { getRuleMode, resultValueOf } from './jjbSession';
 import { postMatch, getToken, getAccount, ensurePlayer } from './backend';
-import { RESULT_VAL } from './legacy/JJBData';
 
 export type RecordOutcome = 'posted' | 'duplicate' | 'skipped';
 
@@ -60,7 +59,7 @@ export async function postMatchResult(): Promise<RecordOutcome> {
       players: players.map((p) => p.id), host: ruleMode === 'match' ? getAccount()?.id : undefined,
       // result/score_total 经 jjbView 分流（currentMatches/currentScore）：单打→XP 引擎，双打→jjbDoubles 引擎,
       // 不再直读 JijieData.winLoseList（双打判定写在 jjbDoubles 闭包，直读会拿单打陈旧/空值 — #94 落库读错引擎）。
-      result: ms.map((m) => RESULT_VAL[m.result as string]), score_total: currentScore(),
+      result: ms.map((m) => resultValueOf(m.result as string)), score_total: currentScore(),
     });
     sessionStorage.setItem(key, '1'); // 成功后才置防重（失败可重试）
     // 落库成功审计由后端 logs(match.create) 记，前端不打 log（check-no-debug）。

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CommanderCard } from '../components/CommanderCard';
 import { FactorFrame } from '../components/FactorFrame';
 import { DropCell } from '../components/DropCell';
@@ -9,6 +9,8 @@ import { useToast, ToastV } from '../components/Toast';
 import { EnemyBadge } from '../components/EnemyBadge';
 import { CaptureButtons } from '../components/CaptureButtons';
 import { cmdUrl, facUrl } from '../lib/realAsset';
+import { DoublesSelect, EnemyStatusPill, GoldBadge } from './DoublesSelect';
+import { useForceRerender } from '../lib/useForceRerender';
 import {
   getSelectState,
   startSession,
@@ -28,36 +30,12 @@ import {
   querySessionMode,
   rerollFactor,
   getRerollState,
+  facFlatIdx,
 } from '../logic/jjbSession';
-import { facFlatIdx } from '../logic/legacy/JJBData';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
-import {
-  doublesLive, doublesMatches, doublesModeLabel, getDoublesState, getDoublesPlayers,
-  setDoublesCmd, clearDoublesCmd, setDoublesFac, clearDoublesFac,
-  validateDoubles, randomFillDoubles,
-} from '../logic/jjbDoubles';
+import { doublesLive } from '../logic/jjbDoubles';
 import { getBpModeEnabled } from '../logic/bpConfig';
-import { COMMANDERS } from '../config/commanders';
 import { currentEnemyRace, currentEnemyAi, currentModeLabel } from '../logic/jjbView';
-import { getRandomEnemyEnabled } from '../logic/randomConfig';
-import { raceUrl } from '../lib/realAsset';
-
-// 操作区只读敌方状态条（设计稿 03 方案A）：select 不放开关，仅随机敌方开启时提示「功能已开·三族每场随机」；
-// 切换在 BP 设置面，这里纯只读（三族徽 + ON 点）。关闭时不渲染、不占位。
-function EnemyStatusPill() {
-  if (!getRandomEnemyEnabled()) return null;
-  return (
-    <div className="estat" data-screen-label="enemy-status">
-      <span className="ems">
-        <img src={raceUrl('P')} alt="" />
-        <img src={raceUrl('T')} alt="" />
-        <img src={raceUrl('Z')} alt="" />
-      </span>
-      <span className="et"><span className="estat-k">敌方</span><span className="estat-v">每场随机</span></span>
-      <span className="estat-on"><span className="estat-d"></span>ON</span>
-    </div>
-  );
-}
 
 // 集结杯 × CM — 选择面板整屏（段2 Phase 2：拖拽手选 + 校验 + 手选进 battle）。
 // 严格承接 design/v4-r2/components/select-screen.jsx 的 SelectScreenV4 DOM/className：
@@ -74,21 +52,6 @@ export interface SelectScreenProps {
   mode: string;
   onStart: () => void; // 校验通过 → 手选进 battle → 切屏
   onGenCode: () => void; // 生成对局码：固化当前局 → CodeScreen gen
-}
-
-/** 点金角标按钮（每个因子右上角，toggle 金/非金；stopPropagation 不触发拖拽/清槽）。 */
-function GoldBadge({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
-  return (
-    <button
-      className={'gold-toggle' + (on ? ' on' : '')}
-      data-gold-toggle={name}
-      title="点金 / 取消金"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => { e.stopPropagation(); onToggle(); }}
-    >
-      金
-    </button>
-  );
 }
 
 /** BP ban 角标按钮（因子池每个因子左上角，toggle ban）。皮=实心红圆章（Claude Design v1 稿 1b，见 styles/badges.css .bp-ban）。
@@ -134,13 +97,13 @@ function RerollBadge({ name, onReroll }: { name: string; onReroll: () => void })
 export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenProps) {
   // 兜底：?screen=select 直跳时若 jjbLive=false 在本屏内开一局 std8 后 setState 强制重渲。
   // URL ?sessionMode=std8|std10|... 覆盖默认 std8；旧 ?mode=std10 仍兼容。
-  const [, setTick] = useState(0);
+  const forceRerender = useForceRerender();
   useEffect(() => {
     if (doublesLive()) return; // 双打局已开（JJBDoubles 自管，JijieData.jjbLive 恒 false）：不被单打 std8 兜底覆盖
     const s = getSelectState();
     if (!s.jjbLive) {
       const m = querySessionMode();
-      try { startSession(m); setTick((x) => x + 1); } catch (e) { console.error('[Select] 兜底开局失败:', e); }
+      try { startSession(m); forceRerender(); } catch (e) { console.error('[Select] 兜底开局失败:', e); }
     }
   }, []);
   // 校验失败 toast：开始按钮按下时塞（state + 4s 自动消失 → useToast）
@@ -148,6 +111,13 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
 
   const s = getSelectState();
   const live = s.jjbLive;
+
+  useEffect(() => {
+    try {
+      const w = window as unknown as { __jjbE2E?: Record<string, unknown> };
+      w.__jjbE2E = { ...(w.__jjbE2E || {}), setSelectedFac, clearFacSlot, getSelectState };
+    } catch { /* noop */ }
+  }, []);
 
   // 因子池/指挥官池（真实完整池，不截断；对齐 Cocos 真身整池渲染；6 主题渲染由 design 排版约束）
   const factorRow = useMemo(() => s.randomFactorPoor.slice(), [s.randomFactorPoor]);
@@ -203,21 +173,39 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
           setSelectedFac(slot, idx, name);
         }
         // 强制重渲（setSelected* 是 module-level 写 JijieData，React 不知）
-        setTick((x) => x + 1);
+        forceRerender();
+      },
+    }, ev.nativeEvent);
+  };
+
+  const onSlotFactorPointerDown = (ev: React.PointerEvent, slot: number, idx: number, name: string, el: HTMLElement) => {
+    ev.preventDefault();
+    startDrag({
+      kind: 'factor',
+      name,
+      el,
+      origin: { slot, idx },
+      onDrop: (targetSlot, targetIdx) => {
+        if (targetSlot === slot && targetIdx === idx) return;
+        // banned 因子 setSelectedFac 会拒写（落槽防御）；先清源再写会凭空丢失，前置拦下并提示
+        if (getBanFor(name)) { setToast({ msg: '因子已被禁用，无法移动', count: 1, kind: 'soft' }); return; }
+        clearFacSlot(slot, idx);
+        setSelectedFac(targetSlot, targetIdx, name);
+        forceRerender();
       },
     }, ev.nativeEvent);
   };
 
   // ===== 点击已填槽清除 =====
-  const onClearCmd = (slot: number) => { clearCmdSlot(slot); setTick((x) => x + 1); };
-  const onClearFac = (slot: number, k: number) => { clearFacSlot(slot, k); setTick((x) => x + 1); };
+  const onClearCmd = (slot: number) => { clearCmdSlot(slot); forceRerender(); };
+  const onClearFac = (slot: number, k: number) => { clearFacSlot(slot, k); forceRerender(); };
 
   // ===== 重揉：换一个未出现的因子（match 超限走软违规 toast，照抄 BpBadge 回显范式） =====
   const doReroll = (kind: 'pool' | 'slot', i: number, k?: number) => {
     rerollFactor(kind, i, k);
     const w = getSelectWarn();
     if (w) setToast({ msg: w, count: 1, kind: 'soft' });
-    setTick((x) => x + 1);
+    forceRerender();
   };
 
   // ===== 开始按钮：校验 + 手选进 battle =====
@@ -232,7 +220,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
 
   const handleRandomFill = () => {
     randomFillSelection();
-    setTick((x) => x + 1);
+    forceRerender();
   };
 
   // 双打：JJBDoubles 自管局已开 → 渲双打选择面板（2 指挥官/场 + 官突锁定 + 3 随机因子槽），与单打 9 模式 UI 分流。
@@ -321,15 +309,16 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                           key={k}
                           ref={setTarget(`factor:${i}:${k}`)}
                           data-slot-fac={`${i}:${k}`}
+                          onPointerDown={(ev) => onSlotFactorPointerDown(ev, i, k, v, ev.currentTarget as HTMLElement)}
                           onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }}
-                          style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
+                          style={{ cursor: 'grab', position: 'relative', display: 'inline-block', touchAction: 'none' }}
                         >
                           <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
-                          <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
+                          <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); forceRerender(); }} />
                           <RerollBadge name={v} onReroll={() => doReroll('slot', i, k)} />
                         </span>
                       ) : (
-                        <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
+                        <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" data-slot-fac-target={`${i}:${k}`} />
                       );
                     })}
                   </div>
@@ -361,8 +350,8 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block', opacity: getBanFor(f) ? 0.45 : 1 }}
                 >
                   <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} banned={getBpModeEnabled(s.mode) && getBanFor(f)} />
-                  <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
-                  {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1, kind: 'soft' }); setTick((x) => x + 1); }} />}
+                  <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); forceRerender(); }} />
+                  {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1, kind: 'soft' }); forceRerender(); }} />}
                   <RerollBadge name={f} onReroll={() => doReroll('pool', i)} />
                 </span>
               ))}
@@ -469,217 +458,6 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
               >
                 比赛开始 <span className="startbtn-arrow">▶</span>
               </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ScreenShell>
-  );
-}
-
-// ===== 双打选择面板（JJBDoubles 自管引擎接通；复用单打 CSS 类 + 组件，数据走 jjbDoubles 适配层） =====
-// 与单打 9 模式 UI 分流：2 指挥官/场 + 官突锁定打底 + extraFactors 随机因子槽；拖拽复用 dragdrop（cmd/factor × slot/idx）。
-function isPickedDoubles(slots: Array<{ cmds: (string | null)[]; factors: (string | null)[] }>, kind: 'cmd' | 'fac', name: string): boolean {
-  return slots.some((s) => (kind === 'cmd' ? s.cmds : s.factors).some((x) => x === name));
-}
-
-// CM 自制指挥官识别章（cm 双打自选全量 22 官方/CM 混排，D11）：标识非按钮，皮见 styles/doubles-select.css .cm-chip。
-const CM_NAMES = new Set(COMMANDERS.filter((c) => c.source === 'cm').map((c) => c.name));
-function CmChip({ name }: { name: string }) {
-  return CM_NAMES.has(name) ? <span className="cm-chip" aria-hidden>CM</span> : null;
-}
-
-function DoublesSelect({ style, mode, onStart, onGenCode }: SelectScreenProps) {
-  const [, setTick] = useState(0);
-  const [toast, setToast] = useToast();
-
-  const st = getDoublesState();
-  const matchVMs = doublesMatches();
-  const cfg = st.config;
-  const cmdPool = st.commanderPool;
-  const facPool = st.factorPool;
-  const slots = st.selection.slots || [];
-
-  // Drop target 注册（cmd:i:k / factor:i:k），复用 dragdrop 模块
-  const targetRefs = useRef<Record<string, HTMLSpanElement | null>>({});
-  const setTarget = (k: string) => (el: HTMLSpanElement | null) => {
-    if (el && targetRefs.current[k] !== el) targetRefs.current[k] = el;
-    else if (!el && targetRefs.current[k]) delete targetRefs.current[k];
-  };
-  useEffect(() => {
-    const unregs: Array<() => void> = [];
-    for (const k in targetRefs.current) {
-      const el = targetRefs.current[k];
-      if (!el) continue;
-      const [kind, slotStr, idxStr] = k.split(':');
-      unregs.push(registerTarget({ kind: kind as 'cmd' | 'factor', slot: Number(slotStr), idx: Number(idxStr), el }));
-    }
-    return () => unregs.forEach((u) => u());
-  });
-
-  const onPoolPointerDown = (ev: React.PointerEvent, kind: 'cmd' | 'factor', name: string, el: HTMLElement) => {
-    ev.preventDefault();
-    startDrag({ kind, name, el, onDrop: (slot, idx) => {
-      if (kind === 'cmd') setDoublesCmd(slot, idx, name);
-      else setDoublesFac(slot, idx, name);
-      setTick((x) => x + 1);
-    } }, ev.nativeEvent);
-  };
-  const onClearCmd = (slot: number, idx: number) => { clearDoublesCmd(slot, idx); setTick((x) => x + 1); };
-  const onClearFac = (slot: number, idx: number) => { clearDoublesFac(slot, idx); setTick((x) => x + 1); };
-
-  const handleStart = () => {
-    const r = validateDoubles();
-    if (!r.ok) { setToast({ msg: r.firstError, count: r.errors.length, kind: 'hard' }); return; }
-    onStart();
-  };
-  const handleRandomFill = () => { randomFillDoubles(); setTick((x) => x + 1); };
-
-  // 各场锁定因子展示：topbar 汇总用。官突=每场官突名；非酋之轮=三场共享锁定因子（混乱工作室）；
-  // std15=无锁定（显待选口径）；cm=每场恒锁 风暴英雄+虚空裂隙。
-  const isFeiqiu = cfg.variant === 'feiqiu';
-  const isStd15 = cfg.variant === 'std15';
-  const isCm = cfg.variant === 'cm';
-  const lockLabel = isFeiqiu ? '非酋' : isCm ? '锁定' : isStd15 ? '待选' : '官突';
-  const mutNames = cfg.matchMutatorNames || [];
-  const allMatchMuts = isFeiqiu
-    ? '混乱工作室'
-    : isStd15
-      ? `每场 ${cfg.extraFactors} · 无锁定`
-      : isCm
-        ? '风暴英雄 + 虚空裂隙 · 每场'
-        : (mutNames.length
-          ? mutNames.join(' | ')
-          : (cfg.matchMutators || []).map((ms) => ms.join('·')).join(' | '));
-  // 每场 slot 头部角标文案（per-variant）
-  const slotTag = (i: number) => {
-    if (isFeiqiu) return '非酋';
-    if (isStd15) return `待选 ${cfg.extraFactors}`;
-    if (isCm) return `锁定 2 + 待选 ${cfg.extraFactors}`;
-    return `官突 ${mutNames[i] || ((cfg.matchMutators || [])[i] || []).join('·')}`;
-  };
-  const selfPool = st.selfPool || [];
-
-  return (
-    <ScreenShell
-      className={`jjb style-${style} mode-${mode}`}
-      data-screen-label={`select-${style}-${mode}-doubles`}
-      data-capture="select"
-      data-doubles-select
-    >
-      <div className="jjb-inner sel">
-        <TopBar styleName={style} modeName={mode}>
-          <MetaRow k="参赛战队" v={getDoublesPlayers().join(' & ')} vProps={{ 'data-meta-player': true }} />
-          <MetaRow k="比赛模式" v={doublesModeLabel()} vProps={{ 'data-meta-mode': true, 'data-doubles-mode': true }} />
-          <MetaRow k={lockLabel} v={allMatchMuts} vProps={{ 'data-doubles-mutators': true, style: { fontWeight: 700, color: 'var(--accent, #e8b84b)' } }} />
-        </TopBar>
-
-        <div className="slots" data-doubles-slots={slots.length}>
-          {matchVMs.map((m, i) => {
-            const sel = slots[i] || { cmds: [], factors: [] };
-            const mapName = m.map || '—';
-            const isBoss = i === matchVMs.length - 1;
-            return (
-              <div key={i} className={'slot' + (i === 0 ? ' slot-active' : '')} data-slot-idx={i} data-doubles-slot={i} data-doubles-lock={(m.mutators || []).join(',')}>
-                <div className="slot-head">
-                  <span className="slot-no">{m.slot}</span>
-                  <span className="slot-map-name">{mapName}</span>
-                  <span className={'slot-difficulty' + (isStd15 || isCm ? ' slot-tag' : '')} style={{ marginLeft: isBoss ? 0 : 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent, #e8b84b)', whiteSpace: 'nowrap' }}>{slotTag(i)}</span>
-                  {isBoss && <span className="slot-flag">BOSS</span>}
-                </div>
-                <MapThumb map={mapName}>
-                  <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} size="lg" />
-                </MapThumb>
-                <div className="slot-targets">
-                  <div className="t-cmds">
-                    {Array.from({ length: cfg.cmdsPerMatch }).map((_, k) => {
-                      const c = sel.cmds[k];
-                      return c ? (
-                        <span key={k} ref={setTarget(`cmd:${i}:${k}`)} className="cmdwrap" data-doubles-cmd={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i, k); }} style={{ cursor: 'pointer' }}>
-                          <CommanderCard src={cmdUrl(c)} name={c} w={56} h={67} fill check />
-                          <CmChip name={c} />
-                        </span>
-                      ) : (
-                        <DropCell key={k} ref={setTarget(`cmd:${i}:${k}`)} w={56} h={67} hint="指挥官" />
-                      );
-                    })}
-                  </div>
-                  <div className="t-facs">
-                    {(m.mutators || []).map((mu, k) => (
-                      <span key={`mut${k}`} style={{ position: 'relative', display: 'inline-block' }}>
-                        <FactorFrame src={facUrl(mu)} size={52} tag={lockLabel} gold={getGoldFor(mu)} />
-                        <GoldBadge name={mu} on={getGoldFor(mu)} onToggle={() => { toggleGold(mu); setTick((x) => x + 1); }} />
-                      </span>
-                    ))}
-                    {Array.from({ length: cfg.extraFactors }).map((_, k) => {
-                      const v = sel.factors[k];
-                      return v ? (
-                        <span key={k} ref={setTarget(`factor:${i}:${k}`)} data-doubles-fac={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearFac(i, k); }} style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}>
-                          <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
-                          <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); setTick((x) => x + 1); }} />
-                        </span>
-                      ) : (
-                        <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" />
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="pool" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <div className="pool-factors">
-            <div className="block-head sm"><span className="block-kicker">FACTORS</span><span className="block-title">随机因子池</span></div>
-            <div className="factor-row" style={{ gap: 14, flexWrap: 'wrap' }} data-doubles-pool-factors>
-              {facPool.map((f, i) => (
-                <span key={i} data-doubles-pool-fac={f} onPointerDown={(ev) => onPoolPointerDown(ev, 'factor', f, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}>
-                  <FactorFrame src={facUrl(f)} size={66} check={isPickedDoubles(slots, 'fac', f)} gold={getGoldFor(f)} />
-                  <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); setTick((x) => x + 1); }} />
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="pool-cmd" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            <div className="grp">
-              <div className="block-head sm"><span className="block-title">指挥官池（双打 {cfg.cmdPoolSize} 选）</span></div>
-              <div className="avatar-row" style={{ gap: 13, flexWrap: 'wrap' }} data-doubles-pool-cmds>
-                {cmdPool.map((c, i) => (
-                  <span key={i} className="cmdwrap" data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none' }}>
-                    <CommanderCard src={cmdUrl(c)} name={c} />
-                    <CmChip name={c} />
-                  </span>
-                ))}
-              </div>
-            </div>
-            {/* 双打自选区（D4/D11 net-new）：std15=官方全量 / cm=官方+CM 全量，减已入池；拖入场次槽复用同一 dragdrop。
-                guantu/feiqiu selfPool 恒空不渲染（行为不变）。 */}
-            {selfPool.length > 0 && (
-              <div className="grp self-grp">
-                <div className="block-head sm">
-                  <span className="block-title">自选指挥官</span>
-                  <span className="block-note">{isCm ? '全量可选（官方 + CM）· 拖入场次槽位' : '官方全量可选 · 拖入场次槽位'}</span>
-                </div>
-                <div className="avatar-grid" style={{ gap: 11 }} data-doubles-pool-self>
-                  {selfPool.map((c, i) => (
-                    <span key={i} className="cmdwrap" data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none' }}>
-                      <CommanderCard src={cmdUrl(c)} name={c} w={60} h={72} />
-                      <CmChip name={c} />
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            </div>
-            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
-              <ToastV toast={toast} />
-              <EnemyStatusPill />
-              <button type="button" className="btn-ghost" data-nav-gencode onClick={onGenCode}>生成对局码 →</button>
-              <CaptureButtons targetSelector='[data-capture="select"]' filename="jjb-select-doubles.png" />
-              <button className="startbtn" data-doubles-random-fill-btn style={{ margin: 0, padding: '14px 26px' }} onClick={handleRandomFill}>随机填充</button>
-              <button className="startbtn" data-doubles-start-btn style={{ margin: 0 }} onClick={handleStart}>比赛开始 <span className="startbtn-arrow">▶</span></button>
             </div>
           </div>
         </div>

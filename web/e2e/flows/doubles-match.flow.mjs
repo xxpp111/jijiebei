@@ -23,6 +23,12 @@ await withPreview(async (page, { baseUrl }) => {
   expect(g.config?.variant === 'guantu', `官突 variant（实=${g.config?.variant}）`);
   expect(g.factorPool?.length === 9, `官突 factorPool=9 抽 CSV 真表（实=${g.factorPool?.length}）`);
   expect(g.commanderPool?.length === 6, `6 指挥官池（实=${g.commanderPool?.length}）`);
+  const guantuRerolls = await page.$$('[data-doubles-reroll]');
+  expect(guantuRerolls.length === 15, `官突重揉入口=指挥官6+因子9（实=${guantuRerolls.length}）`);
+  await guantuRerolls[0].click(); await page.waitForTimeout(300);
+  const g2 = await page.evaluate(() => window.__jjbDebug?.doubles || {});
+  expect(g2.reroll?.count === 1, `官突重揉后 count=1（实=${g2.reroll?.count}）`);
+  expect(new Set(g2.commanderPool || []).size === (g2.commanderPool || []).length, '官突重揉后 commanderPool 无重复');
   await shot(page, 'doubles-guantu');
 
   // 5 号位 非酋之轮 → facPool=3 固定可分配
@@ -34,6 +40,8 @@ await withPreview(async (page, { baseUrl }) => {
   const f = await page.evaluate(() => window.__jjbDebug?.doubles || {});
   expect(f.config?.variant === 'feiqiu', `非酋 variant=feiqiu（实=${f.config?.variant}）`);
   expect(f.factorPool?.length === 3, `非酋 factorPool=3 固定可分配（实=${f.factorPool?.length}）`);
+  const feiqiuRerolls = await page.$$('[data-doubles-reroll]');
+  expect(feiqiuRerolls.length === 0, `非酋无重揉入口（实=${feiqiuRerolls.length}）`);
   await shot(page, 'doubles-feiqiu');
 });
 done('doubles-match');

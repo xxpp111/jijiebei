@@ -102,6 +102,7 @@ export function exposeSelectWarn(msg: string): void {
     w.__jjbDebug = w.__jjbDebug || {};
     w.__jjbDebug.select = w.__jjbDebug.select || {};
     w.__jjbDebug.select.warn = msg;
+    w.__jjbDebug.selectWarn = msg;
   } catch { /* noop */ }
 }
 
@@ -110,6 +111,7 @@ export function clearSelectWarn(): void {
   try {
     const w: any = window;
     if (w.__jjbDebug && w.__jjbDebug.select) w.__jjbDebug.select.warn = '';
+    if (w.__jjbDebug) w.__jjbDebug.selectWarn = '';
   } catch { /* noop */ }
 }
 

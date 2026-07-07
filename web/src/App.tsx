@@ -10,12 +10,11 @@ import { CodeScreen } from './screens/CodeScreen';
 import { LadderScreen } from './screens/LadderScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { RegisterScreen } from './screens/RegisterScreen';
-import { startSession, getSelectState, querySessionMode, type SessionMode } from './logic/jjbSession';
+import { startSession, getSelectState, hasLiveMaps, querySessionMode, type SessionMode } from './logic/jjbSession';
 import { doublesLive } from './logic/jjbDoubles';
 import { fetchAndLoadEventBan } from './logic/eventBan';
 import { currentSessionMode, currentTotal } from './logic/jjbView';
 import { applySnapshot } from './logic/codec';
-import JijieData from './logic/legacy/JijieData';
 import { pbAuth, pbRefresh, getAccount, clearAuth } from './logic/backend';
 import { AdaptiveViewport, type StageHeightMode } from './lib/dynres';
 
@@ -136,8 +135,7 @@ export default function App() {
     if (screen === 'select' && getAccount()) {
       try {
         if (doublesLive()) return; // 双打局已开（JJBDoubles 自管，JijieData.mapList 恒空）：不被单打 startSession 兜底覆盖
-        const d: any = JijieData;
-        if (!d || !Array.isArray(d.mapList) || d.mapList.length < 3) {
+        if (!hasLiveMaps()) {
           startSession(querySessionMode());
         }
       } catch (e) {
@@ -214,52 +212,6 @@ export default function App() {
     </AdaptiveViewport>
   );
 
-  if (screen === 'home') {
-    return (
-      <>
-        {renderStage(
-          <HomeScreen
-            key={`home-${rerenderTick}`}
-            style={style}
-            mode={mode}
-            onStart={(_m: SessionMode, _name: string) => navigate('select')}
-            onLadder={() => navigate('ladder')}
-            onPasteCode={() => goCode('paste')}
-            onLogin={() => navigate('login')}
-            onLogout={() => { clearAuth(); setRerenderTick((x) => x + 1); }}
-          />,
-        )}
-        {!bare && switcher}
-      </>
-    );
-  }
-
-  if (screen === 'select') {
-    return (
-      <>
-        {renderStage(
-          <SelectScreen
-            key={`select-${rerenderTick}`}
-            style={style}
-            mode={mode}
-            onStart={() => navigate('battle')}
-            onGenCode={() => goCode('gen')}
-          />,
-        )}
-        {!bare && switcher}
-      </>
-    );
-  }
-
-  if (screen === 'battle') {
-    return (
-      <>
-        {renderStage(<BattleScreen key={`battle-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />)}
-        {!bare && switcher}
-      </>
-    );
-  }
-
   if (screen === 'obs') {
     return (
       <div className="jjb-obs-viewport" data-adaptive-stage="obs" data-stage-scale="1">
@@ -287,93 +239,72 @@ export default function App() {
     );
   }
 
-  if (screen === 'result') {
-    return (
-      <>
-        {renderStage(<ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />)}
-        {!bare && switcher}
-      </>
-    );
-  }
+  const stageByScreen: Partial<Record<Screen, ReactNode>> = {
+    home: (
+      <HomeScreen
+        key={`home-${rerenderTick}`}
+        style={style}
+        mode={mode}
+        onStart={(_m: SessionMode, _name: string) => navigate('select')}
+        onLadder={() => navigate('ladder')}
+        onPasteCode={() => goCode('paste')}
+        onLogin={() => navigate('login')}
+        onLogout={() => { clearAuth(); setRerenderTick((x) => x + 1); }}
+      />
+    ),
+    select: (
+      <SelectScreen
+        key={`select-${rerenderTick}`}
+        style={style}
+        mode={mode}
+        onStart={() => navigate('battle')}
+        onGenCode={() => goCode('gen')}
+      />
+    ),
+    battle: <BattleScreen key={`battle-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />,
+    result: <ResultScreen key={`result-${rerenderTick}`} style={style} mode={mode} onGenCode={() => goCode('gen')} />,
+    ladder: <LadderScreen key={`ladder-${rerenderTick}`} style={style} mode={mode} />,
+    login: (
+      <LoginScreen
+        key={`login-${rerenderTick}`}
+        style={style}
+        mode={mode}
+        onBack={() => navigate('home')}
+        onSuccess={() => navigate('home')}
+        onRegister={() => navigate('register')}
+      />
+    ),
+    register: (
+      <RegisterScreen
+        key={`register-${rerenderTick}`}
+        style={style}
+        mode={mode}
+        onBack={() => navigate('login')}
+        onSuccess={() => navigate('home')}
+      />
+    ),
+    bpconfig: <BpConfigScreen key={`bpconfig-${rerenderTick}`} style={style} mode={mode} />,
+    eventrules: <EventRulesScreen key={`eventrules-${rerenderTick}`} style={style} mode={mode} />,
+    code: (
+      <CodeScreen
+        key={`code-${rerenderTick}-${codeVariant}`}
+        style={style}
+        mode={mode}
+        variant={codeVariant}
+        onBack={() => navigate('home')}
+        onStart={(snap) => {
+          applySnapshot(snap);
+          navigate('select');
+        }}
+      />
+    ),
+  };
 
-  if (screen === 'ladder') {
+  const stageNode = stageByScreen[screen];
+  if (stageNode) {
     return (
       <>
-        {renderStage(<LadderScreen key={`ladder-${rerenderTick}`} style={style} mode={mode} />)}
-        {!bare && switcher}
-      </>
-    );
-  }
-
-  if (screen === 'login') {
-    return (
-      <>
-        {renderStage(
-          <LoginScreen
-            key={`login-${rerenderTick}`}
-            style={style}
-            mode={mode}
-            onBack={() => navigate('home')}
-            onSuccess={() => navigate('home')}
-            onRegister={() => navigate('register')}
-          />,
-        )}
-        {!bare && switcher}
-      </>
-    );
-  }
-
-  if (screen === 'register') {
-    return (
-      <>
-        {renderStage(
-          <RegisterScreen
-            key={`register-${rerenderTick}`}
-            style={style}
-            mode={mode}
-            onBack={() => navigate('login')}
-            onSuccess={() => navigate('home')}
-          />,
-        )}
-        {!bare && switcher}
-      </>
-    );
-  }
-
-  if (screen === 'bpconfig') {
-    return (
-      <>
-        {renderStage(<BpConfigScreen key={`bpconfig-${rerenderTick}`} style={style} mode={mode} />)}
-        {!bare && switcher}
-      </>
-    );
-  }
-
-  if (screen === 'eventrules') {
-    return (
-      <>
-        {renderStage(<EventRulesScreen key={`eventrules-${rerenderTick}`} style={style} mode={mode} />)}
-        {!bare && switcher}
-      </>
-    );
-  }
-
-  if (screen === 'code') {
-    return (
-      <>
-        {renderStage(
-          <CodeScreen
-            key={`code-${rerenderTick}-${codeVariant}`}
-            style={style}
-            mode={mode}
-            variant={codeVariant}
-            onBack={() => navigate('home')}
-            onStart={(snap) => {
-              applySnapshot(snap);
-              navigate('select');
-            }}
-          />,
-        )}
+        {renderStage(stageNode)}
         {!bare && switcher}
       </>
     );

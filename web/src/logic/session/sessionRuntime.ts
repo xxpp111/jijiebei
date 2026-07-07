@@ -35,6 +35,19 @@ export function getSessionMatches(): MatchVM[] {
   return sessionMatches();
 }
 
+export function hasLiveMaps(): boolean {
+  const d: any = JijieData;
+  return !!d && Array.isArray(d.mapList) && d.mapList.length >= 3;
+}
+
+export function setPlayerName(name: string): void {
+  try { (JijieData as any).playerName = name; } catch { /* noop */ }
+}
+
+export function resultValueOf(result: string): number {
+  return RESULT_VAL[result];
+}
+
 /** 写判定 + 重算记分（winLoseList[i]=0失败/1胜利/2带奖励；win+bonus 计获胜场，对齐 jjbDesign 语义）。 */
 export function setVerdict(matchIdx: number, verdict: 'win' | 'bonus' | 'lose'): void {
   const d: any = JijieData;
@@ -93,6 +106,12 @@ export function getRuleMode(): 'practice' | 'match' { return ruleMode; }
 const bpBanRuntime = new Set<string>();
 const BP_BAN_LIMIT = 1; // 比赛态「禁因子」每局上限（二选一之「ban 1 因子」）；练习态不设上限。
 
+export function enforceMatchLimit(current: number, limit: number, warnMsg: string): boolean {
+  if (ruleMode !== 'match' || current < limit) return true;
+  exposeSelectWarn(warnMsg);
+  return false;
+}
+
 /** 是否使用了「自选指挥官」：selectedCommanderList 含不在本局 A/B 抽中池（randomCommanderPoorA/B 去 '自选'）的指挥官，
  *  即玩家从自选区全量池挑了非抽中指挥官。二选一互斥（ban 因子 ⊕ 自选指挥官）据此判定。 */
 export function usedSelfPick(d: any): boolean {
@@ -122,8 +141,7 @@ export function getBpExclusive(): 'ban' | 'self' | 'conflict' | null {
 export function toggleBanFactor(name: string): void {
   if (!name) return;
   if (bpBanRuntime.has(name)) { bpBanRuntime.delete(name); clearSelectWarn(); return; }
-  if (ruleMode === 'match' && bpBanRuntime.size >= BP_BAN_LIMIT) {
-    exposeSelectWarn('超出比赛规则：禁用因子每局限 ' + BP_BAN_LIMIT + ' 个');
+  if (!enforceMatchLimit(bpBanRuntime.size, BP_BAN_LIMIT, '超出比赛规则：禁用因子每局限 ' + BP_BAN_LIMIT + ' 个')) {
     return; // 不替换、不落第 2 个；第 1 个 ban 仍有效（违规不强拦）
   }
   bpBanRuntime.add(name);
@@ -168,8 +186,7 @@ export function rerollFactor(kind: 'pool' | 'slot', i: number, k?: number): bool
   // 锁定因子不可换（UI 不挂角标；逻辑侧再挡一道，防误调）
   if (((d.lockFactorList || []) as (string | null)[]).includes(oldName)) return false;
   // 限次（照抄 BP toggleBanFactor 范式）：match 超限 → 软违规提示、不执行、已揉的仍有效
-  if (ruleMode === 'match' && rerollCount >= REROLL_LIMIT) {
-    exposeSelectWarn('超出比赛规则：重揉每局限 ' + REROLL_LIMIT + ' 次');
+  if (!enforceMatchLimit(rerollCount, REROLL_LIMIT, '超出比赛规则：重揉每局限 ' + REROLL_LIMIT + ' 次')) {
     return false;
   }
   // 抽新：先抽后放——getJijieFactor 只从活池抽（活池已排除所有在场因子），保证新因子 ≠ 旧且 ∉ 当前 3 场在场集；

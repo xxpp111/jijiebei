@@ -5,6 +5,7 @@ import { currentDifficulty, currentEnemyAi, currentEnemyRace, currentIsDoubles, 
 import { autoPostIfComplete, canPostResult, getRecordState, retryRecordPost, subscribeRecordState, type RecordState } from '../logic/matchRecord';
 import { ScreenShell } from '../components/ScreenShell';
 import { TopBar, MetaRow } from '../components/TopBar';
+import { useForceRerender } from '../lib/useForceRerender';
 
 const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'suiji', 'doubles', 'feiqiu-doubles']);
 
@@ -13,7 +14,7 @@ const MODES_SET = new Set<SessionMode>(['std8', 'std10', 'std12', 'rescue', 'one
 // 整屏布局承接 design/v4-r2/components/battle-screen.jsx。
 export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: string; onGenCode: () => void }) {
   const [ready, setReady] = useState(false);
-  const [tick, setTick] = useState(0); // 判定后强制重渲
+  const forceRerender = useForceRerender(); // 判定后强制重渲
   // 落库状态 chip（#94）：recordState 是 matchRecord 模块级状态（跨屏不丢），这里订阅它驱动重渲。
   const [recordState, setRecordState] = useState<RecordState>(getRecordState());
   useEffect(() => subscribeRecordState(() => setRecordState(getRecordState())), []);
@@ -81,7 +82,6 @@ export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: 
     <ScreenShell
       className={`jjb style-${style} mode-${mode}`}
       data-screen-label={`battle-${style}-${mode}-${dbl ? 'doubles' : s.mode}`}
-      data-tick={tick}
       {...(dbl ? { 'data-doubles-battle': matches.length } : {})}
     >
       <div className="jjb-inner battle">
@@ -98,7 +98,7 @@ export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: 
               onVerdict={(v) => {
                 setCurrentVerdict(r.idx, v);
                 void autoPostIfComplete(); // #94：判定完成即后台自动落库（5s 改判缓冲，见 matchRecord.ts）
-                setTick((x) => x + 1);
+                forceRerender();
               }}
             />
           ))}

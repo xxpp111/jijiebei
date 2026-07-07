@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 
 const webRoot = resolve(fileURLToPath(new URL('..', import.meta.url)), '..'); // lib → e2e → web
 const backendRoot = resolve(webRoot, '..', 'backend'); // pocketbase 二进制 + cwd（loadScoring 相对路径 config/）
-const PB_BIN = resolve(backendRoot, 'pocketbase');
+const PB_BIN = process.env.JJB_PB_BIN || resolve(backendRoot, 'pocketbase');
 export const ISO_PB_BASE = 'http://127.0.0.1:8090';
 export const ISO_SU_EMAIL = 'admin@jjb.test';
 export const ISO_SU_PWD = 'Admin123456!';

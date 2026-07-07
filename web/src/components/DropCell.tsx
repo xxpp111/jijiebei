@@ -11,10 +11,11 @@ export interface DropCellProps {
   over?: boolean; // 拖放 hover 演示态（Phase 2 真拖时点亮）
   filled?: boolean; // 已填态：true 时不渲染 hint（视觉一致 design fill 槽）
   onClear?: () => void; // 点击已填槽时触发（与 dragdrop 350ms 窗口配合）
+  [data: `data-${string}`]: unknown;
 }
 
 export const DropCell = forwardRef<HTMLSpanElement, DropCellProps>(function DropCell(
-  { w, h, hint = '', over = false, filled = false, onClear },
+  { w, h, hint = '', over = false, filled = false, onClear, ...dataProps },
   ref,
 ) {
   const cls = 'drop' + (over ? ' dropv-over' : '') + (filled ? ' dropv-filled' : '');
@@ -24,6 +25,7 @@ export const DropCell = forwardRef<HTMLSpanElement, DropCellProps>(function Drop
       className={cls}
       style={{ width: w, height: h, display: 'flex' }}
       data-drop-cell
+      {...dataProps}
       onClick={(e) => {
         // 350ms 窗口内的 click 是 drop 触发的，不算清槽（防 touch/mouse 双事件流）
         if (shouldSuppressClickClear()) { e.stopPropagation(); return; }

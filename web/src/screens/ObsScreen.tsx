@@ -4,6 +4,7 @@ import { CaptureButtons } from '../components/CaptureButtons';
 import { startRandomSession, exposeObsbarDebug, jjbLive } from '../logic/jjbSession';
 import { currentDifficultyTotal, currentEnemyAi, currentEnemyRace, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
 import { getPlayerByCode } from '../logic/backend';
+import { useForceRerender } from '../lib/useForceRerender';
 
 // ObsScreen — 直播采集 OBS 横条（段3 真实化 + 横条判定）。
 // 布局策略（用户愿景②）：单窗口，上方横条进 OBS 采集区、下方判定控制条放采集线外
@@ -14,7 +15,7 @@ import { getPlayerByCode } from '../logic/backend';
 export function ObsScreen({ style, mode, onBack }: { style: string; mode: string; onBack: () => void }) {
   const bare = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bare') === '1';
   const [ready, setReady] = useState(false);
-  const [tick, setTick] = useState(0); // 判定后强制重渲
+  const forceRerender = useForceRerender(); // 判定后强制重渲
   const [playerId, setPlayerId] = useState(''); // Brief E：选手 ID 直播展示
 
   useEffect(() => {
@@ -38,7 +39,6 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
   }, [ready]);
 
   if (!ready) return null;
-  void tick;
 
   const matches = currentMatches();
   // 真实 status/verdict 推导：已判定(result 有值)→done；首个未判定→live；其余→wait。
@@ -63,7 +63,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
 
   const judge = (i: number, v: 'win' | 'bonus' | 'lose') => {
     setCurrentVerdict(i, v);
-    setTick((x) => x + 1);
+    forceRerender();
   };
 
   return (
