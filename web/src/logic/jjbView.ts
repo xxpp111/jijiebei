@@ -22,7 +22,7 @@ import {
 } from './jjbDoubles';
 import { getEnemyRoll } from './aiEnemySelector';
 import type { RaceCode } from '../data/aiEnemyPool';
-import { MODE_DEFS } from '../config/modes';
+import { lockTagFor, MODE_DEFS } from '../config/modes';
 
 export type Verdict = 'win' | 'bonus' | 'lose';
 export type CurrentMatch = MatchVM & { mutators?: string[] };
@@ -82,10 +82,7 @@ export function currentSessionMode(): SessionMode {
  *  （select/battle/obs/result 四屏统一）。std15 无锁定因子，角标不渲染，返回值不生效。 */
 export function currentLockTag(): string {
   if (!doublesLive()) return '官突';
-  const v = getDoublesState().config.variant;
-  if (v === 'feiqiu') return '非酋';
-  if (v === 'cm') return '锁定';
-  return '官突';
+  return lockTagFor(getDoublesState().config.variant);
 }
 
 export function currentModeLabel(): string {

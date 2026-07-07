@@ -1,4 +1,5 @@
 import ConfigData from '../legacy/JJConfigData';
+import { URL_MODE_KEYS } from '../../config/modes';
 export { jjbLive } from '../legacy/JJBData';
 
 // 真实 csv（\r\n 分隔），编译期 raw 捆绑——无 fetch 时序、build 后亦可用。
@@ -44,7 +45,7 @@ export type SessionMode = 'std8' | 'std10' | 'std12' | 'rescue' | 'one-a' | 'har
  *  suiji 第五格入口已由 feiqiu 顶替下线：故移出 URL 白名单 → ?mode=suiji / ?sessionMode=suiji 回落 std8。
  *  'suiji' 仍保留在 SessionMode 类型与 setModeFlags 内（startSession('suiji') 与 e2e 9 模式恒等式回归依赖），仅非 URL/首页可达。
  *  'doubles' 双打入白名单：官突双打。'feiqiu-doubles'：飞球（非酋）双打，混乱工作室+随机1替代官突 CSV 池。 */
-const URL_SESSION_MODES: readonly SessionMode[] = ['std8', 'std10', 'std12', 'rescue', 'one-a', 'hard1', 'hard2', 'feiqiu', 'std15', 'cm', 'doubles', 'feiqiu-doubles'];
+const URL_SESSION_MODES: readonly SessionMode[] = URL_MODE_KEYS;
 
 /** 解析 URL 赛事模式：优先 ?sessionMode=（白名单），兼容旧 ?mode=std10；非法/主题值(dark/light)回落 std8。
  *  SSR（typeof window==='undefined'）守卫防 Node 端崩。App.tsx 与 SelectScreen.tsx 共用此函数（LOW2 去重）。 */

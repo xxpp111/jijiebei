@@ -1,15 +1,14 @@
-import { useState } from 'react';
 import { ScreenShell } from '../components/ScreenShell';
 import { TopBar, MetaRow } from '../components/TopBar';
 import { getBpModeState, toggleBpMode, type BpModeState } from '../logic/bpConfig';
 import { getRandomEnemyEnabled, toggleRandomEnemy } from '../logic/randomConfig';
 import { rollEnemiesForSession } from '../logic/aiEnemySelector';
-import { MODE_DEFS } from '../config/modes';
+import { BP_MODE_KEYS, MODE_DEFS } from '../config/modes';
+import { useForceRerender } from '../lib/useForceRerender';
 
 // 承接 Claude Design 设计稿（项目 3a9216be / bp-config.jsx）。每模式一行 + BP 开关，
 // 渲染用 repo 真实 BrandLockup + 真实模式 key；开关态由 logic/bpConfig 驱动（on/offable/locked）。
 // R3 口径展示数据从 config/modes.ts 的 MODE_DEFS 派生（BP 面板差异名走 bpName/bpTag，缺省回落 name/tag）；state 运行时取 bpConfig。
-const BP_MODE_KEYS = ['std8', 'std10', 'std12', 'rescue', 'feiqiu', 'doubles', 'std15', 'cm'];
 const BP_MODES = BP_MODE_KEYS.map((key) => {
   const d = MODE_DEFS[key];
   return { no: d.no!, key, name: d.bpName ?? d.name!, tag: d.bpTag ?? d.tag!, def: d.def!, defcls: d.defcls!, fac: d.fac!, form: d.form!, note: d.note! };
@@ -62,7 +61,7 @@ export interface BpConfigScreenProps {
 }
 
 export function BpConfigScreen({ style, mode }: BpConfigScreenProps) {
-  const [, setTick] = useState(0);
+  const forceRerender = useForceRerender();
   return (
     <ScreenShell className={`jjb bpc style-${style} mode-${mode}`} data-screen-label={`bpconfig-${style}-${mode}`}>
       <div className="jjb-inner">
@@ -76,7 +75,7 @@ export function BpConfigScreen({ style, mode }: BpConfigScreenProps) {
         </div>
         <div className="bpc-list">
           {BP_MODES.map((m) => (
-            <BpRow key={m.no} m={m} state={getBpModeState(m.key)} onToggle={() => { toggleBpMode(m.key); setTick((x) => x + 1); }} />
+            <BpRow key={m.no} m={m} state={getBpModeState(m.key)} onToggle={() => { toggleBpMode(m.key); forceRerender(); }} />
           ))}
         </div>
         {/* 随机敌方全局开关（设计稿 01 方案 A：独立金棕分区，与每模式 BP 列表视觉分隔——它是全局开关，不混进模式列表）。 */}
@@ -85,7 +84,7 @@ export function BpConfigScreen({ style, mode }: BpConfigScreenProps) {
           data-random-enemy={getRandomEnemyEnabled() ? '1' : '0'}
           role="switch"
           aria-checked={getRandomEnemyEnabled()}
-          onClick={() => { toggleRandomEnemy(); rollEnemiesForSession(3); setTick((x) => x + 1); }}
+          onClick={() => { toggleRandomEnemy(); rollEnemiesForSession(3); forceRerender(); }}
           style={{ cursor: 'pointer' }}
         >
           <div className="bp-enemy-i">

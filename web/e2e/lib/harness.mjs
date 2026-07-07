@@ -41,7 +41,9 @@ function waitForServer(proc, port) {
     const timer = setTimeout(() => rej(new Error('preview server did not become ready')), 15000);
     const onData = (buf) => {
       out += String(buf);
-      if (out.includes(`127.0.0.1:${port}`) || out.includes(`localhost:${port}`)) { clearTimeout(timer); res(); }
+      // 剥 ANSI 再匹配：带色环境下 vite 在 URL 中插色码（127.0.0.1:\x1b[1m<port>），裸 include 永不命中（#94 同款修法）
+      const plain = out.replace(/\x1b\[[0-9;]*m/g, '');
+      if (plain.includes(`127.0.0.1:${port}`) || plain.includes(`localhost:${port}`)) { clearTimeout(timer); res(); }
     };
     proc.stdout.on('data', onData);
     proc.stderr.on('data', onData);

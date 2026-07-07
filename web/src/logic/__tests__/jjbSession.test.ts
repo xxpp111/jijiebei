@@ -4,7 +4,7 @@
 //         ②开局契约（map=3/lock=3/9 格 null/status=2）+ factorScore 白名单 fallback。
 // 加载链同 e2e/run.mjs：setup.ts 注入 window shim，startSession 写 window.__jjbDebug 供 getSelectState 读。
 import { describe, it, expect, beforeEach } from 'vitest';
-import { startSession, getSelectState, factorScore } from '../jjbSession';
+import { clearFacSlot, setSelectedFac, startSession, getSelectState, factorScore, getSelectWarn } from '../jjbSession';
 import { getDoublesState } from '../jjbDoubles';
 
 const g = globalThis as any;
@@ -74,6 +74,26 @@ describe('jjbSession 开局契约', () => {
       startSession(mode);
       expect(getSelectState().jjbLive).toBe(true);
     }
+  });
+});
+
+describe('单打因子去重', () => {
+  beforeEach(() => { g.__jjbDebug = undefined; startSession('std10'); });
+
+  it('同一因子不能从池重复落到两个槽，清空后可再落', () => {
+    const fac = getSelectState().randomFactorPoor[0];
+    setSelectedFac(0, 0, fac);
+    setSelectedFac(1, 0, fac);
+    let s = getSelectState();
+    expect(s.selectedFactorList[0]).toBe(fac);
+    expect(s.selectedFactorList[3]).toBeNull();
+    expect(getSelectWarn()).toContain('因子已使用');
+
+    clearFacSlot(0, 0);
+    setSelectedFac(1, 0, fac);
+    s = getSelectState();
+    expect(s.selectedFactorList[0]).toBeNull();
+    expect(s.selectedFactorList[3]).toBe(fac);
   });
 });
 

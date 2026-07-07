@@ -14,6 +14,8 @@ import {
   usedSelfPick,
 } from './sessionRuntime';
 
+export { facFlatIdx };
+
 // ===== 段2 Phase 1：select 屏透出 + 随机填满进 battle（不动 startSession/9 模式逻辑） =====
 
 /** select 屏给 React 屏绑真身数据用的视图模型（0 改 JijieData 内部）。
@@ -180,7 +182,12 @@ export function setSelectedFac(slot: number, k: number, name: string | null): vo
   if (!Array.isArray(d.selectedFactorList)) d.selectedFactorList = new Array(9).fill(null);
   if (slot < 0 || slot > 2 || k < 0 || k > 2) return;
   if (name && getBanFor(name)) return; // BP: 被 ban 的因子不可落槽（手选拖入直接挡）
-  d.selectedFactorList[facFlatIdx(slot, k)] = name;
+  const flat = facFlatIdx(slot, k);
+  if (name && d.selectedFactorList.some((v: string | null, i: number) => i !== flat && v === name)) {
+    exposeSelectWarn('因子已使用');
+    return;
+  }
+  d.selectedFactorList[flat] = name;
 }
 
 /** 清第 slot 场指挥官（回填 null）。 */

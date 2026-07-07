@@ -12,8 +12,11 @@ import { weightedSampleNoReplace } from './commanderWeight';
 import { rollEnemiesForSession, clearEnemyRolls } from './aiEnemySelector';
 import { FACTORS } from '../config/factors';
 import { COMMANDERS } from '../config/commanders';
+import { doublesModeLabelFor } from '../config/modes';
 import type { DoublesSnapshot } from './codec';
 import { getBanFactors, getBanMutators, getBanMaps } from './eventBan';
+import { enforceMatchLimit } from './session/sessionRuntime';
+import { exposeSelectWarn } from './session/sessionDebug';
 
 // 额外随机因子来源（官方24因子子集，按开局时过滤当场官突锁定因子后随机抽取）。
 const FACTOR_SOURCE = [
@@ -23,9 +26,9 @@ const FACTOR_SOURCE = [
   '生命汲取', '速度狂魔', '给我死吧', '虚空重生者', '进攻部署', '减伤屏障',
 ];
 
-// 指挥官 A 档（弱）/ B 档（强）— 源自 assets/resources/jjdata/指挥官配置.txt 第2列。
-const COMMANDER_A = ['雷诺', '凯瑞甘', '阿塔尼斯', '斯旺', '扎加拉', '沃拉尊', '阿巴瑟', '阿纳拉克', '斯图科夫', '菲尼克斯', '米拉'];
-const COMMANDER_B = ['凯拉克斯', '诺娃', '德哈卡', '泰凯斯', '泽拉图', '斯台特曼', '蒙斯克'];
+// 指挥官 A 档（弱）/ B 档（强）— 源自 commanders.ts group（对账 jjdata/指挥官配置.txt 第2列）。
+const COMMANDER_A = COMMANDERS.filter((c) => c.group === 'A').map((c) => c.name);
+const COMMANDER_B = COMMANDERS.filter((c) => c.group === 'B').map((c) => c.name);
 
 // 飞球（非酋）之轮因子：混乱工作室恒锁；{礼尚往来/风暴英雄/虚空裂隙} 为可分配池（三者皆可分配，非随机抽1）。
 const FEIQIU_FIXED = '混乱工作室';
@@ -37,6 +40,7 @@ const CM_POOL: string[] = COMMANDERS.filter((c) => c.source === 'cm').map((c) =>
 
 const MATCHES = 3;
 const CMDS_PER_MATCH = 2;
+const DOUBLES_REROLL_LIMIT = 3;
 const TIER_ORDER: Array<'A' | 'B' | 'C'> = ['A', 'B', 'C'];
 const SLOT_LABELS = ['第 1 场', '第 2 场', 'BOSS 战'];
 
@@ -71,6 +75,11 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
+export function filterWithFallback<T>(pool: T[], pred: (t: T) => boolean, min: number): T[] {
+  const filtered = pool.filter(pred);
+  return filtered.length >= min ? filtered : pool;
+}
+
 // ---- 模块级状态 ----
 let _live = false;
 let _variant: DoublesVariant = 'guantu';
@@ -80,6 +89,7 @@ let _commanderPool: string[] = [];
 let _slots: { cmds: (string | null)[]; factors: (string | null)[] }[] = [];
 let _winLoseList: (number | undefined)[] = [];
 let _players: [string, string] = [...DEFAULT_PLAYERS]; // #84：双打两名选手名（落库 players=[A,B] 两真实 player 的来源）
+let _doublesRerollCount = 0;
 
 function spec(): VariantSpec { return VARIANT_SPECS[_variant]; }
 
@@ -116,8 +126,7 @@ function drawOfficialMaps(): string[] {
     pool = [...new Set(((ConfigData.mapGrid as unknown as unknown[][]) || []).map((r) => r[0] as string).filter(Boolean))];
   } catch { pool = []; }
   if (pool.length === 0) pool = [...new Set(TIER_ORDER.flatMap((t) => MUTATOR_POOL[t].map((e) => e.map)))];
-  const unbanned = pool.filter((m) => !getBanMaps().has(m));
-  const maps = shuffle(unbanned.length >= MATCHES ? unbanned : pool);
+  const maps = shuffle(filterWithFallback(pool, (m) => !getBanMaps().has(m), MATCHES));
   return Array.from({ length: MATCHES }, (_, i) => maps[i % maps.length] ?? '湮灭快车');
 }
 
@@ -136,20 +145,19 @@ export function doublesStart(variant: DoublesVariant = 'guantu'): void {
     const locks = variant === 'cm' ? CM_LOCKS : [];
     const entryName = variant === 'cm' ? 'CM' : '15因子';
     _mutEntries = TIER_ORDER.map((_, i) => ({ name: entryName, map: maps[i], factors: locks.slice() }));
-    const src = FACTOR_SOURCE.filter((f) => !getBanFactors().has(f));
-    const base = src.length >= spec().factorPoolSize ? src : FACTOR_SOURCE;
+    const base = filterWithFallback(FACTOR_SOURCE, (f) => !getBanFactors().has(f), spec().factorPoolSize);
     _factorPool = shuffle(base).slice(0, spec().factorPoolSize);
   } else {
     // 3 档官突各自带地图，独立随机抽会撞图（bug：完美风暴/现世现报同配升格之链 → 3 场重复地图）。
     // 修：逐档抽取时对地图去重——优先抽地图未用过的官突；该档官突地图被前面用尽（撞档，罕见）时回退原池随机，避免抽不出。
     const usedMaps = new Set<string>();
     _mutEntries = TIER_ORDER.map((t) => {
-      const pool = MUTATOR_POOL[t].filter(
-        (e) => !getBanMutators().has(e.name) && !e.factors.some((f) => getBanFactors().has(f))
-      );
-      const base = pool.length > 0 ? pool : MUTATOR_POOL[t]; // 守卫：全 ban 时回退原池
-      const fresh = base.filter((e) => !usedMaps.has(e.map));
-      const cand = fresh.length > 0 ? fresh : base;
+      const base = filterWithFallback(
+        MUTATOR_POOL[t],
+        (e) => !getBanMutators().has(e.name) && !e.factors.some((f) => getBanFactors().has(f)),
+        1,
+      ); // 守卫：全 ban 时回退原池
+      const cand = filterWithFallback(base, (e) => !usedMaps.has(e.map), 1);
       const pick = cand[Math.floor(Math.random() * cand.length)];
       usedMaps.add(pick.map);
       return pick;
@@ -167,6 +175,7 @@ export function doublesStart(variant: DoublesVariant = 'guantu'): void {
   _slots = freshSlots();
   _winLoseList = new Array(MATCHES);
   _players = [...DEFAULT_PLAYERS]; // #84：新局重置两名为默认（HomeScreen 开局后立即 setDoublesPlayers 覆盖真名）
+  _doublesRerollCount = 0;
   _live = true;
   rollEnemiesForSession(MATCHES); // 随机敌方：开关 ON 时每场 roll 种族+AI，OFF 则清空
   exposeDebug();
@@ -181,6 +190,7 @@ export function doublesReset(): void {
   _slots = freshSlots();
   _winLoseList = [];
   _players = [...DEFAULT_PLAYERS]; // #84：重置两名为默认
+  _doublesRerollCount = 0;
   clearEnemyRolls();
   exposeDebug();
 }
@@ -189,10 +199,7 @@ export function doublesReset(): void {
 
 export function doublesLive(): boolean { return _live; }
 export function doublesModeLabel(): string {
-  if (_variant === 'feiqiu') return '双打模式 · 非酋';
-  if (_variant === 'std15') return '双打模式 · 15因子';
-  if (_variant === 'cm') return '双打模式 · CM';
-  return '双打模式 · 官突';
+  return doublesModeLabelFor(_variant);
 }
 /** #84：双打两名选手名（trim + 空回落默认；落库/展示都读这里，不再有「双打战队」占位）。 */
 export function getDoublesPlayers(): [string, string] {
@@ -229,6 +236,7 @@ export interface DoublesState {
   winbCount: number;
   totalCount: number;
   players: [string, string]; // #84：双打两名选手名（e2e 读数契约；trim+回落默认后的展示/落库名）
+  reroll: { count: number; limit: number; remaining: number };
 }
 
 export function doublesMatches(): Array<MatchVM & { mutators?: string[] }> {
@@ -292,6 +300,7 @@ function debugSnapshot(): DoublesState {
     winbCount: wl.filter((v) => v === 2).length,
     totalCount: wl.filter((v) => v === 0 || v === 1 || v === 2).length,
     players: getDoublesPlayers(),
+    reroll: getDoublesRerollState(),
   };
 }
 
@@ -311,11 +320,115 @@ export function setDoublesCmd(slot: number, idx: number, name: string): void {
 export function clearDoublesCmd(slot: number, idx: number): void {
   ensureSlot(slot); _slots[slot].cmds[idx] = null; exposeDebug();
 }
-export function setDoublesFac(slot: number, idx: number, name: string): void {
-  ensureSlot(slot); _slots[slot].factors[idx] = name; exposeDebug();
+export function isDoublesFacUsed(name: string, except?: { slot: number; idx: number }): boolean {
+  if (!name) return false;
+  return (_slots ?? []).some((s, slot) => (s.factors ?? []).some((v, idx) => {
+    if (except && except.slot === slot && except.idx === idx) return false;
+    return v === name;
+  }));
+}
+
+export function setDoublesFac(slot: number, idx: number, name: string | null, opts?: { bypassDedupe?: boolean }): boolean {
+  ensureSlot(slot);
+  // feiqiu 豁免去重：固定 3 因子池 × 9 槽自由分配（:35/:62），跨场复用是设计本身，拦了就无法手填开局
+  if (!opts?.bypassDedupe && _variant !== 'feiqiu' && name && isDoublesFacUsed(name, { slot, idx })) {
+    exposeSelectWarn('因子已使用');
+    return false;
+  }
+  _slots[slot].factors[idx] = name;
+  exposeDebug();
+  return true;
 }
 export function clearDoublesFac(slot: number, idx: number): void {
   ensureSlot(slot); _slots[slot].factors[idx] = null; exposeDebug();
+}
+
+function clearSelectedDoublesName(kind: 'cmd' | 'factor', name: string): number {
+  let cleared = 0;
+  for (let slot = 0; slot < MATCHES; slot++) {
+    ensureSlot(slot);
+    const arr = kind === 'cmd' ? _slots[slot].cmds : _slots[slot].factors;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] === name) { arr[i] = null; cleared++; }
+    }
+  }
+  return cleared;
+}
+
+function guardDoublesReroll(): boolean {
+  if (_variant === 'feiqiu') {
+    exposeSelectWarn('非酋之轮固定因子池不可单独重揉');
+    return false;
+  }
+  return enforceMatchLimit(
+    _doublesRerollCount,
+    DOUBLES_REROLL_LIMIT,
+    '超出比赛规则：双打重揉每局限 ' + DOUBLES_REROLL_LIMIT + ' 次',
+  );
+}
+
+function commitDoublesReroll(): void {
+  _doublesRerollCount++;
+  exposeDebug();
+}
+
+export function getDoublesRerollState(): { count: number; limit: number; remaining: number } {
+  return {
+    count: _doublesRerollCount,
+    limit: DOUBLES_REROLL_LIMIT,
+    remaining: Math.max(0, DOUBLES_REROLL_LIMIT - _doublesRerollCount),
+  };
+}
+
+export function rerollDoublesCommander(poolIdx: number): boolean {
+  if (!guardDoublesReroll()) return false;
+  if (poolIdx < 0 || poolIdx >= _commanderPool.length) return false;
+  const oldName = _commanderPool[poolIdx];
+  if (!oldName) return false;
+  const inPool = new Set(_commanderPool);
+  let source: string[];
+  let pick: string | undefined;
+  if (poolIdx < spec().cmdACount) {
+    source = filterWithFallback(COMMANDER_A, (name) => !inPool.has(name), 1);
+    pick = shuffle(source.filter((name) => !inPool.has(name)))[0];
+  } else {
+    source = _variant === 'cm' ? [...COMMANDER_B, ...CM_POOL] : COMMANDER_B;
+    const candidates = filterWithFallback(source, (name) => !inPool.has(name), 1).filter((name) => !inPool.has(name));
+    pick = weightedSampleNoReplace(candidates, 1)[0];
+  }
+  if (!pick) {
+    exposeSelectWarn('双打重揉候选不足');
+    return false;
+  }
+  _commanderPool[poolIdx] = pick;
+  // 契约「已落槽联动」：清空同名槽位须带 warn 提示（数据一致优先，但不静默）
+  if (clearSelectedDoublesName('cmd', oldName) > 0) exposeSelectWarn(`已重揉「${oldName}」：其场次槽位已同步清空`);
+  commitDoublesReroll();
+  return true;
+}
+
+export function rerollDoublesFactor(poolIdx: number): boolean {
+  if (!guardDoublesReroll()) return false;
+  if (poolIdx < 0 || poolIdx >= _factorPool.length) return false;
+  const oldName = _factorPool[poolIdx];
+  if (!oldName) return false;
+  const inPool = new Set(_factorPool);
+  // 排除当场官突锁定因子：开局池已剔除 lockedFacs(:165-166 不变量)，重揉不得灌回，否则锁定+可分配同场重复
+  const lockedFacs = new Set(_mutEntries.flatMap((e) => e.factors));
+  const candidates = filterWithFallback(
+    FACTOR_SOURCE,
+    (name) => !getBanFactors().has(name) && !inPool.has(name) && !lockedFacs.has(name),
+    1,
+  ).filter((name) => !getBanFactors().has(name) && !inPool.has(name) && !lockedFacs.has(name));
+  const pick = shuffle(candidates)[0];
+  if (!pick) {
+    exposeSelectWarn('双打重揉候选不足');
+    return false;
+  }
+  _factorPool[poolIdx] = pick;
+  if (clearSelectedDoublesName('factor', oldName) > 0) exposeSelectWarn(`已重揉「${oldName}」：其场次槽位已同步清空`);
+  commitDoublesReroll();
+  return true;
 }
 
 // ---- Verdict ----
@@ -355,7 +468,7 @@ export function randomFillDoubles(): void {
     for (let k = 0; k < ef; k++) {
       // 取模：guantu 池=9 / std15 池=17 顺序消费不回卷；feiqiu 池=3 则每场循环喂满那 3 个可分配因子。
       const name = _factorPool.length ? _factorPool[(slot * ef + k) % _factorPool.length] : undefined;
-      if (name) setDoublesFac(slot, k, name);
+      if (name) setDoublesFac(slot, k, name, { bypassDedupe: true });
     }
   }
 }

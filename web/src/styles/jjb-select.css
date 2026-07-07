@@ -20,11 +20,23 @@
 .jjb-inner.sel .slot-targets { margin-top: 7px; }
 .jjb-inner.sel .pool-factors .factor-row { margin-top: 8px; }
 /* 按钮行（pool-cmd 第 2 个直接子 div）钉底不缩；中和 startbtn 跨轴自对齐避免顶错行高 */
+.jjb-inner.sel .pool-cmd > div:first-child { overflow-x: hidden; }
 .jjb-inner.sel .pool-cmd > div:last-child { align-items: center; }
 .jjb-inner.sel .pool-cmd .startbtn { align-self: center; margin-top: 0; }
 /* 因子池左列（pool-factors）随机因子多时（如 std15 的 15 因子）会撑出 .pool(overflow:hidden) 底被裁；
    给它独立内滚，与右列指挥官区一致，整池可滚不裁。 */
 .jjb-inner.sel .pool-factors { min-height: 0; overflow-y: auto; }
+/* Chrome 滚动条在 snapDOM 输出中会被当作白色系统控件绘进 select 基线，跨环境漂移；
+   保留纵向滚动能力，只隐藏滚动条外观。 */
+.jjb-inner.sel .pool-factors,
+.jjb-inner.sel .pool-cmd > div:first-child {
+  scrollbar-width: none;
+}
+.jjb-inner.sel .pool-factors::-webkit-scrollbar,
+.jjb-inner.sel .pool-cmd > div:first-child::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
 
 /* 边框内嵌修复（yb 反馈：因子图方角外露到金边框外一点，应内嵌进边框实心环内）。
    v4.css .fx-art 普通缩进 7%(占86%)/金 9%(占82%)，实测边框 PNG 内框更小 → 方角露边。

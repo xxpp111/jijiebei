@@ -18,6 +18,8 @@ import {
 } from '../logic/codec';
 import { difficultyTotal, factorScore, startSession } from '../logic/jjbSession';
 import { currentSessionMode } from '../logic/jjbView';
+import { doublesLabelFor } from '../config/modes';
+import { useForceRerender } from '../lib/useForceRerender';
 
 export interface CodeScreenProps {
   style: string;
@@ -67,7 +69,7 @@ function snapshotToMatches(snap: PayloadSnapshot): MatchSummary[] {
 }
 
 function snapshotModeLabel(snap: PayloadSnapshot): string {
-  if (snap.kind === 'd') return snap.variant === 'feiqiu' ? '双打 · 非酋' : '双打 · 官突';
+  if (snap.kind === 'd') return doublesLabelFor(snap.variant);
   const fc = snap.mfc === 0 ? '随机' : snap.mfc === 2 ? '8 因子' : snap.mfc === 3 ? '10 因子' : snap.mfc === 4 ? '12 因子' : `${snap.mfc} 因子`;
   const ml = snap.flags.zj ? '拯救' : snap.flags.op ? '单指' : (snap.flags.vh2 || snap.flags.vh) ? '极难' : snap.flags.fq ? '非酋' : snap.flags.sj ? '随机' : '手选';
   return `${fc} · ${ml}`;
@@ -116,7 +118,7 @@ export function CodeScreen({ style, mode, variant, onBack, onStart }: CodeScreen
 // ===== 屏 C：生成码 =====
 
 function GenPanel({ onBack }: { onBack: () => void }) {
-  const [, setTick] = useState(0);
+  const forceRerender = useForceRerender();
   const [copied, setCopied] = useState(false);
 
   const snap = capturePayload();
@@ -138,7 +140,7 @@ function GenPanel({ onBack }: { onBack: () => void }) {
   const handleRegen = () => {
     // 重新生成 = 开新局再固化（码方案固化"当前局"，换局换码）
     try { startSession(currentSessionMode()); } catch { /* noop */ }
-    setTick((x) => x + 1);
+    forceRerender();
   };
 
   return (

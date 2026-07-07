@@ -8,13 +8,14 @@ import { CaptureButtons } from '../components/CaptureButtons';
 import { cmdUrl, facUrl } from '../lib/realAsset';
 import { currentDifficulty, currentLockedFactors, currentLockTag, currentMatches, currentModeLabel, currentPlayerName, currentScore, ensureDoublesSessionFromUrl } from '../logic/jjbView';
 import { postMatchResult, canPostResult } from '../logic/matchRecord';
+import { useForceRerender } from '../lib/useForceRerender';
 
 const RESULT_LABEL: Record<string, string> = { win: '胜利', bonus: '带奖励', lose: '失败' };
 
 // ResultScreen — 结算屏（段3③）。承接后端 JJBResult.build：TopBar + 大比分 banner + 战绩卡列表 + 页脚。
 // 大比分 = getScore()（winCount，含带奖励不双计）；战绩卡 result 从 sessionMatches 反查。0 改 jijie2。
 export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: string; onGenCode: () => void }) {
-  const [, setTick] = useState(0);
+  const forceRerender = useForceRerender();
   const [recordState, setRecordState] = useState<'idle' | 'posting' | 'done' | 'error'>('idle');
   // canRecord = 落库资格谓词（与 postMatchResult 同口径，单点 canPostResult()）：比赛只 host 可录、练习选手可录自存战绩，其余不显示录入按钮。
   const canRecord = canPostResult();
@@ -32,7 +33,7 @@ export function ResultScreen({ style, mode, onGenCode }: { style: string; mode: 
   }
 
   useEffect(() => {
-    if (ensureDoublesSessionFromUrl()) setTick((x) => x + 1);
+    if (ensureDoublesSessionFromUrl()) forceRerender();
     // #94：主触发链路已下沉到 BattleScreen（判定完成即 autoPostIfComplete，5s 改判缓冲）；
     // 这里保留为兜底重试面——主播不开结算屏也能落库，但万一提前/直接打开本屏，挂载即尝试落库仍有意义。
     // 局指纹防重（matchRecord.fingerprintKey）保证与 BattleScreen 的自动落库不会产生第二条 matches。
