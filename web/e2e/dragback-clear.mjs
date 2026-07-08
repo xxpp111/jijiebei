@@ -118,5 +118,30 @@ await withPreview(async (page, { baseUrl }) => {
   const recover = await page.evaluate(() => window.__jjbDebug?.doubles?.selection?.slots?.[2]?.factors?.[0]);
   expect(recover === facB, `双打崩溃路径: 拖拽机未卡死、后续拖拽仍生效 slot2=${recover}`);
   pass(`双打 未选因子拖占位格: 不崩✓ 槽未污染✓ 拖拽机未卡死✓`);
+
+  // ===== 点击清除回归（对抗审查 blocker）：场次槽因子/指挥官挂了 onPointerDown 后，纯点击(0 位移)必须仍能清除 =====
+  // 根因：dragdrop onPointerUp 曾无条件盖 lastDropAt → 纯点击被 shouldSuppressClickClear 吞掉 onClick。
+  // 修复：位移 < CLICK_MOVE_THRESHOLD 视为点击、不盖 lastDropAt。此断言用 0 位移的 down→up 模拟真实点击。
+  async function clickCenter(sel) {
+    const el = await page.$(sel);
+    if (!el) return false;
+    const b = await el.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down(); await page.mouse.up(); // 0 位移 = 纯点击
+    await page.waitForTimeout(150);
+    return true;
+  }
+  // 单打 std12：随机填充后点击场次槽指挥官/因子，验证点击清除生效
+  await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=dark&sessionMode=std12&cb=clickclear`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('[data-random-fill-btn]');
+  await page.click('[data-random-fill-btn]'); await page.waitForTimeout(300);
+  const read = () => page.evaluate(() => ({ cmd0: window.__jjbE2E.getSelectState().selectedCommanderList[0], fac0: window.__jjbE2E.getSelectState().selectedFactorList[0] }));
+  const b0 = await read();
+  expect(b0.cmd0 != null && b0.fac0 != null, `点击清除前置: 随机填充后 slot0 有指挥官(${b0.cmd0})+因子(${b0.fac0})`);
+  await clickCenter('[data-slot-cmd="0"]');
+  expect((await read()).cmd0 == null, `单打 指挥官纯点击清除生效(${b0.cmd0}→null)`);
+  await clickCenter('[data-slot-fac="0:0"]');
+  expect((await read()).fac0 == null, `单打 因子纯点击清除生效(${b0.fac0}→null)`);
+  pass(`点击清除回归: 场次槽指挥官/因子 0 位移纯点击仍能清除（dragdrop 位移门槛生效）`);
 });
 done('dragback-clear');

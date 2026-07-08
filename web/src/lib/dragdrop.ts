@@ -15,6 +15,7 @@
 
 const SNAP_RADIUS = 40; // 吸附半径（px），真机对照手感调（Phase 2 stop_when #5 强调"需真机对照"）
 const CLICK_FILL_WINDOW = 350; // ms，释放后 350ms 内 click 不算清槽
+const CLICK_MOVE_THRESHOLD = 6; // px，指针位移小于此视为「点击」而非「拖放」：不触发 onDrop、不盖 lastDropAt，让元素自身 onClick 正常生效（否则同挂 onPointerDown+onClick 的槽位纯点击会被 lastDropAt 抑制窗口吞掉）
 
 interface Target {
   kind: 'cmd' | 'factor';
@@ -98,11 +99,17 @@ function onPointerMove(ev: PointerEvent) {
 
 function onPointerUp(ev: PointerEvent) {
   if (!active || ev.pointerId !== active.pointerId) return;
-  const hit = findNearestTarget(ev.clientX, ev.clientY, active.kind);
-  if (hit && active.onDrop) {
-    active.onDrop(hit.slot, hit.idx);
+  const dx = ev.clientX - active.startX;
+  const dy = ev.clientY - active.startY;
+  // 原地点击（位移 < 阈值）：不算拖放——不触发 onDrop、不盖 lastDropAt，让 span 自身的 onClick（点击清除）正常生效。
+  // 否则挂了 onPointerDown 的槽位纯点击也会跑完拖拽握手并盖 lastDropAt，紧随的 click 被 shouldSuppressClickClear 吞掉。
+  if (dx * dx + dy * dy >= CLICK_MOVE_THRESHOLD * CLICK_MOVE_THRESHOLD) {
+    const hit = findNearestTarget(ev.clientX, ev.clientY, active.kind);
+    if (hit && active.onDrop) {
+      active.onDrop(hit.slot, hit.idx);
+    }
+    lastDropAt = Date.now();
   }
-  lastDropAt = Date.now();
   if (active.ghost && active.ghost.parentNode) active.ghost.parentNode.removeChild(active.ghost);
   window.removeEventListener('pointermove', onPointerMove);
   window.removeEventListener('pointerup', onPointerUp);

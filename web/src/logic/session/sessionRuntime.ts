@@ -194,6 +194,12 @@ export function rerollFactor(kind: 'pool' | 'slot', i: number, k?: number): bool
   const newName = ConfigData.getJijieFactor(!!d.modeIsVeryHard);
   ConfigData.popFactor(newName);
   arr[flat] = newName;
+  // 场次槽 reroll：候选池若仍含旧因子，同步换成新因子（对齐双打「换池」语义）。
+  // 否则旧因子仍在 poor，落槽格 reroll 后 selectedFactorList 不再含它 → 候选区那格从空出「恢复显示」旧因子。
+  if (kind === 'slot') {
+    const poorIdx = poor.indexOf(oldName);
+    if (poorIdx >= 0) poor[poorIdx] = newName;
+  }
   const stillShown = poor.includes(oldName) || sel.includes(oldName);
   if (!stillShown) ConfigData.releaseFactor(oldName);
   rerollCount++;

@@ -17,18 +17,19 @@ await withPreview(async (page, { baseUrl }) => {
   await (await page.$('[data-home-tab="match"]'))?.click(); await page.waitForTimeout(400);
   await page.click('[data-mode-btn="doubles"]'); await page.waitForTimeout(900);
   expect(await page.$('[data-doubles-select]'), '官突双打 select 屏渲染');
+  // 开局态（未填充）查重揉入口 + 点一个 reroll：填充后指挥官落槽→候选区空出→角标消失，故必须填充前查
+  const guantuRerolls = await page.$$('[data-doubles-reroll]');
+  expect(guantuRerolls.length === 15, `官突开局重揉入口=指挥官6+因子9（实=${guantuRerolls.length}）`);
+  await guantuRerolls[0].click(); await page.waitForTimeout(300);
+  const g2 = await page.evaluate(() => window.__jjbDebug?.doubles || {});
+  expect(g2.reroll?.count === 1, `官突重揉后 count=1（实=${g2.reroll?.count}）`);
+  expect(new Set(g2.commanderPool || []).size === (g2.commanderPool || []).length, '官突重揉后 commanderPool 无重复');
   await (await page.$('[data-doubles-random-fill-btn]'))?.click(); await page.waitForTimeout(600);
   const g = await page.evaluate(() => window.__jjbDebug?.doubles || {});
   expect(g.live === true, '双打 live');
   expect(g.config?.variant === 'guantu', `官突 variant（实=${g.config?.variant}）`);
   expect(g.factorPool?.length === 9, `官突 factorPool=9 抽 CSV 真表（实=${g.factorPool?.length}）`);
   expect(g.commanderPool?.length === 6, `6 指挥官池（实=${g.commanderPool?.length}）`);
-  const guantuRerolls = await page.$$('[data-doubles-reroll]');
-  expect(guantuRerolls.length === 15, `官突重揉入口=指挥官6+因子9（实=${guantuRerolls.length}）`);
-  await guantuRerolls[0].click(); await page.waitForTimeout(300);
-  const g2 = await page.evaluate(() => window.__jjbDebug?.doubles || {});
-  expect(g2.reroll?.count === 1, `官突重揉后 count=1（实=${g2.reroll?.count}）`);
-  expect(new Set(g2.commanderPool || []).size === (g2.commanderPool || []).length, '官突重揉后 commanderPool 无重复');
   await shot(page, 'doubles-guantu');
 
   // 5 号位 非酋之轮 → facPool=3 固定可分配
@@ -53,13 +54,15 @@ await withPreview(async (page, { baseUrl }) => {
     await page.waitForTimeout(500);
     await (await page.$('[data-home-tab="match"]'))?.click(); await page.waitForTimeout(300);
     await page.click(`[data-mode-btn="${modeBtn}"]`); await page.waitForTimeout(800);
+    // 开局态（未随机填充）重揉入口 = 指挥官池 + 因子池：此时都未落槽、全在候选区有 reroll 角标。
+    // 必须在填充前查——随机填充后指挥官落槽→候选区空出（本轮改动），候选区指挥官 reroll 角标随之消失。
+    const rerolls = await page.$$('[data-doubles-reroll]');
+    expect(rerolls.length === cmdPoolLen + facPoolLen, `${variant} 开局重揉入口=${cmdPoolLen}+${facPoolLen}=${cmdPoolLen + facPoolLen}（实=${rerolls.length}）`);
     await (await page.$('[data-doubles-random-fill-btn]'))?.click(); await page.waitForTimeout(500);
     const st = await page.evaluate(() => window.__jjbDebug?.doubles || {});
     expect(st.config?.variant === variant, `${variant} variant（实=${st.config?.variant}）`);
     expect(st.factorPool?.length === facPoolLen, `${variant} factorPool=${facPoolLen}（实=${st.factorPool?.length}）`);
     expect(st.commanderPool?.length === cmdPoolLen, `${variant} commanderPool=${cmdPoolLen}（实=${st.commanderPool?.length}）`);
-    const rerolls = await page.$$('[data-doubles-reroll]');
-    expect(rerolls.length === cmdPoolLen + facPoolLen, `${variant} 重揉入口=${cmdPoolLen}+${facPoolLen}=${cmdPoolLen + facPoolLen}（实=${rerolls.length}）`);
     // 剩余次数角标（match 态）应可见
     const remainingBadge = await page.$('[data-doubles-reroll-remaining]');
     expect(!!remainingBadge, `${variant} match 态剩余次数角标应可见`);

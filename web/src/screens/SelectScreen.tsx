@@ -205,6 +205,21 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
     }, ev.nativeEvent);
   };
 
+  // 场次槽指挥官拖拽（对齐因子）：拖到其他场次槽=移动（清源+写目标）/ 拖到候选区占位格(slot<0)=清除
+  const onSlotCmdPointerDown = (ev: React.PointerEvent, slot: number, name: string, el: HTMLElement) => {
+    ev.preventDefault();
+    startDrag({
+      kind: 'cmd',
+      name,
+      el,
+      onDrop: (targetSlot) => {
+        if (targetSlot === slot) return;
+        if (targetSlot < 0) { clearCmdSlot(slot); forceRerender(); return; }
+        clearCmdSlot(slot); setSelectedCmd(targetSlot, name); forceRerender();
+      },
+    }, ev.nativeEvent);
+  };
+
   // ===== 点击已填槽清除 =====
   const onClearCmd = (slot: number) => { clearCmdSlot(slot); forceRerender(); };
   const onClearFac = (slot: number, k: number) => { clearFacSlot(slot, k); forceRerender(); };
@@ -294,8 +309,9 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                       <span
                         ref={setTarget(`cmd:${i}:0`)}
                         data-slot-cmd={i}
+                        onPointerDown={(ev) => onSlotCmdPointerDown(ev, i, selCmd, ev.currentTarget as HTMLElement)}
                         onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i); }}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'grab', touchAction: 'none' }}
                       >
                         <CommanderCard src={cmdUrl(selCmd)} name={selCmd} w={56} h={67} fill check />
                       </span>
@@ -392,7 +408,11 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   {cmdA.length === 0 && (
                     <span style={{ color: 'var(--muted)', fontSize: 12 }}>（本模式无 A 组）</span>
                   )}
-                  {cmdA.map((c, i) => (
+                  {cmdA.map((c, i) => s.selectedCommanderList.includes(c) ? (
+                    <span key={i} ref={setTarget(`cmd:-1:a${i}`)} data-pool-cmd={c} data-pool-cmd-placeholder="" style={{ display: 'inline-block' }}>
+                      <DropCell w={70} h={84} hint="" />
+                    </span>
+                  ) : (
                     <span
                       key={i}
                       data-pool-cmd={c}
@@ -415,7 +435,11 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   {cmdB.length === 0 && (
                     <span style={{ color: 'var(--muted)', fontSize: 12 }}>（本模式无 B 组）</span>
                   )}
-                  {cmdB.map((c, i) => (
+                  {cmdB.map((c, i) => s.selectedCommanderList.includes(c) ? (
+                    <span key={i} ref={setTarget(`cmd:-1:b${i}`)} data-pool-cmd={c} data-pool-cmd-placeholder="" style={{ display: 'inline-block' }}>
+                      <DropCell w={70} h={84} hint="" />
+                    </span>
+                  ) : (
                     <span
                       key={i}
                       data-pool-cmd={c}
@@ -438,7 +462,11 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   <span className="block-note">全量可选 · 拖入场次槽位（B 组占用合并计数）</span>
                 </div>
                 <div className="avatar-grid" style={{ gap: 11 }} data-pool-cmds-self>
-                  {selfPool.map((c, i) => (
+                  {selfPool.map((c, i) => s.selectedCommanderList.includes(c) ? (
+                    <span key={i} ref={setTarget(`cmd:-1:s${i}`)} data-pool-cmd={c} data-pool-cmd-placeholder="" style={{ display: 'inline-block' }}>
+                      <DropCell w={60} h={72} hint="" />
+                    </span>
+                  ) : (
                     <span
                       key={i}
                       data-pool-cmd={c}

@@ -158,6 +158,20 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
       },
     }, ev.nativeEvent);
   };
+  // 场次槽指挥官拖拽（对齐因子）：拖到其他场次槽=移动 / 拖到候选区占位格(slot<0)=清除
+  const onSlotCmdPointerDown = (ev: React.PointerEvent, slot: number, idx: number, name: string, el: HTMLElement) => {
+    ev.preventDefault();
+    startDrag({
+      kind: 'cmd',
+      name,
+      el,
+      onDrop: (targetSlot, targetIdx) => {
+        if (targetSlot === slot && targetIdx === idx) return;
+        if (targetSlot < 0) { clearDoublesCmd(slot, idx); forceRerender(); return; }
+        clearDoublesCmd(slot, idx); setDoublesCmd(targetSlot, targetIdx, name); forceRerender();
+      },
+    }, ev.nativeEvent);
+  };
   const onClearCmd = (slot: number, idx: number) => { clearDoublesCmd(slot, idx); forceRerender(); };
   const onClearFac = (slot: number, idx: number) => { clearDoublesFac(slot, idx); forceRerender(); };
 
@@ -233,7 +247,7 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
                     {Array.from({ length: cfg.cmdsPerMatch }).map((_, k) => {
                       const c = sel.cmds[k];
                       return c ? (
-                        <span key={k} ref={setTarget(`cmd:${i}:${k}`)} className="cmdwrap" data-doubles-cmd={`${i}:${k}`} onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i, k); }} style={{ cursor: 'pointer' }}>
+                        <span key={k} ref={setTarget(`cmd:${i}:${k}`)} className="cmdwrap" data-doubles-cmd={`${i}:${k}`} onPointerDown={(ev) => onSlotCmdPointerDown(ev, i, k, c, ev.currentTarget as HTMLElement)} onClick={() => { if (shouldSuppressClickClear()) return; onClearCmd(i, k); }} style={{ cursor: 'grab', touchAction: 'none' }}>
                           <CommanderCard src={cmdUrl(c)} name={c} w={56} h={67} fill check />
                           <CmChip name={c} />
                         </span>
@@ -316,7 +330,11 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
             <div className="grp">
               <div className="block-head sm"><span className="block-title">指挥官池（双打 {cfg.cmdPoolSize} 选）</span></div>
               <div className="avatar-row" style={{ gap: 13, flexWrap: 'wrap' }} data-doubles-pool-cmds>
-                {cmdPool.map((c, i) => (
+                {cmdPool.map((c, i) => isPickedDoubles(slots, 'cmd', c) ? (
+                  <span key={i} ref={setTarget(`cmd:-1:p${i}`)} className="cmdwrap" data-doubles-pool-cmd={c} data-doubles-pool-cmd-placeholder="" style={{ display: 'inline-block' }}>
+                    <DropCell w={70} h={84} hint="" />
+                  </span>
+                ) : (
                   <span key={i} className="cmdwrap" data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}>
                     <CommanderCard src={cmdUrl(c)} name={c} />
                     <CmChip name={c} />
@@ -334,7 +352,11 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
                   <span className="block-note">{isCm ? '全量可选（官方 + CM）· 拖入场次槽位' : '官方全量可选 · 拖入场次槽位'}</span>
                 </div>
                 <div className="avatar-grid" style={{ gap: 11 }} data-doubles-pool-self>
-                  {selfPool.map((c, i) => (
+                  {selfPool.map((c, i) => isPickedDoubles(slots, 'cmd', c) ? (
+                    <span key={i} ref={setTarget(`cmd:-1:s${i}`)} className="cmdwrap" data-doubles-pool-cmd={c} data-doubles-pool-cmd-placeholder="" style={{ display: 'inline-block' }}>
+                      <DropCell w={60} h={72} hint="" />
+                    </span>
+                  ) : (
                     <span key={i} className="cmdwrap" data-doubles-pool-cmd={c} onPointerDown={(ev) => onPoolPointerDown(ev, 'cmd', c, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none' }}>
                       <CommanderCard src={cmdUrl(c)} name={c} w={60} h={72} />
                       <CmChip name={c} />
