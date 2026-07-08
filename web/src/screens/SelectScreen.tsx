@@ -165,6 +165,9 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
     startDrag({
       kind, name, el,
       onDrop: (slot, idx) => {
+        // 候选区占位格是 slot=-1 拖放目标(供场次槽拖回)；池因子误吸附到占位格=无意义(dead-drop)，忽略。
+        // 单打 setSelectedFac 有 slot<0 守卫不崩，此处提前 return 与双打对称、语义更清晰。
+        if (slot < 0) return;
         if (kind === 'cmd') {
           setSelectedCmd(slot, name);
           const w = getSelectWarn(); // P2 二选一即时提示（match 态选自选指挥官且已 ban）
@@ -187,6 +190,12 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
       onDrop: (targetSlot, targetIdx) => {
         // 源槽 slot/idx 由闭包捕获，移动=清源+写目标；dragdrop 不需感知来源
         if (targetSlot === slot && targetIdx === idx) return;
+        // Phase3: 命中候选区(targetSlot<0)=清除该因子所在场次槽，不写目标
+        if (targetSlot < 0) {
+          clearFacSlot(slot, idx);
+          forceRerender();
+          return;
+        }
         // banned 因子 setSelectedFac 会拒写（落槽防御）；先清源再写会凭空丢失，前置拦下并提示
         if (getBanFor(name)) { setToast({ msg: '因子已被禁用，无法移动', count: 1, kind: 'soft' }); return; }
         clearFacSlot(slot, idx);
@@ -316,6 +325,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                           <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
                           <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); forceRerender(); }} />
                           <RerollBadge name={v} onReroll={() => doReroll('slot', i, k)} />
+                          {getBpModeEnabled(s.mode) && <BpBadge name={v} on={getBanFor(v)} onToggle={() => { toggleBanFactor(v); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1, kind: 'soft' }); forceRerender(); }} />}
                         </span>
                       ) : (
                         <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" data-slot-fac-target={`${i}:${k}`} />
@@ -339,7 +349,19 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
               {factorRow.length === 0 && (
                 <span style={{ color: 'var(--muted)', fontSize: 12 }}>本局无随机因子（随机模式）</span>
               )}
-              {factorRow.map((f, i) => (
+              {factorRow.map((f, i) => {
+                const picked = s.selectedFactorList.includes(f);
+                return picked ? (
+                  <span
+                    key={i}
+                    ref={setTarget(`factor:-1:${i}`)}
+                    data-pool-fac={f}
+                    data-pool-fac-placeholder=""
+                    style={{ display: 'inline-block' }}
+                  >
+                    <DropCell w={66} h={66} hint="" />
+                  </span>
+                ) : (
                 <span
                   key={i}
                   data-pool-fac={f}
@@ -349,12 +371,13 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   }}
                   style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block', opacity: getBanFor(f) ? 0.45 : 1 }}
                 >
-                  <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} check={s.selectedFactorList.includes(f)} banned={getBpModeEnabled(s.mode) && getBanFor(f)} />
+                  <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} banned={getBpModeEnabled(s.mode) && getBanFor(f)} />
                   <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); forceRerender(); }} />
                   {getBpModeEnabled(s.mode) && <BpBadge name={f} on={getBanFor(f)} onToggle={() => { toggleBanFactor(f); const w = getSelectWarn(); if (w) setToast({ msg: w, count: 1, kind: 'soft' }); forceRerender(); }} />}
                   <RerollBadge name={f} onReroll={() => doReroll('pool', i)} />
                 </span>
-              ))}
+                );
+              })}
             </div>
           </div>
 

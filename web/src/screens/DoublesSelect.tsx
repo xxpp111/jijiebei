@@ -11,7 +11,7 @@ import { CaptureButtons } from '../components/CaptureButtons';
 import { cmdUrl, facUrl, raceUrl } from '../lib/realAsset';
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
 import { useForceRerender } from '../lib/useForceRerender';
-import { getGoldFor, getRuleMode, getSelectWarn, toggleGold } from '../logic/jjbSession';
+import { clearSelectWarn, getGoldFor, getRuleMode, getSelectWarn, toggleGold } from '../logic/jjbSession';
 import {
   doublesMatches, doublesModeLabel, getDoublesState, getDoublesPlayers,
   setDoublesCmd, clearDoublesCmd, setDoublesFac, clearDoublesFac,
@@ -124,6 +124,10 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
   const onPoolPointerDown = (ev: React.PointerEvent, kind: 'cmd' | 'factor', name: string, el: HTMLElement) => {
     ev.preventDefault();
     startDrag({ kind, name, el, onDrop: (slot, idx) => {
+      // 候选区占位格注册为 slot=-1 的拖放目标(供场次槽因子拖回清除)；未选池因子若误吸附到占位格，
+      // slot=-1 会让 setDoublesFac(-1) 走 ensureSlot(-1)→_slots[-1] undefined→TypeError 并卡死拖拽机。
+      // 池因子拖到占位格无意义(dead-drop)，直接忽略。
+      if (slot < 0) return;
       if (kind === 'cmd') setDoublesCmd(slot, idx, name);
       else {
         setDoublesFac(slot, idx, name);
@@ -142,6 +146,12 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
       onDrop: (targetSlot, targetIdx) => {
         // 源槽 slot/idx 由闭包捕获，移动=清源+写目标；dragdrop 不需感知来源
         if (targetSlot === slot && targetIdx === idx) return;
+        // Phase3: 命中候选区(targetSlot<0)=清除该因子所在场次槽，不写目标
+        if (targetSlot < 0) {
+          clearDoublesFac(slot, idx);
+          forceRerender();
+          return;
+        }
         clearDoublesFac(slot, idx);
         setDoublesFac(targetSlot, targetIdx, name);
         forceRerender();
@@ -162,7 +172,7 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
   // std15=无锁定（显待选口径）；cm=每场恒锁 风暴英雄+虚空裂隙。
   const isCm = cfg.variant === 'cm';
   const isStd15 = cfg.variant === 'std15';
-  const canReroll = cfg.variant === 'guantu';
+  const canReroll = cfg.variant !== 'feiqiu';
   const lockLabel = lockTagFor(cfg.variant);
   const mutNames = cfg.matchMutatorNames || [];
   const allMatchMuts = cfg.variant === 'feiqiu'
@@ -252,6 +262,23 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
                         >
                           <FactorFrame src={facUrl(v)} size={52} gold={getGoldFor(v)} />
                           <GoldBadge name={v} on={getGoldFor(v)} onToggle={() => { toggleGold(v); forceRerender(); }} />
+                          {canReroll && <RerollBadge name={v} onReroll={() => {
+                            // 场次槽 reroll = 原地换(对齐单打场次槽 reroll：那格因子直接变新的，不清空)。
+                            // rerollDoublesFactor 换池 poolIdx 的因子并清掉落槽同名(引擎既有语义)，
+                            // 成功后把新因子写回本槽 → 净效果=原地替换；引擎的「已同步清空」提示在此不适用，clearSelectWarn 抹掉。
+                            const poolIdx = facPool.indexOf(v); // 池内无重复(guantu/std15/cm)保证唯一
+                            if (poolIdx < 0) { setToast({ msg: '自选因子不在随机池，不可重揉', count: 1, kind: 'soft' }); return; }
+                            const ok = rerollDoublesFactor(poolIdx);
+                            if (ok) {
+                              const fresh = getDoublesState().factorPool[poolIdx];
+                              if (fresh) setDoublesFac(i, k, fresh);
+                              clearSelectWarn();
+                            } else {
+                              const w = getSelectWarn(); // 超限/候选不足
+                              if (w) setToast({ msg: w, count: 1, kind: 'soft' });
+                            }
+                            forceRerender();
+                          }} />}
                         </span>
                       ) : (
                         <DropCell key={k} ref={setTarget(`factor:${i}:${k}`)} w={52} h={52} hint="因子" data-doubles-fac-target={`${i}:${k}`} />
@@ -268,13 +295,20 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
           <div className="pool-factors">
             <div className="block-head sm"><span className="block-kicker">FACTORS</span><span className="block-title">随机因子池</span></div>
             <div className="factor-row" style={{ gap: 14, flexWrap: 'wrap' }} data-doubles-pool-factors>
-              {facPool.map((f, i) => (
-                <span key={i} data-doubles-pool-fac={f} onPointerDown={(ev) => onPoolPointerDown(ev, 'factor', f, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}>
-                  <FactorFrame src={facUrl(f)} size={66} check={isPickedDoubles(slots, 'fac', f)} gold={getGoldFor(f)} />
-                  <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); forceRerender(); }} />
-                  {canReroll && <RerollBadge name={f} onReroll={() => doDoublesReroll(rerollDoublesFactor, i)} />}
-                </span>
-              ))}
+              {facPool.map((f, i) => {
+                const picked = isPickedDoubles(slots, 'fac', f);
+                return picked ? (
+                  <span key={i} ref={setTarget(`factor:-1:${i}`)} data-doubles-pool-fac={f} data-doubles-pool-fac-placeholder="" style={{ display: 'inline-block' }}>
+                    <DropCell w={66} h={66} hint="" />
+                  </span>
+                ) : (
+                  <span key={i} data-doubles-pool-fac={f} onPointerDown={(ev) => onPoolPointerDown(ev, 'factor', f, ev.currentTarget as HTMLElement)} style={{ cursor: 'grab', touchAction: 'none', position: 'relative', display: 'inline-block' }}>
+                    <FactorFrame src={facUrl(f)} size={66} gold={getGoldFor(f)} />
+                    <GoldBadge name={f} on={getGoldFor(f)} onToggle={() => { toggleGold(f); forceRerender(); }} />
+                    {canReroll && <RerollBadge name={f} onReroll={() => doDoublesReroll(rerollDoublesFactor, i)} />}
+                  </span>
+                );
+              })}
             </div>
           </div>
           <div className="pool-cmd" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -313,7 +347,7 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 8 }}>
               <ToastV toast={toast} />
               {/* 剩余计数仅比赛态显示(对齐单打 :435;practice 无限,计数会涨但不拦,常显会误导) */}
-              {st.config.variant === 'guantu' && getRuleMode() === 'match' && (() => { const rr = getDoublesRerollState(); return (
+              {st.config.variant !== 'feiqiu' && getRuleMode() === 'match' && (() => { const rr = getDoublesRerollState(); return (
                 <span data-doubles-reroll-remaining={rr.remaining} style={{ fontSize: 12, fontWeight: 700, color: '#8fd6ff', whiteSpace: 'nowrap' }}>
                   ↻ 重揉 {rr.remaining}/{rr.limit}
                 </span>

@@ -51,7 +51,9 @@ function waitForServer(proc) {
     const timer = setTimeout(() => reject(new Error('preview server did not become ready')), 15000);
     const onData = (buf) => {
       out += String(buf);
-      if (out.includes(`http://127.0.0.1:${port}`) || out.includes(`http://localhost:${port}`)) {
+      // 剥 ANSI 再匹配：带色环境下 vite 在 URL 插色码，裸 include 永不命中（#94/R6 同款既有债修法）
+      const plain = out.replace(/\x1b\[[0-9;]*m/g, '');
+      if (plain.includes(`http://127.0.0.1:${port}`) || plain.includes(`http://localhost:${port}`)) {
         clearTimeout(timer);
         resolveReady();
       }
@@ -103,25 +105,36 @@ async function main() {
     await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=dark&cb=ui-smoke-select`, { waitUntil: 'networkidle' });
     const initial = await page.evaluate(() => ({
       label: document.querySelector('[data-screen-label]')?.getAttribute('data-screen-label'),
-      poolChecks: document.querySelectorAll('[data-pool-fac] .fx-check').length,
+      poolPlaceholders: document.querySelectorAll('[data-pool-fac-placeholder]').length,
       slotChecks: document.querySelectorAll('[data-slot-fac] .fx-check').length,
       difficulty: document.querySelector('[data-difficulty-total]')?.textContent?.trim() || '',
     }));
     if (initial.label !== 'select-sc2-dark-std8') fail(`select label=${initial.label}`);
-    if (initial.poolChecks !== 0 || initial.slotChecks !== 0) fail(`initial checks pool=${initial.poolChecks} slot=${initial.slotChecks}`);
+    if (initial.poolPlaceholders !== 0 || initial.slotChecks !== 0) fail(`initial placeholders pool=${initial.poolPlaceholders} slotChecks=${initial.slotChecks}`);
     // 难度总分显示为纯数字（d208aa6 select 重构改 label+value「难度总分」+ 值，去掉旧 · 前缀）。
     if (!/^\d+$/.test(initial.difficulty)) fail(`initial difficulty invalid: ${initial.difficulty}`);
 
     await page.click('[data-random-fill-btn]');
-    await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac] .fx-check').length === 5);
+    await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac-placeholder]').length === 5);
     const afterFill = await page.evaluate(() => ({
-      poolChecks: document.querySelectorAll('[data-pool-fac] .fx-check').length,
+      poolPlaceholders: document.querySelectorAll('[data-pool-fac-placeholder]').length,
       slotChecks: document.querySelectorAll('[data-slot-fac] .fx-check').length,
       difficulty: document.querySelector('[data-difficulty-total]')?.textContent?.trim() || '',
     }));
-    if (afterFill.poolChecks !== 5) fail(`after fill poolChecks=${afterFill.poolChecks}`);
+    if (afterFill.poolPlaceholders !== 5) fail(`after fill poolPlaceholders=${afterFill.poolPlaceholders}`);
     if (afterFill.slotChecks !== 0) fail(`after fill slotChecks=${afterFill.slotChecks}`);
     if (!/^\d+$/.test(afterFill.difficulty)) fail(`after fill difficulty invalid: ${afterFill.difficulty}`);
+
+    // Phase2: 场次槽三操作角标跟因子走 — 已选因子上应有 RerollBadge（reroll 入口）；候选区占位格无 FactorFrame
+    const slotBadges = await page.evaluate(() => ({
+      slotReroll: document.querySelectorAll('[data-slot-fac] [data-reroll-at]').length,
+      poolFrameAfterPick: document.querySelectorAll('[data-pool-fac-placeholder] .fx').length,
+      poolDropCellAfterPick: document.querySelectorAll('[data-pool-fac-placeholder] [data-drop-cell]').length,
+    }));
+    if (slotBadges.slotReroll !== 5) fail(`Phase2 场次槽 RerollBadge 数量异常 slotReroll=${slotBadges.slotReroll} (期望5)`);
+    if (slotBadges.poolFrameAfterPick !== 0) fail(`Phase2 占位格不应有 FactorFrame poolFrameAfterPick=${slotBadges.poolFrameAfterPick}`);
+    if (slotBadges.poolDropCellAfterPick === 0) fail(`Phase2 占位格应有 DropCell poolDropCellAfterPick=${slotBadges.poolDropCellAfterPick}`);
+    pass(`Phase2 候选区空出: 5占位格(DropCell)✓ 无对号✓ 场次槽 RerollBadge(${slotBadges.slotReroll})✓`);
 
     await page.goto(`${baseUrl}/?screen=select&style=sc2&mode=std8&cb=ui-smoke-session-mode-param`, { waitUntil: 'networkidle' });
     const sessionModeParam = await page.evaluate(() => ({
@@ -184,6 +197,15 @@ async function main() {
     if (dblFilled.domFac !== 9 || dblFilled.domFac !== dblFilled.selFac) fail(`doubles 填充 data-doubles-fac dom=${dblFilled.domFac} ≠ selection ${dblFilled.selFac}`);
     pass(`doubles randomFill: dom cmd(6)/fac(9) ↔ __jjbDebug.doubles selection 一致`);
 
+    // Phase2: 双打候选区空出（官突池9全选走→9占位）+ 场次槽 RerollBadge（canReroll guantu）
+    const dblPhase2 = await page.evaluate(() => ({
+      poolPlaceholder: document.querySelectorAll('[data-doubles-pool-fac-placeholder]').length,
+      slotReroll: document.querySelectorAll('[data-doubles-fac] [data-doubles-reroll]').length,
+    }));
+    if (dblPhase2.poolPlaceholder !== 9) fail(`Phase2 双打候选区占位格=${dblPhase2.poolPlaceholder} (期望9)`);
+    if (dblPhase2.slotReroll !== 9) fail(`Phase2 双打场次槽 RerollBadge=${dblPhase2.slotReroll} (期望9)`);
+    pass(`Phase2 双打候选区空出: 9占位格✓ 场次槽 RerollBadge(9)✓`);
+
     await page.click('[data-doubles-start-btn]');
     await page.waitForFunction(() => new URLSearchParams(window.location.search).get('screen') === 'battle');
     await page.waitForSelector('[data-doubles-battle]');
@@ -235,7 +257,7 @@ async function main() {
     // R5① 截断验证：底部按钮在 1280×720 视口内完整可见
     await page.goto(`${baseUrl}/?screen=select&style=metal&mode=dark&sessionMode=std10&cb=ui-smoke-r5-truncate`, { waitUntil: 'networkidle' });
     await page.click('[data-random-fill-btn]');
-    await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac] .fx-check').length > 0);
+    await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac-placeholder]').length > 0);
     const btnRect = await page.evaluate(() => {
       const btn = document.querySelector('[data-start-btn]');
       if (!btn) return null;

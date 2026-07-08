@@ -95,7 +95,7 @@ async function prepareScreen(page, sel) {
   }
   if (sel === 'select') {
     await page.click('[data-random-fill-btn]');
-    await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac] .fx-check').length > 0);
+    await page.waitForFunction(() => document.querySelectorAll('[data-pool-fac-placeholder]').length > 0);
   }
   if (sel === 'battle') {
     await page.waitForSelector('.matches .match');

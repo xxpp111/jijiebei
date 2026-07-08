@@ -43,5 +43,37 @@ await withPreview(async (page, { baseUrl }) => {
   const feiqiuRerolls = await page.$$('[data-doubles-reroll]');
   expect(feiqiuRerolls.length === 0, `非酋无重揉入口（实=${feiqiuRerolls.length}）`);
   await shot(page, 'doubles-feiqiu');
+
+  // Phase1：reroll 扩 std15/CM（guantu/std15/cm 均有角标，feiqiu=0 保持）。验证 std15/cm 的 reroll 入口数量 = 指挥官池+因子池。
+  for (const [modeBtn, variant, facPoolLen, cmdPoolLen] of [
+    ['std15', 'std15', 17, 6],
+    ['cm', 'cm', 14, 6],
+  ]) {
+    await page.goto(`${baseUrl}/?screen=home&style=sc2&mode=dark`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    await (await page.$('[data-home-tab="match"]'))?.click(); await page.waitForTimeout(300);
+    await page.click(`[data-mode-btn="${modeBtn}"]`); await page.waitForTimeout(800);
+    await (await page.$('[data-doubles-random-fill-btn]'))?.click(); await page.waitForTimeout(500);
+    const st = await page.evaluate(() => window.__jjbDebug?.doubles || {});
+    expect(st.config?.variant === variant, `${variant} variant（实=${st.config?.variant}）`);
+    expect(st.factorPool?.length === facPoolLen, `${variant} factorPool=${facPoolLen}（实=${st.factorPool?.length}）`);
+    expect(st.commanderPool?.length === cmdPoolLen, `${variant} commanderPool=${cmdPoolLen}（实=${st.commanderPool?.length}）`);
+    const rerolls = await page.$$('[data-doubles-reroll]');
+    expect(rerolls.length === cmdPoolLen + facPoolLen, `${variant} 重揉入口=${cmdPoolLen}+${facPoolLen}=${cmdPoolLen + facPoolLen}（实=${rerolls.length}）`);
+    // 剩余次数角标（match 态）应可见
+    const remainingBadge = await page.$('[data-doubles-reroll-remaining]');
+    expect(!!remainingBadge, `${variant} match 态剩余次数角标应可见`);
+    // 场次槽 reroll = 原地换（对齐单打，非清空）：点第 1 场第 1 因子的 reroll → 因子原地变新、count+1、槽不为空
+    const facBefore = st.selection?.slots?.[0]?.factors?.[0];
+    const slotReroll = await page.$('[data-doubles-fac="0:0"] [data-doubles-reroll]');
+    expect(!!slotReroll, `${variant} 场次槽因子有 reroll 角标`);
+    if (slotReroll) {
+      await slotReroll.click(); await page.waitForTimeout(300);
+      const rr = await page.evaluate(() => ({ fac: window.__jjbDebug?.doubles?.selection?.slots?.[0]?.factors?.[0], cnt: window.__jjbDebug?.doubles?.reroll?.count }));
+      expect(rr.fac != null && rr.fac !== facBefore, `${variant} 场次槽 reroll 原地换: slot0fac0 ${facBefore}→${rr.fac}（变新且非空，非清空）`);
+      expect(rr.cnt >= 1, `${variant} 场次槽 reroll 计数+1（实=${rr.cnt}）`);
+    }
+    await shot(page, `doubles-${variant}`);
+  }
 });
 done('doubles-match');
