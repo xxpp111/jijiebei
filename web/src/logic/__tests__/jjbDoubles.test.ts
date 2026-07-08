@@ -126,6 +126,74 @@ describe('jjbDoubles 边界', () => {
     });
   });
 
+  // Phase1：reroll 从官突扩到 std15/CM（引擎零改，UI 放开；feiqiu 不开）。验证 variant 中立的 reroll 引擎在 std15/cm 上同样成立：
+  // 替换后池内无重复 / 不含锁定因子 / match 限 3 次 / 落槽联动清空。
+  describe('std15/CM 双打独立重揉（reroll 扩展）', () => {
+    for (const v of ['std15', 'cm'] as const) {
+      it(`${v} 指挥官/因子池单项替换后池内无重复，且清空已落同名槽位`, () => {
+        doublesStart(v);
+        const before = getDoublesState();
+        const oldCmd = before.commanderPool[0];
+        const oldFac = before.factorPool[0];
+        setDoublesCmd(0, 0, oldCmd);
+        setDoublesFac(0, 0, oldFac);
+
+        expect(rerollDoublesCommander(0)).toBe(true);
+        expect(rerollDoublesFactor(0)).toBe(true);
+
+        const after = getDoublesState();
+        expect(after.commanderPool).toHaveLength(before.commanderPool.length);
+        expect(after.factorPool).toHaveLength(before.factorPool.length);
+        expect(new Set(after.commanderPool).size).toBe(after.commanderPool.length);
+        expect(new Set(after.factorPool).size).toBe(after.factorPool.length);
+        expect(after.commanderPool).not.toContain(oldCmd);
+        expect(after.factorPool).not.toContain(oldFac);
+        expect(after.selection.slots[0].cmds[0]).toBeNull();
+        expect(after.selection.slots[0].factors[0]).toBeNull();
+      });
+
+      it(`${v} 因子重揉候选排除当场锁定因子（不灌回 lockedFacs）`, () => {
+        doublesStart(v);
+        const locked = new Set((getDoublesState().config.matchMutators ?? []).flat());
+        // std15 无锁定因子（locked 空），cm 每场恒锁风暴英雄+虚空裂隙
+        if (locked.size === 0) {
+          expect(locked.size).toBe(0); // std15 无锁定，排除项为空集，仍记录断言
+        }
+        for (let n = 0; n < 20; n++) {
+          expect(rerollDoublesFactor(n % getDoublesState().factorPool.length)).toBe(true);
+          for (const f of getDoublesState().factorPool) expect(locked.has(f)).toBe(false);
+        }
+      });
+
+      it(`${v} match 态限 3 次，超限不执行且不计数`, () => {
+        setRuleMode('match');
+        doublesStart(v);
+        expect(getDoublesRerollState()).toEqual({ count: 0, limit: 3, remaining: 3 });
+        const poolLen = getDoublesState().factorPool.length;
+        expect(rerollDoublesFactor(0)).toBe(true);
+        expect(rerollDoublesFactor(1 % poolLen)).toBe(true);
+        expect(rerollDoublesFactor(2 % poolLen)).toBe(true);
+        const beforeOver = getDoublesState().factorPool.slice();
+        expect(getDoublesRerollState()).toEqual({ count: 3, limit: 3, remaining: 0 });
+        expect(rerollDoublesFactor(3 % poolLen)).toBe(false);
+        expect(getDoublesState().factorPool).toEqual(beforeOver);
+        expect(getDoublesRerollState().count).toBe(3);
+        expect(getSelectWarn()).toContain('超出比赛规则');
+        doublesStart(v);
+        expect(getDoublesRerollState()).toEqual({ count: 0, limit: 3, remaining: 3 });
+      });
+
+      it(`${v} 重揉已落槽项：清空同名槽位并给 warn 提示`, () => {
+        doublesStart(v);
+        const fac = getDoublesState().factorPool[0];
+        setDoublesFac(0, 0, fac);
+        expect(rerollDoublesFactor(0)).toBe(true);
+        expect(getDoublesState().selection.slots[0].factors[0]).toBeNull();
+        expect(getSelectWarn()).toContain('已重揉');
+      });
+    }
+  });
+
   describe('双打因子去重', () => {
     it('同一因子不能从池重复落到两个槽，清空后可再落；指挥官不拦截', () => {
       doublesStart('guantu');
