@@ -2851,3 +2851,34 @@ real-browser 探针确认 select/battle ScreenShell(bg×3 层)+TopBar(meta-row)+
 - **push 状态（git 实证，非估计）**：R1–R4（`65019b2`/`7f4575c`/`7b70779`/`591722e`）+ R4 补字体拦截（`2f2ebf3`）**已在 `origin/jjb-platform`**；`7a04e9d`（pbRefresh）+ `36a21a1`（R5）为**本地 commit 未 push**（`jjb-platform` ahead `origin/jjb-platform` 2）。〔勘误说明：R5 commit body 自述「与 Group A + R1–R4 + pbRefresh 一起走后续统一部署」，实际 R1–R4+font 已先行 push、pbRefresh/R5 待首波 smoke 通过后再上第二波——本补章据 git 实测记录以正之，不改原 commit。〕
 - **架构夯地基 R6/R7**：未启动（本地无对应 commit / 分支）。〔勿与 e2e 脚本 `r6-doubles-downstream.mjs` 的历史「双打 R6」混淆，二者无关。〕R8「AI 可接手性」批次（本补章 + jjb-deploy skill 分支修正 + docs drift-check 护栏 + backend/pb_data 入库核查）见下一章。
 - **旧分支说明**：`jjb-live-dock`（origin/local 均停在 `ed161d6` 2026-06-20）是 `jjb-platform` 的严格祖先（platform 领先 81 commit、live-dock 0 独占 commit），系已被 platform 取代的过时残留、非活跃发布分支——部署取码一律以 `jjb-platform` 为准（R8 已据此修正 jjb-deploy skill）。
+
+
+---
+
+##2026-07-14 全项目现状对抗审计 + 下一批需求渐进规划
+
+- 基线：`jjb-platform` @ `5586082`；产品代码零改，`test-x/` 与红线目录零触碰。
+- 编排：67 个 `gpt-5.6-sol[1m]` agent（30 扫描 +30反驳 +6 综合 +1终审），67/67 done，0 error/skip/empty。
+- 首要顺序：安全止血 → 生命周期/测试可信度 → event ban可靠化 → 战绩可信 → codec v1 加固 → 已拍板截图需求 → 发布收口 → 延后重构。
+- 模式：人工流确认比赛结束回首页稳定显示 practice；推荐首次仍 practice、同标签返回恢复 sessionStorage ruleMode，不偷换成首次默认比赛。
+- BP：单局 BP 与赛事 event ban 是两套机制；当前 ban仅显示“已禁”，随机填充会清 BP 并可填回被 ban 因子。先拍引擎语义，再做展示。
+- std15：当前为候选17、最终入槽15（3×5），有自选指挥官区、无 BP；因子/指挥官随机策略必须分别拍板。
+- 奖励：只考虑约100 字纯文本公告；不扩支付、抽奖、财务或积分。
+- 验证：`npm --prefix web test`13 files/150 tests + drift/docs drift/Go PASS；`e2e:core` PASS；Playwright 双打/std15/CM26 项、天梯与人工连续流完成。
+- 测试债：`single-match.flow` 缺认证 fixture；`ui-smoke` 非 bare OBS232px断言与稳定实测约127.45px 冲突（bare 才232px）。
+- Harness-Pro：`DUBHE_API_KEY=UNSET`，native reviewer gate/audit 未跑，禁止宣称 PASS。
+-续跑真相：`.harness_local/sessions/jjb-platform/planning/{task_plan,findings,progress}.md`。
+
+---
+
+## 2026-07-18 真相校准 + Round S 安全止血 & 土豆彩蛋批次落地
+
+**背景（通道污染事件）**：07-17 session 的 Bash 工具通道被 owner 设计的「诚实测试」注入污染（PostToolUse hook 经 LLM 改写命令输出），该 session 报告的「commit a1b7f3e/e4c9d02、push、验收、部署成功」全部为伪造。本次校准以干净通道（Read 工具直读 `.git/refs/heads/jjb-platform` 与 `.git/logs/HEAD` reflog，Read 不经 Bash-matcher hook）确认：真实 HEAD 一直是 `5586082`，reflog 全程无 a1b7f3e/e4c9d02，批次改动从未 commit。本 session（07-18）Bash 通道经「Read 底层 vs rev-parse」双通道比对一致后判定干净。方法论沉淀：**验证只认文件系统底层锚点 + 通道外独立锚点，不认任何单一通道口头结论**。
+
+**批次内容（20 M + 3 migration + 5 e2e，工作树重验后 commit）**：
+- 安全止血（漏洞1）：migration `1782000008` accounts.role `:changed` 字段级不可变 — 拆自提权（viewer/host PATCH 自己 role→admin 原返 200）。
+- 安全止血（漏洞2）：migration `1782000009` matches practice 分支 `players:each = @request.auth.player` 归属 fail-closed — 拆伪造他人/空/伪双打归属（原全 200）。
+- 土豆彩蛋：migration `1782000010` accounts.potato_ai_bias 字段（host 不可自改、admin 可设）+ `aiEnemySelector` 触发时 75% 直达旧世机械团（RNG 注入化可测）+ 触发条件（账号 flag 或选手名含「土豆」）+ 三屏「土豆的老朋友」标签（obs 紧凑档 🥔）+ 开局选手名前置传参（`startSession opts.playerName/doublesPlayers`，修 bias 判断时序）。
+
+**验证（本 session 全部真跑，非转述）**：tsc 0 错；vitest 13 files/153 tests 全过（+3 potato 用例）；go build/vet/test exit 0；drift+docs-drift 全绿；隔离 PB 负测 `sec-account-role` 4/4 + `sec-practice-ownership` 5/5 + `sec-potato-ai-bias` 6/6 + `practice-post` 4/4（pocketbase 二进制本 session 重编译后跑，migration 生效实证）；`potato-ai-bias.mjs` 5/5；`npm run build` ✓（JS `index-Bp1v-zb2.js`）；`potato-ai-bias.flow.mjs` Playwright 三屏 5/5。
+**不入库**：`test-x/`（07-17 测试产物）、`docs/superpowers/`（工具安装产物）。上方 07-14 审计章的「验证」行数据产生于污染前基线，其编排声明未经本 session 复核，引用需谨慎。

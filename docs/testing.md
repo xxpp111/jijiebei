@@ -24,7 +24,8 @@
 │     · 纯逻辑（Vite SSR，7 个）：run / codec / bp-rules / random-enemy /      │
 │       applysnapshot / event-ban / reroll                                     │
 │     · fetch：backend-integ / record-to-score                                 │
-│     · 隔离 PB（自起临时实例）：auth-perm / practice-post / player-hook       │
+│     · 隔离 PB（自起临时实例）：auth-perm / practice-post / player-hook /     │
+│       sec-account-role / sec-practice-ownership（Round S 安全止血负测）       │
 │       · 真 UI+真隔离 PB（/api 真代理不 mock）：record-fullstack              │
 │     · flows（自然语言驱动：导航+交互+断言+截图）：web/e2e/flows/ 7 条        │
 ├──────────────────────────────────────────────────────────────────────────────┤
@@ -172,7 +173,11 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | **r6-doubles-downstream.mjs** | 280 | Playwright + spawn | 双打下游 R6：3 屏 PNG 截图 + 落库断言（截图存 `/tmp/jjb-r6-doubles-downstream/`） | dev 7788 + PB 8090 |
 | **auto-post.mjs** | #94 | Playwright + route mock | 落库触发链路：① 单打 3 场全判 5s 后 BattleScreen 自动 POST 一次 + chip=done ② 改判一场后局指纹不变，6s 内仍只 1 次 POST（不产生第二条 matches）③ 双打局 payload 的 result/score_total 取双打引擎真值 ④ 练习态 battle 屏不渲染任何落库 chip/警示 ⑤ 比赛态非主播账号常驻警示且判满 3 场不触发 POST；拦截 `/api/collections/{players,matches}/records` 不起真后端，只测前端触发时机与 payload | `npm run build`（vite preview 自起，无需 PB） |
 | **auth-perm.mjs** | 73 | fetch (node v23+) + 隔离 PB | player_accounts 权限矩阵：① 无 auth 注册 200 ② 选手 token list totalItems=1（只看自己）③ 无 token list=0（挡匿名）④ 重复 phone 400 validation_not_unique ⑤ 选手 token 改别人档案 ≠200 改不了 | backend pocketbase 已编译（自起临时 PB 8090，不碰现网 pb_data） |
-| **practice-post.mjs** | 49 | fetch (node v23+) + 隔离 PB | Step6 practice 落库权限矩阵：① 选手 token 落 mode=practice → 200 ② 选手 token 落 mode=match → ≠200（限 host/admin）③ 匿名落 practice → ≠200 | backend pocketbase 已编译（自起临时 PB） |
+| **practice-post.mjs** | 49 | fetch (node v23+) + 隔离 PB | Step6 practice 落库权限矩阵：① 选手 token 落 mode=practice players=[本人绑定 player] → 200 ② 选手 token 落 mode=match → ≠200（限 host/admin）③ 匿名落 practice → ≠200 | backend pocketbase 已编译（自起临时 PB） |
+| **sec-account-role.mjs** | 90 | fetch (node v23+) + 隔离 PB | Round S 安全止血·漏洞1（account role 自提权）负测：① viewer 自 PATCH role=admin → ≠200 被拦 ② host 自 PATCH role=admin → ≠200 被拦 ③ viewer 改自己 display_name（非 role 字段）→ 200 本人合法更新不回归 ④ admin 改他人 role → 200 合法角色管理保留（被测 migration 1782000008 字段级不可变 role，:changed 修饰符） | backend pocketbase 已编译（自起临时 PB 8090，不碰现网 pb_data） |
+| **sec-practice-ownership.mjs** | 110 | fetch (node v23+) + 隔离 PB | Round S 安全止血·漏洞2（practice 归属伪造）负测：① 选手A 落 practice players=[本人A] → 200 本人合法归属不回归 ② players=[选手B] → ≠200 被拦（伪造他人）③ players=[] → ≠200 被拦（空归属 fail-closed）④ players=[A,B] 伪双打 → ≠200 被拦 ⑤ host 落 match players=[A,B] → 200 正式赛不回归（被测 migration 1782000009 practice players:each=本人绑定 player） | backend pocketbase 已编译（自起临时 PB 8090，不碰现网 pb_data） |
+| **sec-potato-ai-bias.mjs** | 96 | fetch + 隔离 PB | 土豆 AI 加权彩蛋权限矩阵：新 host 默认 false；host 不能自开标记；普通字段与同值回写可更新；admin 可设置；Round S role 不回归 | 临时编译 backend pocketbase + 自起隔离 PB，不碰现网 pb_data |
+| **potato-ai-bias.mjs** | 63 | Vite SSR 纯逻辑 | 土豆彩蛋确定性随机：75% 直达、25% 完整池 fallback 自然命中、非触发 RNG 次数、账号/单双打名字触发、开关 OFF | `npm run build` |
 | **player-hook.mjs** | 116 | fetch (node v23+) + 隔离 PB | player_accounts→players 自动建 hook：① 注册选手自动建 players（nickname/player_code=pa-`<id>`）② player relation 回设 ③ 重复同 phone 不重复建 ④ 账号预绑 player 时 hook 跳过（幂等） | backend pocketbase 已编译（自起临时 PB） |
 | **record-fullstack.mjs** | 298 | Playwright + 隔离 PB（真 /api 代理，不 mock） | 全栈真接缝（补 auto-post mock 后端 与 practice-post 不走 UI 之间的缺口，覆盖 #94 触发链路 × #89 relation 解析 × #84 双打两名归属）：起隔离 isopb（8090）+ vite preview（/api 真代理→8090）。**P1 practice**：API 注册真 player_account → 前端真 UI 填手机号+密码登录（非注入假 token）→ 练习 std8 → 走完 3 场判定 → 等 autoPostIfComplete 5s 缓冲自动 POST → 断言真 isopb：matches 有 practice 局（mode=practice / result=[1,2,0] / score_total=2）+ **#89**：players 指向注册 hook 建的 `pa-<accId>` 真 player id（relation 经 ensurePlayer 解析成功、未被 CreateRule 挡 4xx）+ scores 无派生（练习不进天梯）。**P2 match**：superuser 建 host 账号 → 前端真 UI 主播 tab 登录 → 比赛 std8 → chip=done → 断言真 isopb：matches 有 match 局（host=host.id）+ scores 有派生（wins=2，进正式天梯）。**P3 doubles（#84）**：复用 host 比赛态 → HomeScreen 采两名（选手A/B 两 distinct 名）→ 点双打格开局 → 双打 select 随机填 → 判定 → 断言真 isopb：matches 有 doubles 局（game_mode=doubles / result=[1,2,0] / score_total=2，走 currentMatches/currentScore 双打分流真值）+ **#84**：players=两个 distinct 真 player id（各 ensurePlayer，非单占位「双打战队」）、各解析回两名 player_code + scores 两条 board=double 派生（两名各一条、各 wins=2，两人各得分）——补 #94 事故靶心双打分支 + #84 两名归属修复在真机链路上的覆盖（P1/P2 仅 std8 单打，doublesLive 分支此前从未穿真后端）。**P4 deep-link（#84 defer）**：不经 HomeScreen 直达 `?screen=select&sessionMode=doubles` → 默认名兜底「选手A/B」→ 判定落库 → 断言两 distinct 真 player id 各解析为默认名 + scores 两条各归属（deep-link/贴码路径不回退占位单归属） | backend pocketbase 已编译（自起隔离 PB 8090，不碰现网 pb_data）+ `npm run build` |
 | **factor-dedupe-drag.mjs** | 38 | Playwright 浏览器 | 因子拖拽去重（R6 P5）：池→图A 落槽 → 同因子池→图B 被拒（去重 warn）→ 图A→图B 槽间移动 → 清空后可再拖 | `npm run build`（vite preview 自起，无需 PB） |
@@ -192,6 +197,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | **single-match.flow.mjs** | 32 | Playwright | 单刷比赛全流程：home 比赛 tab 登录入口 → select 随机填充 3 场槽位 → battle 判定改 score | `npm run build`（PB 8090 可选） |
 | **doubles-match.flow.mjs** | 32 | Playwright | 双打比赛引擎参数：6 号位官突双打 facPool=9 抽 CSV 真表；聚焦 select 引擎参数（落库链路另由 curl 验证） | `npm run build`（PB 8090 可选） |
 | **ladder.flow.mjs** | 19 | Playwright | 积分天梯：3 tab（总/单刷/双打）渲染 + 切换 on + board 稳定态（ranked/empty） | `npm run build`（PB 8090 可选） |
+| **potato-ai-bias.flow.mjs** | 39 | Playwright | 土豆名字旁路的真人连续流：Select / Battle / OBS 三处均显示旧世机械团和“土豆的老朋友”，OBS 1280×232 几何不溢出 | `npm run build`（preview 自起，确定性随机） |
 
 ---
 
