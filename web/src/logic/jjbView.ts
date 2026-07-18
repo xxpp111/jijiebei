@@ -107,6 +107,10 @@ export function currentEnemyAi(matchIdx: number): string | undefined {
   return getEnemyRoll(matchIdx)?.nameZh;
 }
 
+export function currentEnemyEasterEggLabel(matchIdx: number): string | undefined {
+  return getEnemyRoll(matchIdx)?.potatoFriend ? '土豆的老朋友' : undefined;
+}
+
 /** Reload/deep-link guard: preserve doubles when the URL says this is a doubles session. */
 export function ensureDoublesSessionFromUrl(): boolean {
   if (doublesLive()) return true;

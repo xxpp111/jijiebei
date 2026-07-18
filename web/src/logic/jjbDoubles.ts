@@ -9,7 +9,8 @@ import { RESULT_VAL, VAL_RESULT, type MatchVM } from './legacy/JJBData';
 import ConfigData from './legacy/JJConfigData';
 import { MUTATOR_POOL, type MutatorEntry } from '../data/mutatorPool';
 import { weightedSampleNoReplace } from './commanderWeight';
-import { rollEnemiesForSession, clearEnemyRolls } from './aiEnemySelector';
+import { rollEnemiesForSession, clearEnemyRolls, shouldUsePotatoBias } from './aiEnemySelector';
+import { getAccount } from './backend';
 import { FACTORS } from '../config/factors';
 import { COMMANDERS } from '../config/commanders';
 import { doublesModeLabelFor } from '../config/modes';
@@ -130,7 +131,7 @@ function drawOfficialMaps(): string[] {
   return Array.from({ length: MATCHES }, (_, i) => maps[i % maps.length] ?? '湮灭快车');
 }
 
-export function doublesStart(variant: DoublesVariant = 'guantu'): void {
+export function doublesStart(variant: DoublesVariant = 'guantu', players: [string, string] = DEFAULT_PLAYERS): void {
   _variant = variant;
   if (variant === 'feiqiu') {
     // 飞球之轮：每场只锁「混乱工作室」(1个)；可分配池=固定3因子(玩家自由分配，非随机抽1)；
@@ -174,10 +175,10 @@ export function doublesStart(variant: DoublesVariant = 'guantu'): void {
   ];
   _slots = freshSlots();
   _winLoseList = new Array(MATCHES);
-  _players = [...DEFAULT_PLAYERS]; // #84：新局重置两名为默认（HomeScreen 开局后立即 setDoublesPlayers 覆盖真名）
+  _players = [players[0] ?? '', players[1] ?? ''];
   _doublesRerollCount = 0;
   _live = true;
-  rollEnemiesForSession(MATCHES); // 随机敌方：开关 ON 时每场 roll 种族+AI，OFF 则清空
+  rollEnemiesForSession(MATCHES, Math.random, shouldUsePotatoBias(getAccount()?.potato_ai_bias, getDoublesPlayers())); // 随机敌方：开关 ON 时每场 roll 种族+AI，OFF 则清空
   exposeDebug();
 }
 

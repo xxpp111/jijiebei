@@ -20,7 +20,7 @@ import {
 } from '../logic/jjbDoubles';
 import { COMMANDERS } from '../config/commanders';
 import { lockTagFor, slotTagFor } from '../config/modes';
-import { currentEnemyRace, currentEnemyAi } from '../logic/jjbView';
+import { currentEnemyRace, currentEnemyAi, currentEnemyEasterEggLabel } from '../logic/jjbView';
 import { getRandomEnemyEnabled } from '../logic/randomConfig';
 
 export interface DoublesSelectProps {
@@ -240,7 +240,7 @@ export function DoublesSelect({ style, mode, onStart, onGenCode }: DoublesSelect
                   {isBoss && <span className="slot-flag">BOSS</span>}
                 </div>
                 <MapThumb map={mapName}>
-                  <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} size="lg" />
+                  <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} easterEggLabel={currentEnemyEasterEggLabel(i)} size="lg" />
                 </MapThumb>
                 <div className="slot-targets">
                   <div className="t-cmds">

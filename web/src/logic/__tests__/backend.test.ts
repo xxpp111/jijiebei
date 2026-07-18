@@ -47,6 +47,18 @@ describe('backend auth · 登录身份映射 + phone→email 兜底', () => {
     expect(getAccount()).toMatchObject({ id: 'h1', kind: 'host', role: 'host' });
   });
 
+  it('pbAuthHost 保存 potato_ai_bias=true', async () => {
+    g.fetch = okFetch({ id: 'h1', role: 'host', potato_ai_bias: true });
+    await pbAuthHost('host@jjb.test', 'pwd', false);
+    expect(getAccount()).toMatchObject({ potato_ai_bias: true });
+  });
+
+  it('字段缺失或非 true 时 potato_ai_bias 按 false', async () => {
+    g.fetch = okFetch({ id: 'h1', role: 'host', potato_ai_bias: 'true' });
+    await pbAuthHost('host@jjb.test', 'pwd', false);
+    expect(getAccount()).toMatchObject({ potato_ai_bias: false });
+  });
+
   it('登录失败（非 200）→ 抛错、内存态不变', async () => {
     g.fetch = vi.fn(async () => ({ ok: false, status: 400 }));
     await expect(pbAuthPlayer('138', 'bad', false)).rejects.toThrow();
@@ -109,6 +121,14 @@ describe('backend auth · 静默续期 pbRefresh', () => {
     g.fetch = okFetch({ id: 'p1' }, 'new');
     expect(await pbRefresh()).toBe(true);
     expect(getToken()).toBe('new');
+  });
+
+  it('host refresh 用 record 更新 potato_ai_bias', async () => {
+    g.fetch = okFetch({ id: 'h1', role: 'host', potato_ai_bias: false }, 'old');
+    await pbAuthHost('host@jjb.test', 'pwd', true);
+    g.fetch = okFetch({ id: 'h1', role: 'admin', display_name: 'Admin', potato_ai_bias: true }, 'new');
+    expect(await pbRefresh()).toBe(true);
+    expect(getAccount()).toMatchObject({ role: 'admin', display_name: 'Admin', potato_ai_bias: true });
   });
 
   it('按 kind 选集合：player → player_accounts/auth-refresh', async () => {

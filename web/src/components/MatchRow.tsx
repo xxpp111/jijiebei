@@ -27,10 +27,11 @@ export interface MatchRowData {
   difficulty?: number;
   enemyRace?: RaceCode; // 随机敌方：种族（开关 ON 有值）
   enemyAi?: string; // 随机敌方：AI 敌军组合中文名
+  enemyEasterEggLabel?: string;
 }
 
 export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (v: 'win' | 'bonus' | 'lose') => void }) {
-  const { idx, slot, mapName, cmds, factors, lock, lockedFactors, lockTag, verdict, boss, difficulty, enemyRace, enemyAi } = data;
+  const { idx, slot, mapName, cmds, factors, lock, lockedFactors, lockTag, verdict, boss, difficulty, enemyRace, enemyAi, enemyEasterEggLabel } = data;
   const mapSrc = mapUrl(mapName);
   const cls = ['match', boss && 'match-boss', verdict && 'match-done'].filter(Boolean).join(' ');
   const difficultyAttrs = difficulty === undefined ? {} : { 'data-match-difficulty': difficulty, [`data-match-difficulty-${idx}`]: difficulty };
@@ -57,7 +58,7 @@ export function MatchRow({ data, onVerdict }: { data: MatchRowData; onVerdict: (
               {mapName}
             </span>
           )}
-          <EnemyBadge race={enemyRace} ai={enemyAi} size="md" />
+          <EnemyBadge race={enemyRace} ai={enemyAi} easterEggLabel={enemyEasterEggLabel} size="md" />
         </span>
       </div>
       <div className="match-cmds">

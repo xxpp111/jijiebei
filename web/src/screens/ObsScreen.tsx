@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ObsBar, type ObsRow } from '../components/ObsBar';
 import { CaptureButtons } from '../components/CaptureButtons';
 import { startRandomSession, exposeObsbarDebug, jjbLive } from '../logic/jjbSession';
-import { currentDifficultyTotal, currentEnemyAi, currentEnemyRace, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
+import { currentDifficultyTotal, currentEnemyAi, currentEnemyEasterEggLabel, currentEnemyRace, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, ensureDoublesSessionFromUrl, setCurrentVerdict } from '../logic/jjbView';
 import { getPlayerByCode } from '../logic/backend';
 import { useForceRerender } from '../lib/useForceRerender';
 
@@ -55,7 +55,7 @@ export function ObsScreen({ style, mode, onBack }: { style: string; mode: string
     } else {
       status = 'wait';
     }
-    return { idx: i, no: m.slot, mapName: m.map, cmds: m.cmds, factors: m.factors, lock: m.lock, lockedFactors: currentLockedFactors(m), lockTag: currentLockTag(), status, verdict, enemyRace: currentEnemyRace(i), enemyAi: currentEnemyAi(i) };
+    return { idx: i, no: m.slot, mapName: m.map, cmds: m.cmds, factors: m.factors, lock: m.lock, lockedFactors: currentLockedFactors(m), lockTag: currentLockTag(), status, verdict, enemyRace: currentEnemyRace(i), enemyAi: currentEnemyAi(i), enemyEasterEggLabel: currentEnemyEasterEggLabel(i) };
   });
   const wins = currentScore();
   const total = matches.length;

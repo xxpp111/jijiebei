@@ -21,6 +21,7 @@ export interface ObsRow {
   verdict?: string;
   enemyRace?: RaceCode; // 随机敌方：种族
   enemyAi?: string; // 随机敌方：AI 敌军组合中文名
+  enemyEasterEggLabel?: string;
 }
 
 function ObsBadge({ status, verdict }: { status: string; verdict?: string }) {
@@ -66,7 +67,7 @@ function ObsMatch({ row }: { row: ObsRow }) {
               {row.mapName}
             </span>
           )}
-          <EnemyBadge race={row.enemyRace} ai={row.enemyAi} size="sm" />
+          <EnemyBadge race={row.enemyRace} ai={row.enemyAi} easterEggLabel={row.enemyEasterEggLabel} size="sm" />
         </span>
       </div>
       <div className="obs-line">

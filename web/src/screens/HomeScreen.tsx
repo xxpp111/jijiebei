@@ -60,11 +60,8 @@ export function HomeScreen({ style, mode, onStart, onLadder, onPasteCode, onLogi
     setRuleMode(isMatch ? 'match' : 'practice');
     // startSession 末尾 exposeSelectDebug 把 mode 写到 __jjbDebug.select.mode，
     // 这里 startSession 后再覆盖 JijieData.playerName（不破坏 9 模式 status/map/lock/pool 任何契约）。
-    startSession(m);
+    startSession(m, { playerName: name, doublesPlayers: [name, (playerNameB || '').trim()] });
     setSessionPlayerName(name);
-    // 双打（#84）：startSession→doublesStart 已把 _players 重置为默认，这里覆盖两名真选手（B 空则 jjbDoubles 回落默认名）。
-    // 落库 currentPlayers()→players=[A,B]，后端 scoreMatch 为两人各记分。单打 doublesLive()=false 不进此分支、players 仍单元素。
-    // （review 修：doublesLive() 即单一真相源——startSession 刚按 m 分流完引擎；不另维护双打模式键集合，防新增 variant 漏更漂移。）
     if (doublesLive()) {
       setDoublesPlayers(name, (playerNameB || '').trim());
     }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MatchRow, type MatchRowData } from '../components/MatchRow';
 import { startSession, getSelectState, exposeBattleDebug, randomFillAndStart, querySessionMode, getRuleMode, type SessionMode } from '../logic/jjbSession';
-import { currentDifficulty, currentEnemyAi, currentEnemyRace, currentIsDoubles, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, setCurrentVerdict } from '../logic/jjbView';
+import { currentDifficulty, currentEnemyAi, currentEnemyEasterEggLabel, currentEnemyRace, currentIsDoubles, currentLockedFactors, currentLockTag, currentMatches, currentPlayerName, currentScore, setCurrentVerdict } from '../logic/jjbView';
 import { autoPostIfComplete, canPostResult, getRecordState, retryRecordPost, subscribeRecordState, type RecordState } from '../logic/matchRecord';
 import { ScreenShell } from '../components/ScreenShell';
 import { TopBar, MetaRow } from '../components/TopBar';
@@ -76,6 +76,7 @@ export function BattleScreen({ style, mode, onGenCode }: { style: string; mode: 
     difficulty: currentDifficulty(i), // 双打无因子难度分（引擎自管 per-match 胜负计分）；单打 difficultyTotal/matchDifficulty 不受影响
     enemyRace: currentEnemyRace(i),
     enemyAi: currentEnemyAi(i),
+    enemyEasterEggLabel: currentEnemyEasterEggLabel(i),
   }));
 
   return (

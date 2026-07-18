@@ -25,7 +25,9 @@ export interface PlayerRecord { id: string; nickname: string; player_code: strin
 //   区分存储层：两个 storage 各持一份 jjb_auth（同一 key），clearAuth 两边都清；loadAuth 优先 localStorage（记住我优先级高于会话）。
 const AUTH_KEY = 'jjb_auth';
 type AccountKind = 'host' | 'player';
-type AuthAccount = { id: string; kind: AccountKind; role?: string; display_name?: string; nickname?: string };
+type AuthAccount = { id: string; kind: AccountKind; role?: string; display_name?: string; nickname?: string; potato_ai_bias?: boolean };
+
+const readPotatoBias = (record: any): boolean => record?.potato_ai_bias === true;
 
 // 记住我分流：localStorage（跨会话）/ sessionStorage（关标签清）。两个 storage 各自读写，clearAuth 双清。
 function authStorage(remember: boolean): Storage | null {
@@ -73,7 +75,7 @@ export async function pbAuthHost(identity: string, password: string, remember = 
   const d = await r.json();
   authRemember = remember;
   authToken = d.token;
-  authAccount = { id: d.record?.id, kind: 'host', role: d.record?.role, display_name: d.record?.display_name };
+  authAccount = { id: d.record?.id, kind: 'host', role: d.record?.role, display_name: d.record?.display_name, potato_ai_bias: readPotatoBias(d.record) };
   persistAuth();
   return { id: authAccount.id, role: authAccount.role || '' };
 }
@@ -138,6 +140,17 @@ export async function pbRefresh(): Promise<boolean> {
   if (!r.ok) { if (r.status === 401 || r.status === 403) clearAuth(); return false; }
   const d = await r.json();
   authToken = d.token; // 续期后的新 token（PB auth-refresh 返新 token + record）
+  if (authAccount.kind === 'host') {
+    authAccount = {
+      id: d.record?.id ?? authAccount.id,
+      kind: 'host',
+      role: d.record?.role,
+      display_name: d.record?.display_name,
+      potato_ai_bias: readPotatoBias(d.record),
+    };
+  } else {
+    authAccount = { id: d.record?.id ?? authAccount.id, kind: 'player', nickname: d.record?.nickname };
+  }
   persistAuth();
   return true;
 }

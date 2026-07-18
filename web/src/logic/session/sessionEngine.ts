@@ -3,7 +3,8 @@ import ConfigData from '../legacy/JJConfigData';
 import { facFlatIdx, manualSlots } from '../legacy/JJBData';
 import { weightedSampleNoReplace } from '../commanderWeight';
 import { doublesStart, doublesReset } from '../jjbDoubles';
-import { rollEnemiesForSession } from '../aiEnemySelector';
+import { rollEnemiesForSession, shouldUsePotatoBias } from '../aiEnemySelector';
+import { getAccount } from '../backend';
 import { getBanMaps, getBanFactors } from '../eventBan';
 import { rand, restoreConfig, type SessionMode } from './sessionConfig';
 import { exposeSelectDebug } from './sessionDebug';
@@ -11,12 +12,12 @@ import { clearBpRuntime, clearGoldRuntime, clearRerollRuntime } from './sessionR
 
 // ===== 9 模式入口（段2 Phase 0 全模式开局）+ doubles 双打（段3④ 独立引擎接通） =====
 /** 设各 mode 的 JijieData flag 组合（参照 InitPanel.onClick* 真实 handler）。 */
-function setModeFlags(mode: SessionMode): void {
+function setModeFlags(mode: SessionMode, playerName?: string): void {
   const d: any = JijieData;
   d.initStart();
   d.reset();
   d.modeIsRandom = false; // 段2 Phase 0 时代定下的默认手选契约（与 startManual 一致）
-  d.playerName = '集结杯选手'; // 未填选手名时的占位（与 jjbView.currentPlayerLabel 兜底一致）
+  d.playerName = playerName || '集结杯选手'; // 未填选手名时的占位（与 jjbView.currentPlayerLabel 兜底一致）
   switch (mode) {
     case 'std8':
       d.modelFactorCount = 2; break;
@@ -100,7 +101,7 @@ function toStartCore(): void {
     d.lockFactorList.push(lockFactor);
   }
 
-  rollEnemiesForSession(3); // 随机敌方：单打 3 场，开关 ON 时每场 roll 种族+AI（双打走 doublesStart 内 roll）
+  rollEnemiesForSession(3, Math.random, shouldUsePotatoBias(getAccount()?.potato_ai_bias, [d.playerName])); // 随机敌方：单打 3 场，开关 ON 时每场 roll 种族+AI（双打走 doublesStart 内 roll）
 }
 
 /** 复刻 JijieContro.toSelect 真实分支（除 UI 副作用 this.jjUI.updateToSelect + map*.spCommander.setCName 外）。 */
@@ -270,19 +271,19 @@ export const sessionEngineCore = { toStartCore, toSelectCore, fillSelectionSlots
  *  跑 toStartCore（内部按 status 决定是否已调过 toSelectCore；极难/拯救内部已调），
  *  末尾对非极难/非拯救再调 toSelectCore 一次，最后固化 9 格契约。
  *  opts 预留段2 BP 接口（banN/gold 暂未启用）。 */
-export function startSession(mode: SessionMode, _opts?: { banN?: number; gold?: string[] }): void {
+export function startSession(mode: SessionMode, opts?: { banN?: number; gold?: string[]; playerName?: string; doublesPlayers?: [string, string] }): void {
   // 双打=独立引擎：JJBDoubles 自管池/槽/洗牌/计分，不读写 JijieData 单打管线。
   // 早分支启动后即返——绕开 restoreConfig/setModeFlags/toStart/toSelect/9格固化；调试镜像走 __jjbDebug.doubles。
   clearBpRuntime(); // 任何开局都重置 BP ban（含双打早分支，避免跨局残留）
   clearGoldRuntime(); // 同步重置点金（修跨局泄漏 bug：上局点金因子带进下局经 weightedFactorScore 让 difficulty×2 污染记分）
   clearRerollRuntime(); // 同步重置重揉次数（比赛态每局限次不跨局残留）
-  if (mode === 'doubles') { doublesStart('guantu'); return; }
-  if (mode === 'feiqiu-doubles') { doublesStart('feiqiu'); return; }
+  if (mode === 'doubles') { doublesStart('guantu', opts?.doublesPlayers); return; }
+  if (mode === 'feiqiu-doubles') { doublesStart('feiqiu', opts?.doublesPlayers); return; }
   // std15/cm 双打（Batch C · yb 2026-07-02 拍板）：先 restoreConfig 让 jjbDoubles 能读 ConfigData.mapGrid 官方地图池
-  if (mode === 'std15' || mode === 'cm') { restoreConfig(); doublesStart(mode); return; }
+  if (mode === 'std15' || mode === 'cm') { restoreConfig(); doublesStart(mode, opts?.doublesPlayers); return; }
   doublesReset(); // 非 doubles 模式开局时重置双打引擎（防跨局 doublesLive 残留，影响 navigate 模式判断）
   restoreConfig(); // 每局重置 ConfigData 母池，防枯竭
-  setModeFlags(mode);
+  setModeFlags(mode, opts?.playerName);
   toStartCore();
   // 极难/拯救在 toStartCore 内部已调 toSelectCore，status=2；其他模式需补调
   if ((JijieData as any).status < 2) {

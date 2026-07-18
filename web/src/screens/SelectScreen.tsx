@@ -35,7 +35,7 @@ import {
 import { startDrag, registerTarget, shouldSuppressClickClear } from '../lib/dragdrop';
 import { doublesLive } from '../logic/jjbDoubles';
 import { getBpModeEnabled } from '../logic/bpConfig';
-import { currentEnemyRace, currentEnemyAi, currentModeLabel } from '../logic/jjbView';
+import { currentEnemyRace, currentEnemyAi, currentEnemyEasterEggLabel, currentModeLabel } from '../logic/jjbView';
 
 // 集结杯 × CM — 选择面板整屏（段2 Phase 2：拖拽手选 + 校验 + 手选进 battle）。
 // 严格承接 design/v4-r2/components/select-screen.jsx 的 SelectScreenV4 DOM/className：
@@ -301,7 +301,7 @@ export function SelectScreen({ style, mode, onStart, onGenCode }: SelectScreenPr
                   {isBoss && <span className="slot-flag">双倍</span>}
                 </div>
                 <MapThumb map={mapName}>
-                  <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} size="lg" />
+                  <EnemyBadge race={currentEnemyRace(i)} ai={currentEnemyAi(i)} easterEggLabel={currentEnemyEasterEggLabel(i)} size="lg" />
                 </MapThumb>
                 <div className="slot-targets">
                   <div className="t-cmds">
