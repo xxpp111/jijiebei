@@ -162,7 +162,11 @@ echo "match.create totalItems: $CREATE_TOTAL"
 gt0 "$CREATE_TOTAL" "7c.match.create log 应≥1"
 
 echo "--- 7d. POST match mode=practice (expect 200, NO scores derived) ---"
-req -X POST "$BASE/api/collections/matches/records" -H "Authorization: $HOST_TOKEN" -H "$CT" \
+# Round S 安全止血后：practice 落库归属受限（matches CreateRule 要求 players=本人绑定 player，
+#   见 1782000009）。7d 只验证 hook 的 mode 分支（practice→不派生 scores），与「谁有权落 practice」无关，
+#   故用 SU_TOKEN（superuser 绕过 CreateRule）造 practice 局，聚焦 hook 行为、不与归属规则耦合。
+#   host 落 practice 属前端不可达路径（canPostResult 限 practice 仅选手 kind=player），其归属负测在 web/e2e/sec-practice-ownership.mjs。
+req -X POST "$BASE/api/collections/matches/records" -H "Authorization: $SU_TOKEN" -H "$CT" \
   -d "{\"mode\":\"practice\",\"game_mode\":\"std8\",\"payload_code\":\"PRAC1\",\"payload_ver\":1,\"players\":[\"$P1_ID\"],\"host\":\"$HOST_ID\",\"result\":[1,0,0],\"score_total\":1}"
 echo "HTTP $CODE | practice match id=$(echo "$BODY" | get id)"
 PRAC_ID=$(echo "$BODY" | get id)

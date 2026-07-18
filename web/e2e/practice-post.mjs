@@ -1,29 +1,38 @@
 // e2e/practice-post.mjs — Step6 practice 落库权限矩阵（需求1 阶段4）。
-// 被测：1782000006_matches_practice_rule.go 放开 matches.CreateRule。
+// 被测：1782000006_matches_practice_rule.go 放开 matches.CreateRule +
+//   1782000009_matches_practice_ownership.go（Round S 安全止血：practice players 须为本人绑定 player）。
 // 隔离 PB（临时 dir，绝不碰现网 pb_data），fetch 矩阵：
-//   ① 选手 player token 落 mode=practice → 200（CreateRule 放开 practice 自助落库）
+//   ① 选手 player token 落 mode=practice players=[本人绑定 player] → 200（CreateRule 放开 practice 自助落库，本人归属合法）
 //   ② 选手 token 落 mode=match → ≠200（match 仍限 host||admin，选手无 role 刷不了正式天梯）
 //   ③ 匿名落 practice → ≠200（@request.auth.id != '' 挡匿名）
+// 注：他人/空/伪双打归属伪造的负测在 sec-practice-ownership.mjs（Round S 专项）；本脚本只验合法落库+match/匿名门。
 import { startIsoPb, stopIsoPb } from './lib/isopb.mjs';
 import { pass, fail, done } from './lib/harness.mjs';
 
 const CT = { 'Content-Type': 'application/json' };
 const PWD = 'Pwd12345';
 const phone = `137${String(Date.now()).slice(-8)}`;
-const matchBody = (mode) => JSON.stringify({ mode, game_mode: 'std8', payload_code: 'TESTCODE', payload_ver: 1, players: [], result: [1, 1, 1], score_total: 3 });
+const matchBody = (mode, players = []) => JSON.stringify({ mode, game_mode: 'std8', payload_code: 'TESTCODE', payload_ver: 1, players, result: [1, 1, 1], score_total: 3 });
 
 const pb = await startIsoPb();
 const BASE = pb.base;
 try {
-  await fetch(`${BASE}/api/collections/player_accounts/records`, { method: 'POST', headers: CT, body: JSON.stringify({ email: `${phone}@phone.jjb`, password: PWD, passwordConfirm: PWD, nickname: '练习选手', phone }) });
+  const reg = await (await fetch(`${BASE}/api/collections/player_accounts/records`, { method: 'POST', headers: CT, body: JSON.stringify({ email: `${phone}@phone.jjb`, password: PWD, passwordConfirm: PWD, nickname: '练习选手', phone }) })).json().catch(() => ({}));
   const auth = await fetch(`${BASE}/api/collections/player_accounts/auth-with-password`, { method: 'POST', headers: CT, body: JSON.stringify({ identity: `${phone}@phone.jjb`, password: PWD }) });
-  const tok = (await auth.json().catch(() => ({}))).token;
+  const authJson = await auth.json().catch(() => ({}));
+  const tok = authJson.token;
   if (!tok) fail('前置：选手登录拿 token 失败');
+  // 注册 hook 自动建 players + 回填 player relation（本人绑定 player，practice 归属约束的合法归属源）。
+  let ownPlayer = ''; for (let i = 0; i < 20 && !ownPlayer; i++) {
+    const acc = await (await fetch(`${BASE}/api/collections/player_accounts/records/${reg.id}`, { headers: { Authorization: tok } })).json().catch(() => ({}));
+    ownPlayer = acc.player || (Array.isArray(acc.player) ? acc.player[0] : ''); if (!ownPlayer) await new Promise((x) => setTimeout(x, 100));
+  }
+  if (!ownPlayer) fail('前置：注册 hook 未回填 player relation');
 
-  // ① 选手 token 落 practice → 200
-  const p = await fetch(`${BASE}/api/collections/matches/records`, { method: 'POST', headers: { Authorization: tok, ...CT }, body: matchBody('practice') });
+  // ① 选手 token 落 practice players=[本人绑定 player] → 200
+  const p = await fetch(`${BASE}/api/collections/matches/records`, { method: 'POST', headers: { Authorization: tok, ...CT }, body: matchBody('practice', [ownPlayer]) });
   const pj = await p.json().catch(() => ({}));
-  if (p.status === 200) pass('① 选手 token 落 practice → 200（CreateRule 放开练习自助落库）');
+  if (p.status === 200) pass('① 选手 token 落 practice players=[本人] → 200（CreateRule 放开练习自助落库，本人归属合法）');
   else fail(`① 选手落 practice status=${p.status}: ${JSON.stringify(pj).slice(0, 150)}`);
 
   // ② 选手 token 落 match → ≠200

@@ -15,7 +15,8 @@ import { fileURLToPath } from 'url';
 const webRoot = resolve(fileURLToPath(new URL('..', import.meta.url)), '..'); // lib → e2e → web
 const backendRoot = resolve(webRoot, '..', 'backend'); // pocketbase 二进制 + cwd（loadScoring 相对路径 config/）
 const PB_BIN = process.env.JJB_PB_BIN || resolve(backendRoot, 'pocketbase');
-export const ISO_PB_BASE = 'http://127.0.0.1:8090';
+const ISO_PB_PORT = Number(process.env.JJB_ISO_PB_PORT || 8090);
+export const ISO_PB_BASE = `http://127.0.0.1:${ISO_PB_PORT}`;
 export const ISO_SU_EMAIL = 'admin@jjb.test';
 export const ISO_SU_PWD = 'Admin123456!';
 
@@ -41,7 +42,7 @@ export async function startIsoPb() {
     throw new Error(`migrate up 失败: ${String(mig.stderr || '').slice(0, 200)}`);
   }
   cli(['superuser', 'upsert', ISO_SU_EMAIL, ISO_SU_PWD, '--dir', dir]);
-  const serve = spawn(PB_BIN, ['serve', '--http=127.0.0.1:8090', '--dir', dir], { cwd: backendRoot, stdio: 'ignore' });
+  const serve = spawn(PB_BIN, ['serve', `--http=127.0.0.1:${ISO_PB_PORT}`, '--dir', dir], { cwd: backendRoot, stdio: 'ignore' });
   try {
     await waitHealth();
   } catch (e) {
