@@ -23,10 +23,10 @@
 浏览器 → nginx:8080（同源）
          ├─ /            → web SPA（vite build，hash 文件名，CDN 友好）
          ├─ /admin/      → admin SPA（vite build base=/admin/）
-         ├─ /api/        → proxy_pass → 127.0.0.1:8090（PocketBase REST + SSE）
-         └─ /_/          → proxy_pass → 127.0.0.1:8090（PocketBase Admin UI）
+         ├─ /api/        → proxy_pass → 172.17.0.1:8090（Docker nginx → PocketBase REST + SSE）
+         └─ /_/          → proxy_pass → 172.17.0.1:8090（Docker nginx → PocketBase Admin UI）
 
-backend（systemd jjb-backend，127.0.0.1:8090，对外不可见）
+backend（systemd jjb-backend，0.0.0.0:8090；供 docker0 网桥访问，公网入口仍经 nginx）
 ├─ PocketBase 二进制（含 7 个 Go embed migrations）
 ├─ config/scoring.json（系数表）
 └─ pb_data/data.db + WAL + SHM（SQLite）
@@ -248,7 +248,7 @@ WantedBy=multi-user.target
 ```
 
 要点：
-- backend listen `0.0.0.0:8090`（容器从 docker0 网桥访问）；nginx 反代到 `127.0.0.1:8090`。
+- backend listen `0.0.0.0:8090`（容器从 docker0 网桥访问）；当前 Docker nginx 经 `172.17.0.1:8090` 反代，裸机 nginx 方案才使用 `127.0.0.1:8090`。
 - `Restart=on-failure` + `RestartSec=5`：崩了 5 秒内自动拉起。
 - `User=jjb`：非 root 运行，权限最小化。
 
@@ -348,7 +348,7 @@ curl -s http://127.0.0.1:8090/api/health
 | 服务 | 端口 | 监听方 | 暴露方 |
 |---|---|---|---|
 | nginx | 8080（容器内 80） | 0.0.0.0（容器内） | 宿主 `-p 8080:80` |
-| PocketBase | 8090 | 0.0.0.0（宿主机） | **不对外**，仅 nginx 反代 |
+| PocketBase | 8090 | 0.0.0.0（宿主机） | 供 docker0/nginx 反代；宿主网络可达性由防火墙/网络策略控制，不作为公网入口 |
 | Litestream | — | — | 主动连对象存储（出站） |
 | Vite dev (local) | 7788 / 7790 / 8686 等 | 127.0.0.1 | 仅本地 |
 | Docker bridge 网关 | 172.17.0.1 | docker0 | 容器 → 宿主 backend |

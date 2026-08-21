@@ -2882,3 +2882,21 @@ real-browser 探针确认 select/battle ScreenShell(bg×3 层)+TopBar(meta-row)+
 
 **验证（本 session 全部真跑，非转述）**：tsc 0 错；vitest 13 files/153 tests 全过（+3 potato 用例）；go build/vet/test exit 0；drift+docs-drift 全绿；隔离 PB 负测 `sec-account-role` 4/4 + `sec-practice-ownership` 5/5 + `sec-potato-ai-bias` 6/6 + `practice-post` 4/4（pocketbase 二进制本 session 重编译后跑，migration 生效实证）；`potato-ai-bias.mjs` 5/5；`npm run build` ✓（JS `index-Bp1v-zb2.js`）；`potato-ai-bias.flow.mjs` Playwright 三屏 5/5。
 **不入库**：`test-x/`（07-17 测试产物）、`docs/superpowers/`（工具安装产物）。上方 07-14 审计章的「验证」行数据产生于污染前基线，其编排声明未经本 session 复核，引用需谨慎。
+
+
+---
+
+## 2026-08-21 systemd unit / Docker 拓扑漂移回补
+
+**授权与边界**：owner 明确授权补齐 systemd unit 与部署文档；账号密码暂不轮换。不得改 seed/凭据、现网 unit 或服务状态。owner 2026-08-21 随后明确授权将本次 tracked 修复按正常流程 commit/push 到 `jjb-platform`。
+
+**Harness disposition**：repo-local adapter 存在，但 devbox 无 `harness-pro-core`/本地 package，`npx --no-install harness-pro --version` 返回 npm E404；禁止伪造 round/PASS，改走小范围确定性验证。planned_phases=2（docs/drift contract correction，按 adoption guide 采用 1–2 phase）。
+
+- [x] Phase 1：将 `backend/deploy/jjb-backend.service` 对齐现网 `0.0.0.0:8090`，并统一 `docs/deployment.md` 的 Docker nginx/docker0 拓扑与暴露说明。
+- [x] Phase 2：运行精确内容断言、`git diff --check`、diff scope/status 检查；记录变更总结与验证结果。
+
+**变更总结**：tracked unit 的监听地址已从 `127.0.0.1:8090` 回补为现网 `0.0.0.0:8090`；部署文档已统一 Docker nginx 经 `172.17.0.1:8090` 访问宿主 backend，并明确裸机 nginx 才走 `127.0.0.1`、8090 的宿主网络可达性由防火墙/网络策略控制。未改账号、seed、现网 unit 或服务。
+
+**验证结果**：`git diff --check` PASS；`systemd-analyze verify backend/deploy/jjb-backend.service` exit 0（仅输出两条宿主既有 systemd/BPF 警告）；精确内容断言 4/4；tracked unit 与 `/etc/systemd/system/jjb-backend.service` 字节一致；diff scope 仅 `backend/deploy/jjb-backend.service`、`docs/deployment.md`、`projectplan.md`，另保留既有 untracked runtime 副本 `nginx-conf/default.conf`。截至确定性验证时尚未 commit/push；现已取得 owner 的正常推送授权。
+
+**复核说明**：一次聚合检查曾把 `172.17.0.1:8090` 的出现次数误设为 `>=5` 而误报；未据此改产品文件，改为逐条精确语义断言后 7/7 PASS。

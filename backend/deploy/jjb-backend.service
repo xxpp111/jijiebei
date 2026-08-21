@@ -12,7 +12,7 @@ After=network.target
 Type=simple
 User=jjb
 WorkingDirectory=/opt/jjb-backend
-ExecStart=/opt/jjb-backend/pocketbase serve --http 127.0.0.1:8090 --dir /opt/jjb-backend/pb_data
+ExecStart=/opt/jjb-backend/pocketbase serve --http 0.0.0.0:8090 --dir /opt/jjb-backend/pb_data
 Restart=on-failure
 RestartSec=5
 
