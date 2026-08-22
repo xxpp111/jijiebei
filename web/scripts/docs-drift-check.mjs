@@ -6,17 +6,29 @@
 //   ——否则本脚本自己就成了会漂的第四处副本。磁盘是唯一被对照的事实源。
 // 只读语义：本脚本零写入工作树（只 read + stat）。
 //
-// 断言四项：
+// 断言七项：
 //   A. docs/architecture.md §1.2「核心逻辑模块」表引用的 web/src/logic/*.ts 全部真实存在
 //   B. 根 README.md §2 目录地图列出的目录/文件路径全部真实存在
 //   C. .claude/skills/jjb-deploy/SKILL.md 无 jjb-live-dock 残留（部署取码分支已收敛 jjb-platform）
 //   D. docs/testing.md §3 声称的 e2e 脚本清单与磁盘 web/e2e|flows + admin/e2e 实际逐一对上（数量/名称双向）
+//   E. governed 活文档 front matter 齐备且合规（docs/ 顶层 *.md + docs/archive/README.md +
+//      design/README.md + diagrams/README.md；title/id/status/owner/updated/applies_to/replaces/evidence
+//      /review_after 必填且值非空，id 唯一且 jijiebei/<小写kebab-case>，title 含中文，
+//      status ∈ current|superseded|draft；current/draft 的 review_after 须 YYYY-MM-DD，
+//      superseded 兼容页为纯指针、无复审周期，豁免 review_after 必填）
+//   F. docs/README.md 导航内全部本地链接目标存在，且须为真相对路径（拒绝 `/` 等绝对路径）、
+//      resolve 后不越出 repo 根目录（允许 ../design/ 等跨目录登记）；current/draft id 全部登记进
+//      docs/README id 表；superseded 兼容指针页 ≤30 行、正文恰为三行：一个 `# ` H1、一个空行、
+//      单条含相对链接的 `> ` 指针行且 blockquote 内容不得以 Markdown 块级标记开头（严格拒绝 `>>`
+//      嵌套引用与 quoted-H2/列表/表格/代码围栏伪装；禁额外空行/多 blockquote/无链接 blockquote/
+//      顺序变化）；指针目标须留在 docs 根目录内且存在（R6：拒绝对路径与 `../` 越出 docs）
+//   G. docs/testing.md 摘要三计数与磁盘机械枚举一致（根级 e2e 数 / flows 数 / vitest 单测文件数）
 //
 // 用法：node web/scripts/docs-drift-check.mjs   （repo 根或任意 cwd 均可，路径自锚定）
 // 退出码：0 全绿 / 1 有漂移或缺失 / 2 脚本自身错误（找不到应存在的文档）
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, isAbsolute, relative } from 'path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..'); // web/scripts/ -> repo 根
@@ -34,6 +46,24 @@ function readDoc(rel) {
     process.exit(2);
   }
   return readFileSync(abs, 'utf8');
+}
+
+// markdown 链接目标分类 + 目录 containment（2026-08-22 R6，Codex R5 final blocker 修复）：
+//   external = `scheme://` 外链（跳过，不适用本地存在性语义）；
+//   absolute = `/`、`//host/…` 等文件系统绝对路径 —— 直接拒。此前 `R('docs', '/')` 会 resolve 到
+//              文件系统根目录且 exists=true，被误计作「相对链接」绕过兼容指针门，故绝对路径必须在
+//              存在性检查之前单独分类，绝不靠「目标恰好 exists」放过；
+//   escape   = 真相对路径但 resolve 后越出 containment 根（`../` 逃逸）；
+//   relative = 合法相对链接（返回 resolved 绝对路径供存在性检查）。
+// 调用方文案必须区分「绝对路径」与「越出目录」两类失败，供红例证明失败原因唯一。
+const EXTERNAL_LINK_RE = /^[a-z]+:\/\//;
+function classifyLink(target, baseDir, containmentRoot) {
+  if (EXTERNAL_LINK_RE.test(target)) return { kind: 'external' };
+  if (isAbsolute(target)) return { kind: 'absolute' };
+  const resolved = resolve(baseDir, target);
+  const off = relative(containmentRoot, resolved);
+  if (off.startsWith('..') || isAbsolute(off)) return { kind: 'escape', resolved };
+  return { kind: 'relative', resolved };
 }
 
 // 取某个 markdown 标题（^#{1,6} ...pattern...）之后、下一个【同级或更高级】标题之前的正文块。
@@ -199,7 +229,183 @@ checks++;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-console.log('');
+// E. governed 活文档 front matter 齐备且合规（文档治理 v1 · 2026-08-22 新增）
+// ───────────────────────────────────────────────────────────────────────────
+const FRONT_MATTER_REQUIRED = ['title', 'id', 'status', 'owner', 'updated', 'applies_to', 'replaces', 'evidence', 'review_after'];
+const STATUS_ENUM = new Set(['current', 'superseded', 'draft']);
+const KEBAB_ID_RE = /^jijiebei\/[a-z0-9]+(-[a-z0-9]+)*$/;
+const CJK_RE = /[一-鿿]/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseFrontMatter(text, rel) {
+  if (!text.startsWith('---\n')) return { fm: null, err: `${rel} 不以 YAML front matter（--- 开头）起始` };
+  const end = text.indexOf('\n---\n', 4);
+  if (end === -1) return { fm: null, err: `${rel} front matter 未闭合（缺行首 --- 结束线）` };
+  const fm = {};
+  for (const line of text.slice(4, end).split('\n')) {
+    const m = line.match(/^([a-z_]+):\s*(.*)$/);
+    if (m) fm[m[1]] = m[2].trim();
+  }
+  return { fm };
+}
+
+// status=current|draft 的 governed id 集合（供 F 检查对账 docs/README 登记完整性）
+const activeIds = new Set();
+
+{
+  checks++;
+  const governedDirs = [
+    { relDir: 'docs', extra: ['docs/archive/README.md', 'design/README.md', 'diagrams/README.md'] },
+  ];
+  const files = [
+    ...readdirSync(R('docs'))
+      .filter((f) => f.endsWith('.md') && statSync(join(R('docs'), f)).isFile())
+      .map((f) => `docs/${f}`),
+    ...governedDirs[0].extra,
+  ];
+  const problems = [];
+  const ids = new Map();
+  for (const rel of files) {
+    const { fm, err } = parseFrontMatter(readDoc(rel), rel);
+    if (!fm) { problems.push(err); continue; }
+    const isCompat = fm.status === 'superseded';
+    for (const key of FRONT_MATTER_REQUIRED) {
+      // superseded 兼容页是纯指针（无事实正文、无复审周期），豁免 review_after 必填
+      if (key === 'review_after' && isCompat) continue;
+      if (!(key in fm)) problems.push(`${rel} front matter 缺字段 ${key}`);
+      else if (String(fm[key]).trim() === '') problems.push(`${rel} front matter 字段 ${key} 值为空`);
+    }
+    // id/title/status 无条件校验：缺字段或值空/非法都打红，不因假值静默跳过（2026-08-22 R2 加固）
+    if (!KEBAB_ID_RE.test(fm.id ?? '')) {
+      problems.push(`${rel} id 缺失或非法（应 jijiebei/<小写kebab-case>）: ${JSON.stringify(fm.id ?? '')}`);
+    } else if (ids.has(fm.id)) {
+      problems.push(`${rel} id 重复: ${fm.id}（先见于 ${ids.get(fm.id)}）`);
+    } else {
+      ids.set(fm.id, rel);
+    }
+    if (!CJK_RE.test(fm.title ?? '')) problems.push(`${rel} title 缺失或不含中文: ${fm.title ?? ''}`);
+    if (!STATUS_ENUM.has(fm.status ?? '')) problems.push(`${rel} status 缺失或非法（current|superseded|draft）: ${fm.status ?? ''}`);
+    if (!isCompat && !DATE_RE.test(fm.review_after ?? '')) {
+      problems.push(`${rel} review_after 缺失或非 YYYY-MM-DD: ${fm.review_after ?? ''}`);
+    }
+    if (!isCompat && KEBAB_ID_RE.test(fm.id ?? '')) activeIds.add(fm.id);
+  }
+  if (problems.length) fail(`E. front matter 治理违规 ${problems.length} 处: ${problems.slice(0, 8).join('；')}${problems.length > 8 ? ' …' : ''}`);
+  else ok(`E. ${files.length} 个 governed 文档 front matter 全部合规（${ids.size} 个 id 唯一、kebab、非空、中文 title；${activeIds.size} 个 current/draft 带 review_after）`);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// F. docs/README.md 导航相对链接 + superseded 兼容指针页（文档治理 v1 · 2026-08-22 新增）
+// ───────────────────────────────────────────────────────────────────────────
+{
+  checks++;
+  const readme = readDoc('docs/README.md');
+  const problems = [];
+  // 1) docs/README.md 内全部 markdown 本地链接：必须是真相对路径（拒绝对路径），resolve 后
+  //    不得越出 repo 根目录（允许 ../design/README.md 等跨目录登记），且目标存在（锚点/外链跳过）
+  const links = [...readme.matchAll(/\]\(([^)#\s]+)(?:#[^)]*)?\)/g)].map((m) => m[1]);
+  const relLinks = new Set();
+  for (const target of new Set(links)) {
+    const c = classifyLink(target, R('docs'), repoRoot);
+    if (c.kind === 'external') continue;
+    if (c.kind === 'absolute') { problems.push(`docs/README.md 链接不得使用绝对路径: ${target}`); continue; }
+    if (c.kind === 'escape') { problems.push(`docs/README.md 链接解析后越出 repo 根目录: ${target}`); continue; }
+    if (!existsSync(c.resolved)) problems.push(`docs/README.md 链接目标缺失: ${target}`);
+    else relLinks.add(target);
+  }
+  // 2) current/draft id 全部登记进 docs/README 的 id 表（表格行首 |id| 形式；superseded 不要求注册）
+  const registered = new Set(
+    [...readme.matchAll(/^\|\s*(jijiebei\/[a-z0-9]+(?:-[a-z0-9]+)*)\s*\|/gm)].map((m) => m[1])
+  );
+  const unregistered = [...activeIds].filter((id) => !registered.has(id));
+  if (unregistered.length) {
+    problems.push(`docs/README.md id 表漏登 ${unregistered.length} 个 current/draft id: ${unregistered.sort().join(', ')}`);
+  }
+  // 3) superseded 兼容指针页：≤30 行；正文为精确 canonical 结构 —— 恰三行（2026-08-22 R3 收紧）：
+  //    行1 = `# ` H1；行2 = 空行；行3 = 单条 `> ` 指针行且行内含 ≥1 个存在的相对链接。
+  //    行3 双内容门（2026-08-22 R5 收紧，Codex final blocker 修复）：
+  //    a. 严格 `> ` 开头 —— `>>`（嵌套引用）、`>无空格` 一律拒；
+  //    b. blockquote 内容不得以 Markdown 块级标记开头（quoted-H2 / 无序 / 有序列表 / 嵌套引用 /
+  //       表格 / 代码围栏伪装全部打红）；合法形态 = 普通段落 + 内联 code/粗体/普通中文 + 有效相对链接。
+  //    额外空行、多条 blockquote、无链接 blockquote、顺序变化、H2/段落/列表/表格/代码围栏一律打红。
+  //    （文件末尾恰一个换行符视为行尾而非第四行，按 POSIX 惯例豁免）
+  const QUOTE_BLOCK_MARKER_RE = /^(#{1,6}(\s|$)|[-*+](\s|$)|\d+[.)](\s|$)|>|\||(`{3,}|~{3,}))/;
+  for (const f of readdirSync(R('docs'))) {
+    if (!f.endsWith('.md') || !statSync(join(R('docs'), f)).isFile()) continue;
+    const rel = `docs/${f}`;
+    const text = readDoc(rel);
+    const { fm } = parseFrontMatter(text, rel);
+    if (!fm || fm.status !== 'superseded') continue;
+    if (text.split('\n').length > 30) problems.push(`${rel} 是 superseded 兼容页但超 30 行（应纯指针）`);
+    const body = text.replace(/^---\n[\s\S]*?\n---\n/, '');
+    // 只剥掉恰一个文件末尾换行符：末尾多余空行（额外空行红例）必须保留到行数里被拒
+    const raw = body.endsWith('\n') ? body.slice(0, -1) : body;
+    const lines = raw.split('\n');
+    if (lines.length !== 3) {
+      problems.push(`${rel} 兼容页正文应恰为三行（H1 + 空行 + 单条 blockquote 指针），实际 ${lines.length} 行`);
+    } else {
+      if (!/^#\s/.test(lines[0])) {
+        problems.push(`${rel} 兼容页正文第 1 行应为 \`# \` H1，实际: ${lines[0].slice(0, 40)}`);
+      }
+      if (!/^\s*$/.test(lines[1])) {
+        problems.push(`${rel} 兼容页正文第 2 行应为空行，实际: ${lines[1].slice(0, 40)}`);
+      }
+      if (!/^> /.test(lines[2])) {
+        problems.push(`${rel} 兼容页正文第 3 行应为 \`> \` 指针行（严格拒绝 \`>>\` 嵌套引用），实际: ${lines[2].slice(0, 40)}`);
+      } else if (QUOTE_BLOCK_MARKER_RE.test(lines[2].replace(/^>\s*/, ''))) {
+        problems.push(`${rel} 兼容页指针 blockquote 内容不得以 Markdown 块级标记开头（标题/列表/引用/表格/代码围栏），实际: ${lines[2].slice(0, 40)}`);
+      }
+    }
+    // 指针链接只认 blockquote 行：H1 行/空行里的链接不再计入（行数错位时链接断言仍可叠加定位）。
+    // R6：目标必须是真相对路径且 resolve 后留在 <repo>/docs 根目录内 —— `/`（resolve 落文件系统
+    // 根目录且 exists=true）与 `../README.md`（目标真实存在但在 docs 外）都不能靠「恰好存在」
+    // 蒙混过存在性门，分类/containment 先拒，文案区分绝对路径与越出 docs 两类失败。
+    const quoteLinks = lines
+      .filter((l) => /^>/.test(l))
+      .flatMap((l) => [...l.matchAll(/\]\(([^)#\s]+)(?:#[^)]*)?\)/g)].map((m) => m[1]))
+      .filter((t) => !EXTERNAL_LINK_RE.test(t));
+    if (quoteLinks.length === 0) {
+      problems.push(`${rel} 兼容页 blockquote 指针行无相对链接（应指向 canonical home）`);
+    }
+    for (const t of quoteLinks) {
+      const c = classifyLink(t, R('docs'), R('docs'));
+      if (c.kind === 'absolute') { problems.push(`${rel} 兼容指针不得使用绝对路径: ${t}`); continue; }
+      if (c.kind === 'escape') { problems.push(`${rel} 兼容指针解析后越出 docs 根目录: ${t}`); continue; }
+      if (!existsSync(c.resolved)) problems.push(`${rel} 兼容指针目标缺失: ${t}`);
+    }
+  }
+  if (problems.length) fail(`F. 导航链接/登记对账/兼容指针违规 ${problems.length} 处: ${problems.join('；')}`);
+  else ok(`F. docs/README.md ${relLinks.size} 个本地链接均为真相对路径、未越出 repo 根且目标存在；${activeIds.size} 个 current/draft id 全部登记；superseded 兼容页均为恰三行纯指针（H1+空行+单条含链接 blockquote，内容非块级标记）且指针为未越出 docs 根的真相对链接、目标存在`);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// G. testing.md 摘要三计数 ↔ 磁盘机械枚举（文档治理 v1 · 2026-08-22 新增）
+// ───────────────────────────────────────────────────────────────────────────
+{
+  checks++;
+  const testing = readDoc('docs/testing.md');
+  const problems = [];
+  const head = testing; // 全文匹配（front matter 使摘要行号后移；三个 pattern 仅摘要行命中）
+  const e2eClaim = head.match(/（(\d+)\s*个前端\s*e2e[^）]*）/) || head.match(/(\d+)\s*个前端\s*e2e/);
+  const flowClaim = head.match(/（(\d+)\s*条\s*AI-E2E\s*flow[^）]*）/) || head.match(/(\d+)\s*条\s*AI-E2E\s*flow/);
+  const vitClaim = head.match(/（(\d+)\s*个\s*vitest\s*单测文件/) || head.match(/(\d+)\s*个\s*vitest\s*单测文件/);
+  if (!e2eClaim || !flowClaim || !vitClaim) {
+    problems.push('testing.md 头部摘要未解析出三计数（口径声明格式漂移？）');
+  } else {
+    const listMjs = (relDir) =>
+      readdirSync(R(relDir)).filter((f) => f.endsWith('.mjs') && statSync(join(R(relDir), f)).isFile());
+    const diskE2e = listMjs('web/e2e').length; // 顶层（flows/、lib/ 是目录不计）
+    const diskFlow = listMjs('web/e2e/flows').length;
+    const diskVitest = readdirSync(R('web/src/logic/__tests__')).filter((f) => f.endsWith('.test.ts')).length;
+    if (Number(e2eClaim[1]) !== diskE2e) problems.push(`摘要 e2e 计数 ${e2eClaim[1]} ≠ 磁盘 ${diskE2e}（web/e2e 顶层 .mjs）`);
+    if (Number(flowClaim[1]) !== diskFlow) problems.push(`摘要 flow 计数 ${flowClaim[1]} ≠ 磁盘 ${diskFlow}（web/e2e/flows .mjs）`);
+    if (Number(vitClaim[1]) !== diskVitest) problems.push(`摘要 vitest 文件计数 ${vitClaim[1]} ≠ 磁盘 ${diskVitest}（web/src/logic/__tests__ .test.ts）`);
+    if (!problems.length) ok(`G. testing.md 摘要计数 = 磁盘机械枚举（e2e ${diskE2e} / flows ${diskFlow} / vitest 文件 ${diskVitest}）`);
+  }
+  if (problems.length) fail(`G. testing.md 计数漂移: ${problems.join('；')}`);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 if (failed > 0) {
   console.error(`[docs-drift-check] ❌ ${failed}/${checks} 项漂移 —— 文档与代码已脱节，修文档（或代码）使其重新一致`);
   process.exit(1);

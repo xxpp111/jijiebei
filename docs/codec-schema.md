@@ -1,9 +1,20 @@
+---
+title: 集结杯 · 对局码编码 Schema v1
+id: jijiebei/codec-schema
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["改 web/src/logic/codec.ts 前读契约", "排查贴码/分享/落库不一致", "评估 schema 演进"]
+replaces: []
+evidence: ["web/src/logic/codec.ts（实现真相源）", "web/e2e/codec.mjs（往返门）", "AGENTS.md 第 7 条（schema v1 冻结）"]
+review_after: 2026-09-22
+---
 # 集结杯码方案 · 编码 Schema（v1）
 
 > 对局码编解码契约。前端分享（URL #hash）+ 后端落库（`matches.payload_code`）+ 主播贴码开局 三态同源。
 > 真相源：`web/src/logic/codec.ts`（encodePayload/decodePayload/capturePayload）。
 > 本文件 = P5 后端 `matches.payload_code` 复用契约，schema v1 冻结于本 round。
-> 设计调研：`docs/research-frontend-p2p3.md` §B（索引化 / 版本 / 池纪律 / URL 上限）。
+> 设计调研：`docs/archive/research-frontend-p2p3.md` §B（索引化 / 版本 / 池纪律 / URL 上限；历史调研已归档，旧裸路径 `docs/research-frontend-p2p3.md` 为兼容指针）。
 
 ## 1. 码格式
 

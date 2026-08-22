@@ -1,7 +1,19 @@
+---
+title: 集结杯 · 测试体系
+id: jijiebei/testing
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["跑回归或定位某测试入口", "新增 e2e/flow/单测后登记清单", "排查测试红因"]
+replaces: []
+evidence: ["web/e2e/ 与 web/e2e/flows/（e2e 真相源）", "web/src/logic/__tests__/（vitest 真相源）", "web/scripts/docs-drift-check.mjs（清单机器校验）"]
+review_after: 2026-09-22
+---
 # 集结杯 · 测试体系（Testing）
 
 > 范围：项目四层测试体系——①代码层（前端 build / 后端 Go）②AI-E2E（Playwright + 纯 Node fetch + flows）③双打同步（两 profile 对战）④vitest 单元测试（纯函数 / 状态机）。
-> 真相源：`web/e2e/*.mjs`（20 个前端 e2e）+ `web/e2e/flows/*.flow.mjs`（7 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（12 个 vitest 单测文件）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
+> 真相源：`web/e2e/*.mjs`（26 个前端 e2e，flows 子目录除外）+ `web/e2e/flows/*.flow.mjs`（8 条 AI-E2E flow）+ `web/src/logic/__tests__/*.test.ts`（13 个 vitest 单测文件 / 153 用例）+ `admin/e2e/admin-smoke.mjs`（后台 e2e）+ `backend/verify-all.sh`（后端全链路）。
+> 计数口径（机械可复验，`node web/scripts/docs-drift-check.mjs` 校验）：根级 E2E = `git ls-files ':(glob)web/e2e/*.mjs'`（排除 flows/、lib/）；flow = `git ls-files ':(glob)web/e2e/flows/*.flow.mjs'`；vitest 文件 = `git ls-files ':(glob)web/src/logic/__tests__/*.test.ts'`，用例数 = `npx vitest run` 实跑。
 
 ---
 
@@ -10,7 +22,7 @@
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  ④ vitest 单元测试（纯函数 / 状态机，最快、无需 build）                      │
-│     · web/src/logic/__tests__/：12 文件 126 用例（详见 §9 当前文件清单）       │
+│     · web/src/logic/__tests__/：13 文件 153 用例（详见 §9 当前文件清单）       │
 │     · npm run test:unit（vitest run）                                        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │  ③ 双打同步（端到端 + 两 profile 对战）                                      │
@@ -27,7 +39,7 @@
 │     · 隔离 PB（自起临时实例）：auth-perm / practice-post / player-hook /     │
 │       sec-account-role / sec-practice-ownership（Round S 安全止血负测）       │
 │       · 真 UI+真隔离 PB（/api 真代理不 mock）：record-fullstack              │
-│     · flows（自然语言驱动：导航+交互+断言+截图）：web/e2e/flows/ 7 条        │
+│     · flows（自然语言驱动：导航+交互+断言+截图）：web/e2e/flows/ 8 条        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │  ① 代码层（前端 build / 后端 Go）                                            │
 │     · web: npm run build（Vite + TS 0 error）                                │
@@ -135,7 +147,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | `npm run e2e:core` | `build + run + codec + bp-rules + auto-post` | 纯前端引擎回归一键跑（9 模式恒等式 / 编解码往返 / BP 规则 / #94 触发链路），无需后端 |
 | `npm run e2e:back` | `go build backend + build + rankings-board + practice-post + record-fullstack` | 真隔离 PB 一键跑（先重编译 backend 防二进制旧）：分榜分流 + practice 落库 + 全栈真接缝 |
 | `npm run snap:visual` | `build + scripts/snap-verify.mjs` | snapDOM 视觉回归：自起 preview，固定随机源 + 每屏全新 page（防跨屏状态/随机序列残留）+ capture-until-stable（同屏连截至相邻两次逐字节一致，收敛 snapDOM 瞬态单图未就绪的二态漂移），采集 home/select/battle/result/obs 五屏 actual，与 `web/e2e/snapshots/baseline/` 做 pixelmatch；更新基线用 `npm run snap:visual -- --update` |
-| `npm run test:unit` | `vitest run` | vitest 单测：`web/src/logic/__tests__/` 12 文件 126 用例 |
+| `npm run test:unit` | `vitest run` | vitest 单测：`web/src/logic/__tests__/` 13 文件 153 用例 |
 | `npm run test:drift` | `node scripts/drift-check.mjs` | 配置漂移守护（重跑 gen-config 比对 committed 无 diff） |
 | `npm run test:back` | `cd ../backend && go test ./...` | 后端 go test |
 | `npm run test` | `test:unit && test:drift && test:back` | 三段聚合 |
@@ -152,7 +164,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 
 ---
 
-## 3. 20 个 e2e 脚本覆盖矩阵
+## 3. 26 个 e2e 脚本覆盖矩阵
 
 | 脚本 | 行数 | 类型 | 覆盖什么 | 前置 |
 |---|---|---|---|---|
@@ -184,7 +196,7 @@ node e2e/admin-smoke.mjs                 # 三角色登录 + 守卫 + 调分
 | **dragback-clear.mjs** | 126 | Playwright 浏览器 | 因子候选区交互（拖回清除 + 崩溃守卫）：单打/双打 因子落槽→候选区空出占位→从场次槽拖回占位格清除→候选区恢复；双打崩溃路径回归（未选池因子拖占位格 slot=-1 不崩、不污染槽、拖拽机不卡死） | `npm run build`（vite preview 自起，无需 PB） |
 | **admin-smoke.mjs** | 80 | fetch (node v23+) | 三角色登录 + 对局/选手/天梯/系数 fetch + role 守卫（viewer 不能读 logs，host 不能读 accounts）+ admin 调分 | PB 8090 + verify-all.sh 已造 |
 
-### flows 覆盖矩阵（`web/e2e/flows/`，7 条 AI-E2E flow）
+### flows 覆盖矩阵（`web/e2e/flows/`，8 条 AI-E2E flow）
 
 > 每条 flow = 导航 + 交互 + `__jjbDebug`/DOM 断言 + 截图，基建统一走 `web/e2e/lib/harness.mjs`（withPreview 自起 vite preview + Playwright chrome）。
 
@@ -342,7 +354,7 @@ steps:
 
 ## 9. TODO（待补 / 留后续 round）
 
-- [x] **vitest 已引入**：`web/src/logic/__tests__/` 12 文件 126 用例（backend/codec/commanderWeight/eventBan/goldRuntime/jjbSession/matchRecord/mutatorPool/config-modes/jjbDoubles/scoring-contract/visual-diff），`npm run test:unit` 跑；`test:drift`/`test:back` 另覆盖配置漂移守护与后端 go test。
+- [x] **vitest 已引入**：`web/src/logic/__tests__/` 13 文件 153 用例（backend/codec/commanderGroups/commanderWeight/eventBan/goldRuntime/jjbSession/matchRecord/mutatorPool/config-modes/jjbDoubles/scoring-contract/visual-diff），`npm run test:unit` 跑；`test:drift`/`test:back` 另覆盖配置漂移守护与后端 go test。
 - [ ] **admin 前后端契约一致性验证**：devbox 三层版本对齐（web 来自 jjb-live-dock、admin 来自本地 build、backend 独立二进制）— 留 P2 round。
 - [ ] **覆盖率上报**：跑完 e2e 后输出 codec/jjbSession/jjbDoubles 覆盖率（c8 或 vitest --coverage）。
 - [ ] **CI 缓存**：`node_modules` / `~/.cache/go-build` / `~/.cache/vite` 三段缓存可大幅加速。

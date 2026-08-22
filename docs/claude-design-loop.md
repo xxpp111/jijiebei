@@ -1,3 +1,14 @@
+---
+title: 集结杯 Claude Design 闭环 SOP
+id: jijiebei/claude-design-loop
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["新一轮设计出稿/读稿/落地 web/src", "DesignSync 操作与坑位排查"]
+replaces: []
+evidence: ["design/（设计稿区）", "design/README.md（设计资产索引）", "memory jjb-claude-design-loop（闭环经验）"]
+review_after: 2026-09-22
+---
 # 集结杯 Claude Design 闭环 SOP
 
 > 适用范围：每一轮新设计的「云端出图 → hub 读取 → 落地 web/src」全流程。

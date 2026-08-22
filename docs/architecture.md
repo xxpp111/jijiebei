@@ -1,3 +1,14 @@
+---
+title: 集结杯 · 架构
+id: jijiebei/architecture
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["了解 11 屏/7 集合/三层部署整体结构", "改 web/src 或 backend 前定位模块", "新增屏幕、集合或部署拓扑"]
+replaces: []
+evidence: ["AGENTS.md（全仓红线唯一集中声明）", "web/src/logic/（正文引用模块的磁盘真相）", "backend/pb_migrations/（集合 schema 真相源）"]
+review_after: 2026-09-22
+---
 # 集结杯 · 架构（Architecture）
 
 > 范围：项目从「单刷抽签工具」演进到「比赛平台」后的完整体系图：11 屏前端 + Arco 业务后台 + PocketBase 7 集合后端 + devbox 三层同源部署。

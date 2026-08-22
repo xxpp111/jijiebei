@@ -1,3 +1,14 @@
+---
+title: diagrams · 资产索引
+id: jijiebei/diagrams-index
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["移动/删除 diagrams 资产前查引用", "区分画板源/证据图/知识库板图"]
+replaces: []
+evidence: ["projectplan.md（证据图引用方）", "docs/archive/system-maps-2026-06.md（已归档体系图源）"]
+review_after: 2026-09-22
+---
 # diagrams 资产索引
 
 本目录保存两类东西：可入库源文件，以及阶段证据截图。不要把整个目录当作临时垃圾清空。

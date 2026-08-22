@@ -1,3 +1,14 @@
+---
+title: design · Claude Design 设计稿区索引
+id: jijiebei/design-assets
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["存放/查找设计稿版本", "确认 v4-r2 活跃基座与历史版本边界"]
+replaces: []
+evidence: ["design/v4-r2/（现行活跃设计基座，只读）", "web/src/styles/index.css（工程引用入口）"]
+review_after: 2026-09-22
+---
 # design/ — Claude Design 设计稿区
 
 Claude Design 产出的设计稿放这里，**受 git 管**（开发模式见记忆 `dev-workflow-claude-design-to-opus`）。
@@ -6,7 +17,7 @@ Claude Design 产出的设计稿放这里，**受 git 管**（开发模式见记
 > 飞书画板（Claude visualizer 风格）：<https://bytedance.larkoffice.com/docx/KMIodWA5Wo9L6exPkXYc6D4AnJh>
 
 实测 `danshua.fire`：每屏 = **4 层节点叠出来**，决定了各工具分工——
-- **① 静态美术整图**（`images/bg/`）：背景1.jpg 1280×720、回归杯横幅.png（待换）、背景2/群号/mask → **GPT-image-2 出无字整图**
+- **① 静态美术整图**（`images/bg/`）：背景1.jpg 1280×720、回归杯合作模式比赛.png、背景2/群号/mask → **GPT-image-2 出无字整图**
 - **② 控件「占位」视觉**：按钮/槽位/面板底全是 `singleColor` 纯色块拉伸 + 默认 Cocos 按钮/EditBox + lock 图标 → **几乎无 UI 美术，正好整套重做**
 - **③ 动态游戏图标**：cmd/map 空占位，运行时 URLSprite 加载 指挥官60×60/地图200×70/因子图标 → **既有素材不动，设计围着固定尺寸排**
 - **④ 文字 Label**：标题/模式名/选手/胜负；mode/players/result 框仅 103×50 会溢出 → 定字号层级 + overflow

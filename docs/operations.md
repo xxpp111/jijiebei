@@ -1,3 +1,14 @@
+---
+title: 集结杯 · 运维手册
+id: jijiebei/operations
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["开主播账号 / 注册选手 / 开赛季 / 调系数", "查天梯 / 处理常见运营问题"]
+replaces: []
+evidence: ["backend/config/scoring.json（系数配置真相）", "admin/（Arco 后台操作面）"]
+review_after: 2026-09-22
+---
 # 集结杯 · 运维（Operations）
 
 > 范围：账号体系 / 选手注册 / 赛季 / 系数 / 天梯 / 常见操作 / FAQ。

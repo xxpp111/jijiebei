@@ -2900,3 +2900,93 @@ real-browser 探针确认 select/battle ScreenShell(bg×3 层)+TopBar(meta-row)+
 **验证结果**：`git diff --check` PASS；`systemd-analyze verify backend/deploy/jjb-backend.service` exit 0（仅输出两条宿主既有 systemd/BPF 警告）；精确内容断言 4/4；tracked unit 与 `/etc/systemd/system/jjb-backend.service` 字节一致；diff scope 仅 `backend/deploy/jjb-backend.service`、`docs/deployment.md`、`projectplan.md`，另保留既有 untracked runtime 副本 `nginx-conf/default.conf`。截至确定性验证时尚未 commit/push；现已取得 owner 的正常推送授权。
 
 **复核说明**：一次聚合检查曾把 `172.17.0.1:8090` 的出现次数误设为 `>=5` 而误报；未据此改产品文件，改为逐条精确语义断言后 7/7 PASS。
+
+---
+
+## 2026-08-22 文档治理 v1（branch docs/doc-governance-v1-20260822 · hub.jijiebei.main 派发 · 单 mutation spoke）
+
+> 契约 `jjb-doc-governance`（dispatch 文档 `/Users/bytedance/.claude/dispatch/dispatch-jjb-doc-governance-20260822.md`）。
+> 目标：活文档有稳定英文 id + 中文 title，docs 导航区分 knowledge/flow/archive/generated/compat，修复已确认断链与计数漂移，唯一受控 rename，规则变可复跑机器检查。迁服前把「当前事实在哪、什么只是历史、如何机器验证」固化。
+> 基线 `7c5806c`；harness session `harness-2026-08-22T06-18-58`，runtime `.harness-pro-doc-governance-v1`，gate-policy strict，4 phase。
+
+### 计划（4 phase）
+
+- [x] Phase 1 治理地图：docs/README.md 收敛为唯一导航/登记面（五分栏）；活文档补统一 front matter（title/id/status/owner/updated/applies_to/replaces/evidence/review_after）；新增 docs/archive/README.md（只做历史分类，不动 archive 正文）。
+- [x] Phase 2 受控 rename 与漂移修复：`规则一-官突加n-细则v1.md` 正文迁 `doubles-guantu-plus-n.md`（旧路径留兼容指针）；codec-schema 指向 archive 唯一 research home + 旧路径兼容页；design/README.md 背景图名修正（不 rename 资产）；testing 摘要 26/8/13。
+- [x] Phase 3 机器可观测：扩展 `web/scripts/docs-drift-check.mjs`（front matter/id/title、相对链接、兼容指针、summary count），先留可复现红例再修绿；全量 verify（docs-drift-check / drift-check / git diff --check / npm test / case-fold / protected-path）。
+- [x] Phase 4 closeout：变更清单、rename map、proof 摘要、gate artifact、warning/blocker 汇总，交 Hub/Codex Judge；spoke 不 commit/push。
+
+### 勘察结论（Phase 0，全部本 session 实测）
+
+- tracked md=73、docs/=42（10 顶层 + 32 archive）、design/=12；E2E direct=26、flows=8、vitest=13（含 commanderGroups）。
+- 三处确认漂移：codec-schema.md:6 引 `docs/research-frontend-p2p3.md`（磁盘缺失，正文在 archive）；design/README.md:9 引 `回归杯横幅.png`（实存 `回归杯合作模式比赛.png`）；testing.md 摘要 20/7/12（真值 26/8/13，§3 逐名清单反而双向对齐——计数不在校验范围，Phase 3 补）。
+- rename 安全性：`规则一-官突加n-细则v1.md` 消费者仅 4 处 markdown（projectplan 历史段 + docs/README + rules-config + archive 存根，后两者本轮更新、前两者不动），0 代码消费者；docs/ 无 case-fold/NFC 碰撞（python unicodedata 实测）；`doubles-guantu-plus-n.md` 目标名空闲。
+- harness recipe 偏离记录：契约建议 pareto-k2，被 init quorum 预检拒（strict + 4 phase 需 ≥3 reviewer）；改 r6-recall-70（4 external reviewer = 契约探针验证的 gpt-5.5-2026-04-24 + gemini-3.1-fl-priority，加 gemini-3.1-p + qwen3.6-plus，后两者经本 session live `/v1/models` probe + eval-models.json 双验存在），gate-policy 保持 strict。
+
+### 执行记录
+
+**Phase 3（2026-08-22 · 全部本 session 真跑）**
+- `web/scripts/docs-drift-check.mjs` 四项扩七项：新增 E（15 个 governed 文档 front matter：8 必填字段/id 唯一小写 kebab/title 含中文/status 枚举）、F（docs/README.md 相对链接闭合 + superseded 兼容页 ≤30 行纯指针且目标存在）、G（testing.md 摘要三计数 ↔ 磁盘枚举：e2e 26/flows 8/vitest 文件 13）；原 A-D 四项保留零改动。
+- 可复现红例 7/7 PASS（`.harness_local/doc-governance/red-examples.mjs`：E1 id 非小写/E2 id 重复/E3 缺字段/F1 导航链接断/F2 兼容指针断/G1 e2e 25≠26/G2 vitest 12≠13；篡改必红→字节还原→恢复即绿，演示后 git status 与演示前一致）。
+- 验证命令与退出码：`node web/scripts/docs-drift-check.mjs` exit 0（7/7）；`node web/scripts/drift-check.mjs` exit 0；`git diff --check` clean；`npm --prefix web test` exit 0（vitest 13 文件/153 用例 + drift×2 + go test）；case-fold/NFC 无碰撞（python unicodedata，docs 18 entries）；protected-path（assets/design/v4-r2/skills/legacy/CSV/生成器/untracked）diff=0。
+- commit 基线：7c5806c（契约固定基线，全程未 commit——spoke 无 commit 权）。artifact：`.harness-pro-doc-governance-v1/{verify-report-3,review/*,gate-matrix-3}.json`、红例脚本 `.harness_local/doc-governance/red-examples.mjs`。
+
+
+**Phase 4 closeout（2026-08-22 · 全量交付汇总，spoke 不 commit/push）**
+
+- **变更清单**（14 tracked 文件 +325/-29 + 3 新增 untracked-but-to-commit 文件）：front matter ×11（docs 9 篇 + design/diagrams README）；docs/README.md 重构五分栏；docs/archive/README.md 新增（9 类 32 文件索引）；rename R085 规则一→doubles-guantu-plus-n（旧路径留兼容指针）；docs/research-frontend-p2p3.md 兼容指针新增；codec-schema 指向 archive 唯一 home；design/README 背景图名修正；testing.md 计数 26/8/13（7 处）；docs-drift-check 四扩七；projectplan 本轮计划/进度/总结。
+- **rename map**：`docs/规则一-官突加n-细则v1.md` → `docs/doubles-guantu-plus-n.md`（git R085 历史保留；旧路径 = 兼容指针 id jijiebei/doubles-guantu-plus-n-compat）；`docs/research-frontend-p2p3.md`（裸路径）→ 兼容指针 → `docs/archive/research-frontend-p2p3.md`（唯一 home，archive 只读）。
+- **proof 摘要**：docs-drift-check 7/7（E 15 文档/F 12 链接/G 26-8-13）；drift-check 3/3；git diff --check clean；npm --prefix web test exit 0（vitest 13 文件 153 用例 + drift×2 + go test）；红例 7/7 可复现（篡改必红→字节还原→恢复即绿）；case-fold/NFC 无碰撞；protected-path diff=0。
+- **Harness**：session harness-2026-08-22T06-18-58 / runtime `.harness-pro-doc-governance-v1` / strict / r6-recall-70（4 external reviewer：gpt-5.5-2026-04-24 + gemini-3.1-fl-priority〔契约 Hub 探针验证〕+ gemini-3.1-p + qwen3.6-plus〔本 session live probe 双验〕）。Phase 1-4 gate 全 PASS（每 phase 5 rubric unanimous、真实 dispatch、HMAC gate-chain 149e0f→f1d936→3b85fb 链续、review_signature_verified=true）。
+- **warning/blocker**：无未决 blocker。记录性 warning：①recipe 偏离（pareto-k2 因 init quorum 预检需 ≥3 被拒 → r6-recall-70，含契约验证的两个 reviewer，gate-policy 仍 strict）；②首轮 review 曾出现 3 次 reviewer 误判（untracked 既有文件 ×2、phase 增量 vs 累积 diff 口径 ×1），均以 rubric 判据修正+证据补强后重跑全 PASS（reviewer 原始 verdict 未删改，存 runtime review/）。
+- **未验证项**：vitest 153 用例数未进机器门（口径已写明 = npx vitest run 实跑）；diagrams/projectplan 历史缺证路径仅分类声明未补造（契约规定不补）。
+- **建议 Hub claim**：独立复跑 `node web/scripts/docs-drift-check.mjs` 与 `node .harness_local/doc-governance/red-examples.mjs`；Codex Judge 审 rename 断链/Unicode/历史被伪 current/protected path；commit 建议消息 `docs(governance): 文档治理 v1 — front matter/唯一导航/受控 rename/机器门四扩七`。
+
+## R2 amendment — Codex 对抗审查 4 假阴性修复(2026-08-22 · spoke session,契约 jjb-doc-governance-r2)
+
+**契约**:修复 Codex 对文档治理 v1 对抗审查确认的 4 个 docs 机器门假阴性;独立 amendment round 重新验证;只改 2 tracked 文件 + ignored proof/runtime。基线 7c5806c 不变,不 commit/push。
+
+**四个假阴性与修复(web/scripts/docs-drift-check.mjs)**:
+1. 删 current 文档 `review_after` 后仍 exit 0 → §E:FRONT_MATTER_REQUIRED 加 `review_after`;required 字段缺 key 与空值分开打红;current/draft(非 compat)必须匹配 `DATE_RE=/^\d{4}-\d{2}-\d{2}$/`(superseded 兼容页为纯指针无复审周期,豁免必填——豁免条件是 status==='superseded',非 allowlist)。
+2. `id:` 置空后仍 exit 0 → §E:id/title/status 无条件校验(`fm.x ?? ''`,消灭 `if(fm.x)` 短路跳过)。
+3. superseded 兼容页追加 `## 第二份事实正文` 后仍 exit 0 → §F:结构白名单——正文恰一个 H1,其余仅空行/`>` blockquote;行级 else 分支使 H2/段落/列表/表格/代码围栏全打红;保留 ≤30 行与链接目标断言。
+4. 13 个 current/draft id 漏登 3 个仍 exit 0 → §F:activeIds 收集(current|draft)与 docs/README id 表逐一对账;README 补 3 条登记(jijiebei/design-assets→../design/README.md、jijiebei/diagrams-index→../diagrams/README.md、jijiebei/archive-index→archive/README.md,五分栏结构不变)。
+
+**红例(.harness_local/doc-governance/red-examples.mjs,7→14)**:R2-1 删 review_after / R2-2 id 置空 / R2-3 兼容页 H2 / R2-4 README 漏登 id(对应 Codex 4 假阴性)+ R2-5 非法日期 2026_09_22 / R2-6 兼容页普通段落 / R2-7 兼容页代码围栏。逐例:篡改 exit 1+命中 E/F DRIFT 行 → 恢复原字节 → exit 0,14/14 全 PASS(verify check 实跑 961ms,stdout_tail 存 verify-report-1.json)。
+
+**全量门禁**:docs-drift-check 7/7(E:15 文档 13 id 非空合规/F:14 链接闭合+13 id 全登记+兼容页纯指针/G:26-8-13);drift-check 3/3;`git diff --check` clean;`(cd web && npm test)` exit 0(vitest 13 文件 153 用例+drift×2+go test);go test ok。
+
+**写集对账(机械)**:v1 closeout 锚点 `.harness-pro-doc-governance-v1/evidence-bundle-pre-review-4.json#/git_status_hash` = `5a6f731f5912eed515874d36b22992f0b192c95ed026059b2e343f9543dce2db`,与 R2 pre-review bundle hash 完全相等 → R2 相对 v1 完成态零新增 tracked/untracked 条目(R2 全部写入落在既有 M 文件 docs/README.md、docs-drift-check.mjs 内容 + ignored .harness_local/、.harness-pro-doc-governance-r2/;本 projectplan 追加为契约允许的第 3 tracked 写点)。
+
+**Harness amendment round**:session harness-2026-08-22T07-34-18 / runtime `.harness-pro-doc-governance-r2` / strict / docs-amendment / 2 phases。reviewer 面 5 external(gpt-5.5-2026-04-24 / gemini-3.1-fl-priority / mh-ali-deepseek-v4-pro / mh-glm-5.1 / gpt-5.4-2026-03-05,与执行位 glm-5.3 disjoint)。踩坑记录:①qwen3.6-max-preview 与 minimax-m3 在 Dubhe /v1/chat/completions upstream 404(models 列表暴露≠可用,live probe 必须打到 completions),换 gemini-3.1-fl-priority 与 gpt-5.4-2026-03-05;②host reviewer 真spawn需 env `HARNESS_HOST_REVIEWER_SMOKE=1`(仅 config allow_real_spawn 不够);③direct-dubhe reviewer 无文件系统访问且 inlined diff 截断 ~600 字符,CANNOT_VERIFY 类 WARNING 只能用 host spawn + work-summary 内联逐字证据消除;④review sandbox 不含 gitignored 文件(.harness_local、.harness-pro-*/),红例与对账证据须进 tracked 文件或 prompt 内联。
+
+---
+
+## 文档治理 v1 · 最终 Hub 收口（2026-08-22 · 契约 jjb-doc-governance-r8）
+
+> Hub 派发 spoke 追加的最终收口记录（基线 `7c5806c` 不变，本节只追加、不改前文）。此前「Phase 4 closeout」「R2 amendment」两节均为**当时快照**，最终结论以本节为准。
+
+### 后续定向加固（R3–R7）
+
+- **R3**：superseded 兼容页收紧为**精确三行指针**（恰一个 H1、一个空行、单条含有效相对链接的 blockquote）。
+- **R4**：红例脚本改**纯内存注入**（零磁盘写入证明）。
+- **R5**：checker 拒绝 quoted H2 / 列表 / 嵌套引用 / 表格伪装穿透「精确 canonical」门（`codex-judge-final.json` blocker 假阴性修复）。
+- **R6**：拒绝绝对路径与 resolve 后越出 docs/repo containment 的链接（`../` 逃逸同拒）。
+- **R7**：testing.md 三条计数命令改为 `:(glob)` 精确 pathspec，真实返回 26/8/13（旧普通 pathspec 递归匹配 36，不可复现 26）。
+- 红例最终 **24/24**（R6 扩充为纯内存版 24 例）。
+
+### 最终 Hub proof（Hub 实跑）
+
+docs checker 7/7；`npm --prefix web test` 13 文件/153 用例 + config/docs drift + Go test 全绿；原仓 pre-push 四检全绿；governed Markdown 本地链接 24 个闭合；casefold/NFC 1141 路径零碰撞；canonical 正文与 baseline 去 front matter 后字节一致且唯一；兼容页 2 个精确三行；组合工作树 rename R085；protected-path diff=0；gitleaks 增量与实际 env 敏感值字面量匹配均为 0。
+
+### 最终异构 Judge（`.harness_local/doc-governance/codex-judge-r7.json`）
+
+R7 后 verdict **ALLOW_WITH_WARNING**：单行修复正确、未发现业务/机器门缺口；唯一 major warning 为 R2 phase2 未 record-gate/stop/audit、R3 phase1 仍 in_progress/null gate——**严禁宣称全 Harness PASS**。R3 的「因 30m stop_when 停止」缺终态 receipt，只能 CANNOT_VERIFY。
+
+### 提交边界（待 Hub 执行）
+
+仅提交计划内 **17 路径**（14 tracked 修改 + 3 新增 untracked-but-to-commit）；排除 `backend/pocketbase-linux-amd64`、`docs/superpowers/**`、`test-x/**` 与 `.harness*`；推治理分支 `docs/doc-governance-v1-20260822`，不直接 merge `jjb-platform`。
+
+### 结论勘正
+
+早期 Phase 4 closeout 的「无未决 blocker / 红例 7/7」是当时快照（后续 judge 曾 BLOCKED 并驱动 R3–R7 加固）；最终结论以上述 **红例 24/24 + ALLOW_WITH_WARNING** 为准。

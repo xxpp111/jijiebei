@@ -1,3 +1,14 @@
+---
+title: 集结杯 · 双打规则一（官突 + n）细则
+id: jijiebei/doubles-guantu-plus-n
+status: draft
+owner: jjb-hub/yb
+updated: 2026-08-22
+applies_to: ["实现或调整双打官突+n 抽签规则前读", "查可调旋钮与待拍板项"]
+replaces: ["docs/规则一-官突加n-细则v1.md（2026-08-22 受控 rename 迁入，旧路径留兼容指针）"]
+evidence: ["docs/官突ABC配置_官突池.csv + docs/因子点数配置.csv（数据基线）", "docs/rules-config.md（配置导读）", "mode-rules-truth-table.md 0) 节（已落地引擎现状）"]
+review_after: 2026-09-22
+---
 # 集结杯 · 双打规则一（官突 + n）细则 v1（草稿）
 
 > 数据基线：官方 52 标准因子点数（灰机 live 核对）+ 官突池 153 条已按点数和分档。配置表见同目录 `官突ABC配置_官突池.csv` / `因子点数配置.csv`，全部可编辑、框架运行时读取。

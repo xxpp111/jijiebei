@@ -1,3 +1,14 @@
+---
+title: 集结杯 · 部署
+id: jijiebei/deployment
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["部署或更新 devbox 站点", "排查 8080 不可达 / 迁移核对 / 回滚", "改 nginx conf 或 systemd unit"]
+replaces: ["docs/archive/runbook-*.md（历史 runbook 已归档，本文件是唯一部署真相源）"]
+evidence: ["backend/deploy/（nginx/systemd/litestream 配置真相）", "AGENTS.md 第 10 条（只更新 web 前必跑 check-migrations）"]
+review_after: 2026-09-22
+---
 # 集结杯 · 部署（Deployment）
 
 > 范围：devbox（10.37.220.128）三层同源部署 + 交叉编译 + nginx conf + Litestream 容灾 + 回滚。

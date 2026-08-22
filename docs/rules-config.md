@@ -1,3 +1,14 @@
+---
+title: 集结杯 · 赛事设计与配置导读
+id: jijiebei/rules-config
+status: current
+owner: jjb-hub
+updated: 2026-08-22
+applies_to: ["调整因子点数或官突分档", "重新生成官突 CSV", "查双打规则一细则与配置产物关系"]
+replaces: []
+evidence: ["docs/因子点数配置.csv（人工编辑源）", "docs/build_guantu_config.py（生成器）", "mode-rules-truth-table.md 0) 节（模式规则最高准）"]
+review_after: 2026-09-22
+---
 # 集结杯 · 赛事设计与配置
 
 > 集结杯（星际2 合作任务比赛）的规则与抽签配置设计区。平台 = CM（承载官方合作内容），赛事内容 = 官方指挥官 + 官方因子，难度基线 = 残酷。
@@ -6,7 +17,7 @@
 ## 文件
 | 文件 | 类型 | 说明 |
 |---|---|---|
-| `规则一-官突加n-细则v1.md` | 规则 | 双打规则一（官突 + n）正式细则草稿 |
+| [doubles-guantu-plus-n.md](doubles-guantu-plus-n.md) | 规则 | 双打规则一（官突 + n）正式细则草稿（2026-08-22 由 `规则一-官突加n-细则v1.md` 受控 rename 迁入，旧路径留兼容指针） |
 | `因子点数配置.csv` | **源配置**（人工/Agent 编辑） | 52 官方因子 + 点数 + 单刷/双打 ban 标记 |
 | `官突ABC配置_官突池.csv` | **生成** | 官方 153 突变按点数和分 A/B/C（id<200） |
 | `官突ABC配置_挑战池.csv` | **生成** | 玩家自制突变（id≥200，多含自制因子，暂搁置） |

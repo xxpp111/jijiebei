@@ -1,3 +1,14 @@
+---
+title: 集结杯积分系数表方案（待定稿）
+id: jijiebei/scoring-proposal
+status: draft
+owner: yb/土豆
+updated: 2026-08-22
+applies_to: ["定稿积分系数前读", "改 backend/config/scoring.json 前对齐口径"]
+replaces: []
+evidence: ["backend/config/scoring.json（当前占位实现）", "backend/scoring.go（delta 公式实现）", "web/src/logic/__tests__/scoring-contract.test.ts"]
+review_after: 2026-09-22
+---
 # 集结杯积分系数表方案（待 yb / 土豆 定稿）
 
 > 现状：`backend/config/scoring.json` 是占位，公式 `delta = wins × coefficient[game_mode]`，纯累加（非 Elo）。
