@@ -4,3 +4,7 @@
 assets/** linguist-vendored
 creator.d.ts linguist-generated
 web/src/logic/legacy/** linguist-vendored
+
+# 不可变 verbatim wiki revision 保留源文件行尾空格字节；仅关闭该两文件的 blank-at-eol 门。
+docs/wiki/jijiebei/potato-ai-bias/r20260823-094100.plan.html whitespace=-blank-at-eol
+docs/wiki/jijiebei/potato-ai-bias/r20260823-094101.decision.html whitespace=-blank-at-eol

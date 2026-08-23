@@ -123,11 +123,11 @@ npm run dev                                     # http://localhost:7790/
 vite dev/preview 都会把 `/api` 反代到 `127.0.0.1:8090`（见 `web/vite.config.ts`），**前端 fetch `/api/...` = 直连 PocketBase**，免 CORS。
 
 ### 3.4 测
-四层测试体系（vitest 单测 / 纯逻辑 e2e / 浏览器与联调 / AI-E2E flows），**17 个 e2e 脚本 + 7 条 flows 的完整清单与前置依赖见 [docs/testing.md](docs/testing.md) §3 覆盖矩阵**（唯一真相源，此处不复读）。最常用的四条：
+四层测试体系（vitest 单测 / 纯逻辑 e2e / 浏览器与联调 / AI-E2E flows）；**e2e 脚本与 flows 的完整清单、计数与前置依赖见 [docs/testing.md](docs/testing.md) §3（唯一真相源，此处不复读）**。最常用的四条：
 ```bash
 cd web
 npm run build                                    # TS 编译 + 产出 dist（多数 e2e 的前置）
-npm run test:unit                                # vitest 74 用例（最快）
+npm run test:unit                                # vitest 单测（最快）
 node e2e/run.mjs                                 # 9 模式 + 双打全路径 SSR 断言（核心恒等式门）
 node e2e/codec.mjs                               # 码方案往返等价 + 三道闸
 ```
@@ -144,19 +144,6 @@ cd backend
 - 交叉编译：本地 `GOOS=linux GOARCH=amd64 go build` → scp 推 devbox。
 - 容器版本：`backend/deploy/nginx-docker-triple.conf`（容器内 listen 80、走 docker0 网关 172.17.0.1:8090 反代 backend）。
 - 容灾：Litestream sidecar 实时增量复制 SQLite WAL → 对象存储。
-
----
-
-## 4. 现状（截至 2026-07-03）
-
-- ✅ 前端 11 屏全部交付；13 种比赛形态（单打 9 + 双打 4 变体，含 std15/CM 双打新引擎）已上线 devbox。
-- ✅ 选手自助注册/登录 + 隐私协议门 + 记住我 + 赛事临时 ban + 主界面 QQ 群二维码 已上线。
-- ✅ 后端 7 集合 + 7 个 Go embed 迁移 + hook 算分 + 天梯分榜（single/double）全链路验证。
-- ✅ 四层测试体系：vitest 74 用例 + 17 个 e2e 脚本 + 7 条 AI-E2E flows + 后端 verify-all.sh。
-- ✅ devbox 三层同源部署 :8080 + cloudflared 公网隧道在跑；部署前迁移核对工具（`backend/scripts/check-migrations.mjs`）已入流程。
-- ⚠️ 系数表缺 `std15`/`cm` 两键（暂按 default 1.0 兜底计分），须 yb/土豆拍板定稿。
-- ⚠️ 双打对局个人归属仍是「双打战队」占位（个人化行动方案已定稿待施工，见任务 #84）。
-- ⚠️ cloudflared quick tunnel 治标不治本（重启换 URL），长期正解 CF Pages（`web/public/_redirects` 已预置）。
 
 ---
 

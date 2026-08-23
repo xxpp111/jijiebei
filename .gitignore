@@ -126,3 +126,10 @@ design/v4-input-r2/
 # 设计素材站：素材本体不入仓（含 112MB 官方 logo 包），仅 README 索引入库（目录级排除会连 re-include 失效，用 /* + 白名单）
 design/inputs/*
 !design/inputs/README.md
+
+# wiki-governance 运行态（Alioth v2 registrar：账本/LEDGER 本体入库，运行态与生成物不入库）
+docs/.context-manifest.json
+docs/wiki/.generated/
+docs/wiki/.registrar.lock
+docs/wiki/.registrar.journal.json
+docs/wiki/*.jsonl.new

@@ -1,0 +1,82 @@
+{
+  "receipt_id": "gc-settlement-gc-alioth-v2-20260823-065156-v3-attempt2",
+  "kind": "settlement",
+  "manifest_id": "gc-alioth-v2-20260823-065156-v3",
+  "manifest_sha256": "40e6cbd4d366cf44ae3bb796a7610d4c313b79bf957ea755848b84c2961f9b41",
+  "settles_attempt": "attempt2",
+  "raw_receipt_preserved": "docs/wiki/_receipts/gc-gc-alioth-v2-20260823-065156-v3.attempt2.json（一字未改，本文件为独立结算件）",
+  "attempt1_invalid_receipt": "docs/wiki/_receipts/gc-gc-alioth-v2-20260823-065156-v3.attempt1-invalid.json（V-6 check-red-then-apply + V-7 覆盖事故的历史件，保留）",
+  "actor": "jjb-alioth-v2-subhub",
+  "authority": "contract-only",
+  "settlement_author": "spoke-b3（jjb-alioth-v2-spoke-b3，gen3 B3-6）",
+  "settled_at": "2026-08-23T11:15:00Z",
+
+  "approval": {
+    "source": "/Users/bytedance/.claude/dispatch/inbox/jjb-alioth-v2/replies/reply-5.md",
+    "full_text_sha256": "6e64a58963f1a32523156515e4c888f1f7cf33ce2bec9fcd207c4aa6f229598b",
+    "sha256_verified_by": "spoke-b3 于 2026-08-23T11:10Z 以 shasum -a 256 复算一致",
+    "approval_ts": "2026-08-23T10:14:11.800Z",
+    "approval_ts_source": "reply-5 文件头注释（hub reply to seq=5 时间戳）",
+    "verbatim_key_authorization": "现仅授权 manifest_id=gc-alioth-v2-20260823-065156-v3、sha256=40e6cbd4d366cf44ae3bb796a7610d4c313b79bf957ea755848b84c2961f9b41 的 attempt2：以 GC_HUB_APPROVED=1 执行；apply 前原位复验，任何漂移 fail closed。",
+    "verbatim_scope_guard": "写独立 attempt2 receipt，禁止覆盖 attempt1-invalid；完成后验证3文件消失、6容器不存在/关闭、账本CHECK_OK、引用门全绿，并登记GC report。不得处理manifest外对象。",
+    "verbatim_preamble_summary": "GC apply approval #5：Hub 独立复验 raw RC 全绿——wiki-governance CHECK_OK 85/85、bootstrap/coverage 80/80；registrar tests 13/13；docs-drift 8/8；npm test 全链 exit0；git diff --check clean；gc-obj1~3 SHA/bytes 与 manifest v3 一致；六 docgov 容器 0 live pane 且 attach_processes=0。"
+  },
+
+  "apply": {
+    "apply_ts": "2026-08-23T10:15:07.775Z",
+    "apply_ts_source": "attempt2 raw receipt applied_at 字段",
+    "approval_before_apply_proof": {
+      "method": "RFC3339 时间戳机械比较（同 UTC）",
+      "approval_ts": "2026-08-23T10:14:11.800Z",
+      "apply_ts": "2026-08-23T10:15:07.775Z",
+      "delta_seconds": 55.975,
+      "conclusion": "approval 早于 apply 55.975 秒，approval-before-apply 成立"
+    },
+    "immediate_counts": {
+      "deleted": 3,
+      "closed": 3,
+      "failed": 3,
+      "failed_objects": ["gc-obj-4", "gc-obj-5", "gc-obj-8"],
+      "race_explanation": "3 容器报 STILL_LISTED 系 --force 后立即 list-sessions 的竞态误报（attempt2 raw receipt post_verification.containers_note）；非真实失败"
+    }
+  },
+
+  "final_object_state": [
+    { "id": "gc-obj-1", "path": "test-x/x.md", "action": "safe-delete", "final": "deleted", "evidence": "attempt2 post_verification.files_gone[0]" },
+    { "id": "gc-obj-2", "path": "docs/superpowers/plans/2026-07-17-potato-ai-bias.md", "action": "distill-then-remove", "final": "deleted", "evidence": "attempt2 post_verification.files_gone[1]；原稿 verbatim 归档 wiki revision jijiebei/potato-ai-bias@r20260823-094100" },
+    { "id": "gc-obj-3", "path": "docs/superpowers/specs/2026-07-17-potato-ai-bias-design.md", "action": "distill-then-remove", "final": "deleted", "evidence": "attempt2 post_verification.files_gone[2]；原稿 verbatim 归档 wiki revision jijiebei/potato-ai-bias@r20260823-094101" },
+    { "id": "gc-obj-4", "path": "zellij:jijiebei-docgov", "action": "safe-close", "final": "closed", "evidence": "attempt2 post_verification.containers_all_gone=true（apply 即时 STILL_LISTED 为竞态误报）" },
+    { "id": "gc-obj-5", "path": "zellij:jijiebei-docgov-r6", "action": "safe-close", "final": "closed", "evidence": "attempt2 post_verification.containers_all_gone=true（竞态误报）" },
+    { "id": "gc-obj-6", "path": "zellij:jijiebei-docgov-r6b", "action": "safe-close", "final": "closed", "evidence": "attempt2 raw receipt objects[5] applied=true/after=closed" },
+    { "id": "gc-obj-7", "path": "zellij:jijiebei-docgov-r7", "action": "safe-close", "final": "closed", "evidence": "attempt2 raw receipt objects[6] applied=true/after=closed" },
+    { "id": "gc-obj-8", "path": "zellij:jijiebei-docgov-r8", "action": "safe-close", "final": "closed", "evidence": "attempt2 post_verification.containers_all_gone=true（竞态误报）" },
+    { "id": "gc-obj-9", "path": "zellij:jijiebei-docgov-r8b", "action": "safe-close", "final": "closed", "evidence": "attempt2 raw receipt objects[8] applied=true/after=closed" }
+  ],
+  "final_counts": { "deleted": 3, "closed": 6, "total": 9, "note": "6/6 容器后验全消失（zellij list-sessions | grep docgov 零命中）；apply 即时 3/3/3 的 3 个 failed 全部为竞态误报" },
+
+  "out_of_manifest_rmdir": {
+    "happened": true,
+    "dirs": ["test-x", "docs/superpowers/plans", "docs/superpowers/specs", "docs/superpowers"],
+    "mechanism": "apply-gc.mjs:92-95 在 manifest 9 对象之外额外 rmdir 了 4 个空父目录",
+    "contradiction_in_attempt2": "attempt2 raw receipt 同时记录 empty_parent_dirs_removed（4 目录）与 out_of_manifest_touched=false，自相矛盾（Codex blocker 指认）；以 happened=true 为准",
+    "hub_rollback": {
+      "status": "rolled_back",
+      "action": "Hub 于 2026-08-23T10:48Z 前后重建 3 个空父目录（test-x/、docs/superpowers/plans/、docs/superpowers/specs/；docs/superpowers 作为 plans/specs 的父目录随附恢复）",
+      "spoke_b3_verify": "2026-08-23T11:12Z mkdir -p 幂等 + ls -laR 复核：3 目录均存在且为空（total 0），git status 对两路径无感知（untracked 空目录语义）",
+      "instruction": "保持空目录，不再删除，不放任何文件"
+    }
+  },
+
+  "normal_lane_close": {
+    "lane": "jijiebei-doubao-pick",
+    "closed_by": "Hub",
+    "closed_at": "2026-08-23T10:3xZ（factor-pick artifact 落账后）",
+    "precondition": "wiki-governance query jijiebei/factor-pick 返回 flow artifact（jijiebei/factor-pick@r20260823-094500），满足计划「artifact 落账后 normal close」前置",
+    "note": "计划内 normal close，不属于 GC manifest deleted/closed 计数（GC v3 终态计数仍为 deleted=3 + closed=6）"
+  },
+
+  "codex_blockers_closed": [
+    "blocker「GC范围与receipt一致性」：本结算件将 apply 即时计数与最终对象级终态分栏，逐对象给出终态与证据指针",
+    "blocker「GC授权证据」：本结算件含 reply-5 逐字关键授权句、全文 SHA256（spoke 复算一致）、approval/apply 时间戳与机械比较结论"
+  ]
+}

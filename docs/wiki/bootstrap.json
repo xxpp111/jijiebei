@@ -1,0 +1,673 @@
+{
+  "generated_at": "2026-08-23T16:21:01.000Z",
+  "coverage": [
+    "*.md",
+    "docs/**/*.md",
+    "design/**/*.md",
+    ".claude/skills/**/*.md",
+    "assets/**/*.md",
+    "backend/**/*.md",
+    "web/**/*.md",
+    "diagrams/**/*.md",
+    ".design-sync/*.md"
+  ],
+  "items": [
+    {
+      "path": ".claude/skills/harness-pro-repo-adapter/SKILL.md",
+      "id": "jijiebei/claude-skills-harness-pro-repo-adapter-skill@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "仓内 adapter SOP（harness-pro 全局 skill 引用）"
+    },
+    {
+      "path": ".claude/skills/jjb-deploy/SKILL.md",
+      "id": "jijiebei/claude-skills-jjb-deploy-skill@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "部署 SOP"
+    },
+    {
+      "path": ".claude/skills/jjb-dev-loop/SKILL.md",
+      "id": "jijiebei/claude-skills-jjb-dev-loop-skill@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "迭代主循环 SOP"
+    },
+    {
+      "path": ".claude/skills/jjb-e2e-flows/SKILL.md",
+      "id": "jijiebei/claude-skills-jjb-e2e-flows-skill@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "AI-E2E flow SOP"
+    },
+    {
+      "path": ".claude/skills/jjb-knowledge-base/SKILL.md",
+      "id": "jijiebei/claude-skills-jjb-knowledge-base-skill@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "飞书知识库维护 SOP"
+    },
+    {
+      "path": ".claude/skills/jjb-run-broadcast/SKILL.md",
+      "id": "jijiebei/claude-skills-jjb-run-broadcast-skill@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "运行/直播采集 SOP"
+    },
+    {
+      "path": ".design-sync/NOTES.md",
+      "id": "jijiebei/design-sync-notes@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "design-sync 路由事实记录（含当前有效的形态判断/pin 路由）"
+    },
+    {
+      "path": "AGENTS.md",
+      "id": "jijiebei/agents@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "全仓红线唯一集中声明（文件自述+docs/README 引用）"
+    },
+    {
+      "path": "README.md",
+      "id": "jijiebei/readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "项目入口（bootstrap 显式指定；Phase 3 收薄）"
+    },
+    {
+      "path": "assets/README.md",
+      "id": "jijiebei/assets-readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "XP 化石层路标（AGENTS.md §1 引用）"
+    },
+    {
+      "path": "backend/README.md",
+      "id": "jijiebei/backend-readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "backend 子系统入口 README"
+    },
+    {
+      "path": "design/README.md",
+      "id": "jijiebei/design-assets@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/design-assets）"
+    },
+    {
+      "path": "design/inputs/README.md",
+      "id": "jijiebei/design-inputs-readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "设计素材站索引（gitignore 白名单显式入库）"
+    },
+    {
+      "path": "design/random-enemy/SPEC.md",
+      "id": "jijiebei/design-random-enemy-spec@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "design/README.md 显式声明「已消化进当前实现，保留 SPEC/历史稿作为追溯材料」"
+    },
+    {
+      "path": "design/v2/README.md",
+      "id": "jijiebei/design-v2-readme@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "design/README.md 版本存续状态显式声明「v1-v4 历史存档，已被 v4-r2 取代」"
+    },
+    {
+      "path": "design/v3/README.md",
+      "id": "jijiebei/design-v3-readme@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "design/README.md 版本存续状态显式声明「v1-v4 历史存档，已被 v4-r2 取代」"
+    },
+    {
+      "path": "design/v3/chats/chat1.md",
+      "id": "jijiebei/design-v3-chats-chat1@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "design/README.md 版本存续状态显式声明「v1-v4 历史存档，已被 v4-r2 取代」"
+    },
+    {
+      "path": "design/v4-r2/chats/chat1.md",
+      "id": "jijiebei/design-v4-r2-chats-chat1@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "文件自证为带日期（2026-06-10）一次性设计会话记录；design/README 声明 v4-r2 活跃基座指样式层（css），chats 非活跃面"
+    },
+    {
+      "path": "design/v4-r2/chats/chat2.md",
+      "id": "jijiebei/design-v4-r2-chats-chat2@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "文件自证为带日期（2026-06-10）一次性设计会话记录；design/README 声明 v4-r2 活跃基座指样式层（css），chats 非活跃面"
+    },
+    {
+      "path": "design/v4-r2/chats/chat3.md",
+      "id": "jijiebei/design-v4-r2-chats-chat3@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "文件自证为带日期（2026-06-10）一次性设计会话记录；design/README 声明 v4-r2 活跃基座指样式层（css），chats 非活跃面"
+    },
+    {
+      "path": "design/v4/HANDOFF-README.md",
+      "id": "jijiebei/design-v4-handoff-readme@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "design/README.md 版本存续状态显式声明「v1-v4 历史存档，已被 v4-r2 取代」"
+    },
+    {
+      "path": "design/v4/NOTES.md",
+      "id": "jijiebei/design-v4-notes@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "design/README.md 版本存续状态显式声明「v1-v4 历史存档，已被 v4-r2 取代」"
+    },
+    {
+      "path": "design/v4/chats/chat1.md",
+      "id": "jijiebei/design-v4-chats-chat1@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "design/README.md 版本存续状态显式声明「v1-v4 历史存档，已被 v4-r2 取代」"
+    },
+    {
+      "path": "diagrams/README.md",
+      "id": "jijiebei/diagrams-index@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/diagrams-index）"
+    },
+    {
+      "path": "docs/README.md",
+      "id": "jijiebei/docs-index@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/docs-index）"
+    },
+    {
+      "path": "docs/architecture.md",
+      "id": "jijiebei/architecture@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/architecture）"
+    },
+    {
+      "path": "docs/archive/README.md",
+      "id": "jijiebei/archive-index@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/archive-index）"
+    },
+    {
+      "path": "docs/archive/backend-admin-ia.md",
+      "id": "jijiebei/docs-archive-backend-admin-ia@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/design-briefs-roadmap.md",
+      "id": "jijiebei/docs-archive-design-briefs-roadmap@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/dispatch-jjb-admin-2026-06-22.md",
+      "id": "jijiebei/docs-archive-dispatch-jjb-admin-2026-06-22@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/dispatch-jjb-cd-codescheme-2026-06-22.md",
+      "id": "jijiebei/docs-archive-dispatch-jjb-cd-codescheme-2026-06-22@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/dispatch-jjb-dsbundle.md",
+      "id": "jijiebei/docs-archive-dispatch-jjb-dsbundle@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/dispatch-jjb-p1b-bp-rules.md",
+      "id": "jijiebei/docs-archive-dispatch-jjb-p1b-bp-rules@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/dispatch-jjb-p5-backend-2026-06-22.md",
+      "id": "jijiebei/docs-archive-dispatch-jjb-p5-backend-2026-06-22@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/dispatch-kb-rewrite.md",
+      "id": "jijiebei/docs-archive-dispatch-kb-rewrite@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/dispatch-r7-doubles-mechanism.md",
+      "id": "jijiebei/docs-archive-dispatch-r7-doubles-mechanism@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/exec-plan-p2p5.md",
+      "id": "jijiebei/docs-archive-exec-plan-p2p5@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/impl-notes-84-doubles-players.md",
+      "id": "jijiebei/docs-archive-impl-notes-84-doubles-players@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/jjb-test-recovery-audit-2026-06-17.md",
+      "id": "jijiebei/docs-archive-jjb-test-recovery-audit-2026-06-17@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-2026-06/bp-framework-design.md",
+      "id": "jijiebei/docs-archive-kb-2026-06-bp-framework-design@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-2026-06/bp-impl-spec.md",
+      "id": "jijiebei/docs-archive-kb-2026-06-bp-impl-spec@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-2026-06/claude-design-brief-r3.md",
+      "id": "jijiebei/docs-archive-kb-2026-06-claude-design-brief-r3@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-2026-06/collab-and-architecture.md",
+      "id": "jijiebei/docs-archive-kb-2026-06-collab-and-architecture@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-2026-06/kb-review-report.md",
+      "id": "jijiebei/docs-archive-kb-2026-06-kb-review-report@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-2026-06/rules-decisions.md",
+      "id": "jijiebei/docs-archive-kb-2026-06-rules-decisions@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-2026-06/rules-rectify-checklist.md",
+      "id": "jijiebei/docs-archive-kb-2026-06-rules-rectify-checklist@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/kb-audit-findings.md",
+      "id": "jijiebei/docs-archive-kb-audit-findings@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/platform-research-report.md",
+      "id": "jijiebei/docs-archive-platform-research-report@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/repo-cleanup-inventory-2026-06-17.md",
+      "id": "jijiebei/docs-archive-repo-cleanup-inventory-2026-06-17@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/research-backend-p5.md",
+      "id": "jijiebei/docs-archive-research-backend-p5@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/research-frontend-p2p3.md",
+      "id": "jijiebei/docs-archive-research-frontend-p2p3@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/runbook-admin.md",
+      "id": "jijiebei/docs-archive-runbook-admin@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/runbook-backend-p5.md",
+      "id": "jijiebei/docs-archive-runbook-backend-p5@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/runbook-triple.md",
+      "id": "jijiebei/docs-archive-runbook-triple@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/skill-jjb-verify-cocos.md",
+      "id": "jijiebei/docs-archive-skill-jjb-verify-cocos@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/system-maps-2026-06.md",
+      "id": "jijiebei/docs-archive-system-maps-2026-06@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/下一阶段-执行蓝图.md",
+      "id": "jijiebei/archive-next-stage-blueprint@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/集结杯前端-状态与派发.md",
+      "id": "jijiebei/archive-frontend-status-dispatch@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/archive/项目全貌.md",
+      "id": "jijiebei/archive-project-overview@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "archive",
+      "reason": "docs/archive/README.md 全目录显式声明「本目录全部是历史快照」+ 分类表"
+    },
+    {
+      "path": "docs/claude-design-loop.md",
+      "id": "jijiebei/claude-design-loop@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/claude-design-loop）"
+    },
+    {
+      "path": "docs/codec-schema.md",
+      "id": "jijiebei/codec-schema@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/codec-schema）"
+    },
+    {
+      "path": "docs/deployment.md",
+      "id": "jijiebei/deployment@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/deployment）"
+    },
+    {
+      "path": "docs/doubles-guantu-plus-n.md",
+      "id": "jijiebei/doubles-guantu-plus-n@r20260823-094500",
+      "type": "report",
+      "life": "flow",
+      "disposition": "flow",
+      "reason": "front matter status=draft（id=jijiebei/doubles-guantu-plus-n，待拍板）"
+    },
+    {
+      "path": "docs/operations.md",
+      "id": "jijiebei/operations@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/operations）"
+    },
+    {
+      "path": "docs/research-frontend-p2p3.md",
+      "id": "jijiebei/research-frontend-p2p3-compat@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "compat",
+      "reason": "front matter status=superseded（id=jijiebei/research-frontend-p2p3-compat，纯指针页）"
+    },
+    {
+      "path": "docs/rules-config.md",
+      "id": "jijiebei/rules-config@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/rules-config）"
+    },
+    {
+      "path": "docs/scoring-proposal.md",
+      "id": "jijiebei/scoring-proposal@r20260823-094500",
+      "type": "report",
+      "life": "flow",
+      "disposition": "flow",
+      "reason": "front matter status=draft（id=jijiebei/scoring-proposal，待拍板）"
+    },
+    {
+      "path": "docs/testing.md",
+      "id": "jijiebei/testing@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "front matter status=current（v1 治理显式身份 id=jijiebei/testing）"
+    },
+    {
+      "path": "docs/规则一-官突加n-细则v1.md",
+      "id": "jijiebei/doubles-guantu-plus-n-compat@r20260823-094500",
+      "type": "report",
+      "life": "archive",
+      "disposition": "compat",
+      "reason": "front matter status=superseded（id=jijiebei/doubles-guantu-plus-n-compat，纯指针页）"
+    },
+    {
+      "path": "mode-rules-truth-table.md",
+      "id": "jijiebei/mode-rules-truth-table@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "赛制真相表（.gitignore 注明知识资产入库）"
+    },
+    {
+      "path": "projectplan.md",
+      "id": "jijiebei/projectplan@r20260823-094500",
+      "type": "decision",
+      "life": "archive",
+      "disposition": "legacy",
+      "reason": "历史决策流水账（docs/README 声明 append-only 只答「为什么当时这么定」；本轮计划 §3.7 冻结收口）"
+    },
+    {
+      "path": "web/e2e/README.md",
+      "id": "jijiebei/web-e2e-readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "e2e 运行说明（testing.md §3 交叉引用）"
+    },
+    {
+      "path": "web/scripts/README.md",
+      "id": "jijiebei/web-scripts-readme@r20260823-162101",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "web 脚本索引（docs-drift-check 等入口）"
+    },
+    {
+      "path": "web/src/config/README.md",
+      "id": "jijiebei/web-src-config-readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "config 层说明"
+    },
+    {
+      "path": "web/src/data/jjdata/README.md",
+      "id": "jijiebei/web-src-data-jjdata-readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "jjdata 副本侧说明（AGENTS.md §3 双副本）"
+    },
+    {
+      "path": "web/src/logic/legacy/README.md",
+      "id": "jijiebei/web-src-logic-legacy-readme@r20260823-094500",
+      "type": "report",
+      "life": "knowledge",
+      "disposition": "knowledge",
+      "reason": "legacy 复刻层对照表与分叉规则（AGENTS.md §2 引用）"
+    },
+    {
+      "path": "docs/potato-ai-bias.md",
+      "disposition": "knowledge",
+      "reason": "Spoke B 蒸馏定稿的 canonical 知识页（superpowers 两篇原稿蒸馏，底稿代码锚点已核验）",
+      "id": "jijiebei/potato-ai-bias@r20260823-141436",
+      "type": "report",
+      "life": "knowledge"
+    },
+    {
+      "path": "docs/wiki/README.md",
+      "disposition": "knowledge",
+      "reason": "JJB Alioth 协议与 registrar 使用说明（A2 交付，log 投影 §8 表所在）",
+      "id": "jijiebei/docs-wiki-readme@r20260823-162100",
+      "type": "report",
+      "life": "knowledge"
+    },
+    {
+      "path": "docs/wiki/jijiebei/engineering-backlog/r20260823-094500.digest.md",
+      "id": "jijiebei/engineering-backlog@r20260823-094500",
+      "type": "digest",
+      "life": "flow",
+      "disposition": "flow",
+      "reason": "本轮 registrar 注册的 digest artifact（jijiebei/engineering-backlog@r20260823-094500），bootstrap 登记与账内一致",
+      "title": "集结杯 · 工程待办集（backlog）",
+      "topic": "doc-governance",
+      "owner": "jjb-hub",
+      "close_policy": "rolling",
+      "canonical_targets": [],
+      "source_refs": [
+        "docs/operations.md",
+        "docs/testing.md"
+      ]
+    },
+    {
+      "path": "docs/wiki/jijiebei/recent-progress/r20260823-094500.digest.md",
+      "id": "jijiebei/recent-progress@r20260823-094500",
+      "type": "digest",
+      "life": "flow",
+      "disposition": "flow",
+      "reason": "本轮 registrar 注册的 digest artifact（jijiebei/recent-progress@r20260823-094500），bootstrap 登记与账内一致",
+      "title": "集结杯 · 近期进展（2026-08 治理浪涌 v2 时点）",
+      "topic": "doc-governance",
+      "owner": "jjb-hub",
+      "close_policy": "rolling",
+      "canonical_targets": [],
+      "source_refs": [
+        "git log -8 @ docs/alioth-governance-v2-20260823"
+      ]
+    }
+  ]
+}

@@ -2990,3 +2990,9 @@ R7 后 verdict **ALLOW_WITH_WARNING**：单行修复正确、未发现业务/机
 ### 结论勘正
 
 早期 Phase 4 closeout 的「无未决 blocker / 红例 7/7」是当时快照（后续 judge 曾 BLOCKED 并驱动 R3–R7 加固）；最终结论以上述 **红例 24/24 + ALLOW_WITH_WARNING** 为准。
+
+---
+
+## 冻结收口（2026-08-23 · Alioth 治理浪涌 v2）
+
+本文件自此处起冻结为**历史决策流**：只答「为什么当时这么定」，不再追加新计划/决策。新计划与决策一律落 `docs/wiki/jijiebei/<slug>/r<ts>.<type>.html` 并经 `web/scripts/wiki-governance.mjs` 登记账本（协议见 [docs/wiki/README.md](docs/wiki/README.md)，查询 `node web/scripts/wiki-governance.mjs query <id>`）。历史行号引用继续有效——上方 2992 行永不改动（Alioth v2 Phase 3 起，sub-hub jjb-alioth-v2）。

@@ -39,3 +39,4 @@ python3 docs/build_guantu_config.py
 
 ## 待定（见规则细则末尾"待土豆拍"）
 n 上限 / 额外因子点数预算 vs 纯随 / C 档阈值 / 指挥官限制（五后二改·独狼·原神）/ 双打 ban 名单 等。
+> 📌 待拍板项已同步收拢至 wiki 决策页 `jijiebei/open-decisions`（sub-hub 落账后生效）。

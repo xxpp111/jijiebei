@@ -354,8 +354,5 @@ steps:
 
 ## 9. TODO（待补 / 留后续 round）
 
-- [x] **vitest 已引入**：`web/src/logic/__tests__/` 13 文件 153 用例（backend/codec/commanderGroups/commanderWeight/eventBan/goldRuntime/jjbSession/matchRecord/mutatorPool/config-modes/jjbDoubles/scoring-contract/visual-diff），`npm run test:unit` 跑；`test:drift`/`test:back` 另覆盖配置漂移守护与后端 go test。
-- [ ] **admin 前后端契约一致性验证**：devbox 三层版本对齐（web 来自 jjb-live-dock、admin 来自本地 build、backend 独立二进制）— 留 P2 round。
-- [ ] **覆盖率上报**：跑完 e2e 后输出 codec/jjbSession/jjbDoubles 覆盖率（c8 或 vitest --coverage）。
-- [ ] **CI 缓存**：`node_modules` / `~/.cache/go-build` / `~/.cache/vite` 三段缓存可大幅加速。
-- [ ] **performance baseline**：build 退出时间 < 30s；e2e 单脚本 < 60s（已大致满足，待实测）。
+> 本节已收拢至 wiki（sub-hub 落账后生效，本页不再逐条维护）：
+> 工程待办（admin 契约一致性 / 覆盖率上报 / CI 缓存 / performance baseline）→ `jijiebei/engineering-backlog`；vitest 引入已完成（13 文件 153 用例，计数见 §3）。

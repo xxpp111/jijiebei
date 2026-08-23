@@ -1,0 +1,100 @@
+<!--lm jijiebei/open-decisions@r20260823-094500-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>集结杯 · 开放决策清单（待 owner 拍板）</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 56rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.7; color: #1f2328; }
+  h1 { font-size: 1.5rem; } h2 { font-size: 1.15rem; margin-top: 2.2rem; border-bottom: 1px solid #d0d7de; padding-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; margin: .6rem 0; }
+  th, td { border: 1px solid #d0d7de; padding: .4rem .6rem; text-align: left; vertical-align: top; font-size: .92rem; }
+  th { background: #f6f8fa; white-space: nowrap; }
+  code { background: #f6f8fa; padding: .1rem .3rem; border-radius: 4px; font-size: .88em; }
+  .meta { color: #57606a; font-size: .88rem; }
+  .tag { display: inline-block; background: #fff8c5; border: 1px solid #d4a72c; border-radius: 999px; padding: 0 .6rem; font-size: .8rem; }
+</style>
+</head>
+<body>
+<h1>集结杯 · 开放决策清单 <span class="tag">flow / waiting-owner</span></h1>
+<p class="meta">蒸馏日期 2026-08-23 · 基线 HEAD d752ce9 · 本页只收拢<strong>真正仍待 owner 拍板</strong>的事项；已定方向未施工的转 <code>jijiebei/engineering-backlog</code>，已施工的陈旧项已剔除并注明依据。每项状态以源文档与代码现状为准，不代 owner 决定。</p>
+
+<h2>D1 · 积分系数表定稿（含 std15/cm 占位、分榜集合、段位阈值、赛季口径）</h2>
+<table>
+<tr><th>决策问题</th><td>
+① 各模式系数定稿——现 <code>backend/config/scoring.json</code> 已给全键<strong>占位值</strong>（std8=1.0 / std10=1.1 / std12=1.2 / rescue=1.3 / one-a=1.1 / hard1·hard2=1.3 / feiqiu·suiji=1.0 / doubles·feiqiu-doubles=1.0 / <strong>std15=1.4、cm=1.3 显式占位</strong>），占位是为消除「live 模式静默回退 default 1.0」的错分雷，准确权重待拍板；<br>
+② 单刷 / 双打分榜集合——<code>one-a</code> / <code>hard1</code> / <code>hard2</code> / <code>feiqiu</code> / <code>suiji</code> 当前 HomeScreen 不可启动（codec 合法但进不了对局），将来开放归哪个榜；<br>
+③ 段位阈值——LadderScreen <code>tierOf</code> 现用占位（王者 1200 / 钻石 900 / 铂金 750 / 黄金 600 / &lt;600 新锐），待按首赛季真实分布校；<br>
+④ 赛季口径——点金 ×2 / 连胜加成 / 赛季周期是否计入排名（现纯累加 <code>delta = wins × coefficient[game_mode]</code>，非 Elo）。
+</td></tr>
+<tr><th>选项</th><td>接受 scoring-proposal 建议表为起点 / 另给系数；段位阈值给数或授权按首赛季分布算；赛季周期与加成口径逐项拍。</td></tr>
+<tr><th>当前状态</th><td>scoring.json 占位可跑、改 JSON 重启即生效（不动 schema）；<code>docs/scoring-proposal.md</code>（status: draft）登记「定稿后给我 3 个数」；天梯上线前必须定稿。</td></tr>
+<tr><th>谁拍板</th><td>yb / 土豆</td></tr>
+<tr><th>源路径</th><td><code>docs/scoring-proposal.md</code>（待定 1/3）、<code>backend/config/scoring.json</code>、<code>docs/operations.md</code> §3 与 §8、<code>docs/deployment.md</code> §10.4</td></tr>
+</table>
+
+<h2>D2 · 双打 ban 名单与官突 +n 五项旋钮</h2>
+<table>
+<tr><th>决策问题</th><td>双打规则一（官突 +n）细则草稿五项：① n 的范围 / 上限（建议 1–6）；② 额外因子用「点数预算」还是「纯随机」；③ 额外因子能否与官突因子重复 / 叠加；④ C 档阈值取 ≥13（33 条）还是严格 ≥15（11 条）；⑤ ABC 三把顺序固定递增还是随机。另有双打 ban 名单——母表当前仅标记「拿钱说话」，是否扩充（含恶意 bug 因子）。</td></tr>
+<tr><th>选项</th><td>见 <code>docs/doubles-guantu-plus-n.md</code> §6 五条与 §5 旋钮表（全在配置表，框架运行时可改）。</td></tr>
+<tr><th>当前状态</th><td>细则 v1 草稿（status: draft，2026-08-22 受控 rename 迁入英文路径）；<code>docs/rules-config.md</code> 待定段同列；豆包因子点播 prompt 已按「双打 ban=拿钱说话」当前母表口径产出，赛制拍板后须重新生成。</td></tr>
+<tr><th>谁拍板</th><td>土豆（yb 协办）</td></tr>
+<tr><th>源路径</th><td><code>docs/doubles-guantu-plus-n.md</code> §5/§6、<code>docs/rules-config.md</code> 待定段、<code>docs/因子点数配置.csv</code></td></tr>
+</table>
+
+<h2>D3 · 极难②（hard2）是否上 home（真相表 C2 / Q8）</h2>
+<table>
+<tr><th>决策问题</th><td>极难②（mfc=2）当前 A 抽 6 / B 抽 3（<code>modeIsVeryHard2</code> 专属覆盖默认 4/2），与产品确认值「B 出 2 / A 出 4」不一致——确认值只覆盖上 home 标准模式。极难②是否最终上 home？上则需对齐 6/3 与标准 4/2 的口径。</td></tr>
+<tr><th>选项</th><td>上 home（先拍 A/B 抽样口径）/ 保持不上（codec 合法、首页不可达）。</td></tr>
+<tr><th>当前状态</th><td>未上 home，仅 e2e 回归保留；真相表 C2、Q8 均标 ❓。</td></tr>
+<tr><th>谁拍板</th><td>土豆</td></tr>
+<tr><th>源路径</th><td><code>mode-rules-truth-table.md</code> 1) 节极难②行、2) 节 C2、3) 节 Q8</td></tr>
+</table>
+
+<h2>D4 · 随机模式 B 组指挥官截断（真相表 C5 / Q7）</h2>
+<table>
+<tr><th>决策问题</th><td>随机模式（suiji）<code>startRandom</code> 取 allCmds 前 3 全是 A 组，B 组 2 人被截断不出场，与「B 组出 2」潜在冲突——是否要保证 B 组指挥官出场？</td></tr>
+<tr><th>选项</th><td>改抽样保证 B 组出场 / 接受现状。</td></tr>
+<tr><th>当前状态</th><td><strong>suiji 已下线</strong>（<code>web/src/config/modes.ts</code>：<code>urlEnabled:false / homeVisible:false / bpVisible:false</code>，玩家不可达，仅 e2e 9 模式恒等式回归保留），问题实际影响 ≈0；真相表仍标 ❓，拍板后可一并销项。</td></tr>
+<tr><th>谁拍板</th><td>yb / 土豆</td></tr>
+<tr><th>源路径</th><td><code>mode-rules-truth-table.md</code> 2) 节 C5、3) 节 Q7、0) 节首页格说明；<code>web/src/config/modes.ts:116</code></td></tr>
+</table>
+
+<h2>D5 · 双打组合榜（按 2 人战队累计）</h2>
+<table>
+<tr><th>决策问题</th><td>当前 <code>scores</code> 是 per-player（双打一局 2 人各得一条），双打个人榜天然成立；要不要额外的「双打组合榜」（按 2 人战队累计）？需加 <code>matches.team</code> 字段或组合 key，是 schema 改动。</td></tr>
+<tr><th>选项</th><td>加组合榜（定了 hub 做）/ 不加。</td></tr>
+<tr><th>当前状态</th><td>未定；scoring-proposal 待定 2 仍登记。注：双打<strong>个人</strong>归属（#84）已施工落库（两人各得分，不再归占位「双打战队」），不在本决策内。</td></tr>
+<tr><th>谁拍板</th><td>yb / 土豆</td></tr>
+<tr><th>源路径</th><td><code>docs/scoring-proposal.md</code> 待定 2、<code>backend/routes.go</code>（board 分流）、<code>web/src/logic/matchRecord.ts</code></td></tr>
+</table>
+
+<h2>D6 · Litestream 容灾对象存储定稿</h2>
+<table>
+<tr><th>决策问题</th><td>Litestream 实时增量复制的 endpoint / bucket / path 用哪家（国内 OSS / MinIO / COS S3 兼容）？</td></tr>
+<tr><th>选项</th><td>指定对象存储与桶；密钥走 env（<code>LITESTREAM_*</code>），不写文件。</td></tr>
+<tr><th>当前状态</th><td><code>backend/deploy/litestream.yml</code> 是模板，占位待拍板；容灾复制未真正启用。</td></tr>
+<tr><th>谁拍板</th><td>yb</td></tr>
+<tr><th>源路径</th><td><code>docs/deployment.md</code> §10.2、<code>backend/deploy/litestream.yml</code></td></tr>
+</table>
+
+<h2>D7 · 拯救模式两项产品确认（真相表 Q4 / Q5）</h2>
+<table>
+<tr><th>决策问题</th><td>① Q4：拯救额外 pop 同化体只有 0.3 概率，是否有意设计、产品文档是否对齐？② Q5：拯救 7 人只填 <code>randomCommanderPoorA</code>、B 为空，前端 7 人如何分配到 3 场 × 指挥官槽？</td></tr>
+<tr><th>选项</th><td>确认有意 / 给口径；分配规则给产品说明。</td></tr>
+<tr><th>当前状态</th><td>真相表 3) 节均标 ❓待确认（Q2/Q9 为代码可核对项，转 engineering-backlog）。</td></tr>
+<tr><th>谁拍板</th><td>yb / 土豆</td></tr>
+<tr><th>源路径</th><td><code>mode-rules-truth-table.md</code> 3) 节 Q4/Q5</td></tr>
+</table>
+
+<h2>已销项 / 不进本清单的事项</h2>
+<table>
+<tr><th>事项</th><th>依据</th></tr>
+<tr><td>系数表「缺 std15/cm 两键」</td><td>已陈旧：scoring.json 现含全键显式占位（std15=1.4 / cm=1.3），问题转为「占位值是否认可」（见 D1）</td></tr>
+<tr><td>双打个人归属（#84）</td><td>已定方向<strong>且已施工</strong>：<code>web/src/logic/jjbView.ts:60</code>、<code>matchRecord.ts:44</code>、<code>jjbDoubles.ts:48,205</code> 注释明示不再归占位「双打战队」；<code>web/e2e/record-fullstack.mjs</code> P3/P4 真机链路覆盖。不进 decision 也不进 backlog</td></tr>
+<tr><td>CF Pages 公网正解</td><td>方向已定（外部静态托管，<code>web/public/_redirects</code> 已预置）未施工 → 转 <code>jijiebei/engineering-backlog</code></td></tr>
+<tr><td>真相表 Q2 / Q9</td><td>代码可核对（smallRate=0.9 是否真生效；jinanArr 注释「6选2」vs 实际 4 项）→ 转 <code>jijiebei/engineering-backlog</code> 调查项</td></tr>
+</table>
+</body>
+</html>

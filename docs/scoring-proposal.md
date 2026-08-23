@@ -13,6 +13,7 @@ review_after: 2026-09-22
 
 > 现状：`backend/config/scoring.json` 是占位，公式 `delta = wins × coefficient[game_mode]`，纯累加（非 Elo）。
 > 定稿后 hub 接：① scoring.json 系数（改 json 重启生效）② LadderScreen `tierOf` 段位阈值 ③ routes.go 分榜 board 集合。
+> 📌 本文待拍板项已同步收拢至 wiki 决策页 `jijiebei/open-decisions`（sub-hub 落账后生效）；定稿后本页转 current 或归档。
 
 ## 待定 1 · 单刷 / 双打分类（分榜用）
 

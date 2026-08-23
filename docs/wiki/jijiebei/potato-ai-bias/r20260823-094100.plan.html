@@ -1,0 +1,678 @@
+<!--lm jijiebei/potato-ai-bias@r20260823-094100-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>土豆 AI 加权彩蛋 · Implementation Plan（原稿归档）</title>
+</head>
+<body>
+<h1>土豆 AI 加权彩蛋 · Implementation Plan（原稿归档）</h1>
+<blockquote>
+<p>原稿 verbatim 归档（Alioth v2 distill-then-remove，gc-obj-2）。原路径 <code>docs/superpowers/plans/2026-07-17-potato-ai-bias.md</code>，source sha256 <code>0c06eeb180c1002ef96df5ca0567dc1977ea690a654bd028166fd585b0ca4571</code>。当前 canonical 知识页：<code>docs/potato-ai-bias.md</code>。本页为同一 slug <code>jijiebei/potato-ai-bias</code> 的 plan revision，内容不追改。</p>
+</blockquote>
+<pre>
+# 土豆 AI 加权彩蛋 Implementation Plan
+
+&gt; **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 为 `accounts` 增加管理员维护的土豆标记，并在账号标记或选手名包含“土豆”时，以实际约 76.32% 的单场概率抽到“旧世机械团”，在 Select/Battle/OBS 展示“土豆的老朋友”。
+
+**Architecture:** 会话入口负责从认证快照与单/双打选手名计算 `potatoBiasActive`，再把冻结布尔值传给纯随机模块；`aiEnemySelector` 只接收 `rng` 与 `potatoBiasActive`，生成带稳定 AI ID 和彩蛋标记的三场结果。PocketBase amendment migration 只负责新增字段及禁止普通账号持久化自开，不承担浏览器防伪。
+
+**Tech Stack:** React 18、TypeScript、Vite/Vitest、PocketBase 0.39 Go migrations、Node/Vite SSR E2E、Playwright、Harness-Pro。
+
+## Global Constraints
+
+- 已批准触发条件：`accounts.potato_ai_bias === true`，或单打 `SelectState.playerName` / 双打 `_players[0..1]` 中任一名称包含连续中文“土豆”。
+- 已批准概率：每场 75% 直接命中；剩余 25% 从完整 19 项池抽取；最终为 `29/38 ≈ 76.32%`，三场可全部相同。
+- 所有随机敌方模式、练习和正式比赛都生效。
+- 凡触发态下最终抽到 `T_MechClassic`，均显示“土豆的老朋友”，不区分直达或普通池来源。
+- 不修改 codec schema v1，不处理 BP 无限重抽、贴码敌方还原或服务端抽签。
+- 不修改既有 migration；新增 amendment migration。
+- 禁止访问或运行使用 `backend/pb_data/**` 的命令；所有 PB 测试必须显式临时 `--dir`。
+- 当前工作树已有 Round S 未提交改动：`1782000008`、`1782000009`、安全 E2E、`backend/verify-all.sh`、`docs/testing.md`、`web/e2e/practice-post.mjs`；不得覆盖、回滚或混淆其归属。
+- `projectplan.md` 与 `test-x/**` 完全 no-touch。
+- 实现 Spoke 不 commit、不 push、不部署；提交由 parent Hub 单独拍板。
+- 使用独立 Harness runtime，例如 `.harness-pro-potato-ai-bias`，planned phases ≥ 4；每条 CLI 显式 `--runtime-dir` 和 review `--model-config`。
+
+---
+
+## File Map
+
+**Create**
+
+- `backend/pb_migrations/1782000010_accounts_potato_ai_bias.go` — 新字段、更新规则合取、down 恢复到 1782000008 的规则。
+- `web/e2e/sec-potato-ai-bias.mjs` — 隔离 PB 字段与权限矩阵。
+- `web/e2e/potato-ai-bias.mjs` — Vite SSR 确定性随机、单/双打触发与兼容回归。
+- `web/e2e/flows/potato-ai-bias.flow.mjs` — 浏览器连续流和三尺寸 DOM/截图验收。
+
+**Modify**
+
+- `web/src/logic/backend.ts` — `AuthAccount.potato_ai_bias`，登录及 refresh 解析。
+- `web/src/logic/aiEnemySelector.ts` — 稳定 ID、彩蛋标记、可注入 RNG 与 bias 参数。
+- `web/src/logic/session/sessionEngine.ts` — 单打名字触发快照并传入抽签。
+- `web/src/logic/jjbDoubles.ts` — 双打两名触发快照并传入抽签；若当前启动顺序先 roll 后 set players，则把 roll 移至玩家写入后的唯一入口，避免默认名误判。
+- `web/src/logic/jjbView.ts` — 暴露当前场次彩蛋 label/flag。
+- `web/src/components/EnemyBadge.tsx` — 通用 `easterEggLabel` 属性与三档展示。
+- `web/src/components/MatchRow.tsx`、`web/src/components/ObsBar.tsx` — 透传彩蛋 label。
+- `web/src/screens/SelectScreen.tsx`、`web/src/screens/DoublesSelect.tsx`、`web/src/screens/BattleScreen.tsx`、`web/src/screens/ObsScreen.tsx` — 从 view 读取并透传。
+- `web/src/styles/random-enemy.css` — lg/md 完整短文案、sm 紧凑角标。
+- `web/src/logic/__tests__/backend.test.ts` — 登录/refresh 字段测试。
+- `web/e2e/random-enemy.mjs` — 保留原均匀路径与数据完整性回归，移除概率采样作为核心判据。
+- `docs/testing.md` — 登记新增测试和实际覆盖。
+
+---
+
+### Task 1: 冻结基线并建立 Harness-Pro 驱动骨架
+
+**Files:**
+- Read only: current worktree and `.harness_local/sessions/jjb-platform/planning/*`
+- Create runtime: `.harness-pro-potato-ai-bias/` through CLI only
+
+**Interfaces:**
+- Consumes: 当前 Round S 工作树基线。
+- Produces: 不可混淆的 baseline path list、四阶段 runtime、Phase 1 pre-review evidence。
+
+- [ ] **Step 1: 记录起跑基线**
+
+Run:
+
+```bash
+git rev-parse --short HEAD
+git status --short
+git diff --name-only
+```
+
+Expected: HEAD 仍为当前分支基线；输出明确列出 Round S 既有改动、设计/计划文档、`projectplan.md` 与 `test-x/`。把路径分类写入本轮 planning progress：`preexisting-round-s`、`preexisting-parent`、`potato-round`。
+
+- [ ] **Step 2: 对红线路径做只读指纹**
+
+Run:
+
+```bash
+find backend/pb_data -type f -print0 2&gt;/dev/null | sort -z | xargs -0 shasum &gt; /tmp/jjb-potato-pbdata.before
+find test-x -type f -print0 2&gt;/dev/null | sort -z | xargs -0 shasum &gt; /tmp/jjb-potato-testx.before
+git diff -- projectplan.md &gt; /tmp/jjb-potato-projectplan.before.diff
+```
+
+Expected: 只生成 `/tmp` 证据，不修改红线目录。
+
+- [ ] **Step 3: 初始化 4-phase Harness runtime**
+
+Run:
+
+```bash
+npx harness-pro init \
+  --goal "实现土豆账号或名字触发的旧世机械团加权彩蛋" \
+  --phases 4 \
+  --scaffold claude-code \
+  --gate-policy majority \
+  --reviewer-config config/harness-pro-reviewers-round-s.json \
+  --runtime-dir .harness-pro-potato-ai-bias
+npx harness-pro phase --phase 1 --runtime-dir .harness-pro-potato-ai-bias
+```
+
+Expected: runtime 创建成功；Phase 1 为 in-progress。若 reviewer config 将被复用，必须确认执行模型不在 reviewer panel 中；否则先创建本轮专用 config。
+
+- [ ] **Step 4: Phase 1 只审契约与基线，不改产品代码**
+
+Verify 至少检查：规格文件存在、工作树路径归因、红线指纹存在、设计概率 `29/38`。随后真实 review、record-gate；任何 reviewer 无法区分已有改动时，把 baseline diff 作为 pre-review evidence，不靠文字声称。
+
+---
+
+### Task 2: 新增 PocketBase 字段并锁定自更新权限
+
+**Files:**
+- Create: `backend/pb_migrations/1782000010_accounts_potato_ai_bias.go`
+- Create: `web/e2e/sec-potato-ai-bias.mjs`
+- Reference: `backend/pb_migrations/1782000008_accounts_role_immutable.go`
+- Reference: `web/e2e/sec-account-role.mjs`
+
+**Interfaces:**
+- Consumes: 1782000008 的修复规则 `accountsUpdateRuleImmutableRole`。
+- Produces: `accounts.potato_ai_bias: bool`；本人更新规则同时锁 `role` 和 `potato_ai_bias`。
+
+- [ ] **Step 1: 先写失败的隔离 PB 权限测试**
+
+测试必须复用 `web/e2e/lib/isopb.mjs`，断言：
+
+```js
+// ① 新建 host 后 potato_ai_bias 默认 false
+// ② host PATCH 自己 { potato_ai_bias: true } → 非 200
+// ③ host PATCH 自己 { display_name: 'renamed' } → 200
+// ④ host PATCH 同值 { potato_ai_bias: false } → 200
+// ⑤ admin PATCH host { potato_ai_bias: true } → 200 且字段 true
+// ⑥ viewer/host 自改 role 仍被拦，证明未回归 Round S
+```
+
+Run:
+
+```bash
+npm --prefix web run build
+node web/e2e/sec-potato-ai-bias.mjs
+```
+
+Expected before migration: FAIL，因为字段不存在或 API 不满足权限矩阵。必须保留红阶段输出摘要。
+
+- [ ] **Step 2: 实现 amendment migration**
+
+核心结构：
+
+```go
+const accountsUpdateRuleImmutableRoleAndPotato = "(@request.auth.id = id &amp;&amp; @request.body.role:changed = false &amp;&amp; @request.body.potato_ai_bias:changed = false) || @request.auth.role = 'admin'"
+
+func init() {
+  m.Register(
+    func(app core.App) error {
+      col, err := app.FindCollectionByNameOrId("accounts")
+      if err != nil { return nil }
+      if col.Fields.GetByName("potato_ai_bias") == nil {
+        col.Fields.Add(&amp;core.BoolField{
+          Name: "potato_ai_bias",
+          System: false,
+          Required: false,
+        })
+      }
+      col.UpdateRule = types.Pointer(accountsUpdateRuleImmutableRoleAndPotato)
+      return app.Save(col)
+    },
+    func(app core.App) error {
+      col, err := app.FindCollectionByNameOrId("accounts")
+      if err != nil { return nil }
+      col.Fields.RemoveByName("potato_ai_bias")
+      col.UpdateRule = types.Pointer(accountsUpdateRuleImmutableRole)
+      return app.Save(col)
+    },
+  )
+}
+```
+
+实施前以当前 PocketBase 0.39 API 校正 `Fields.Add/RemoveByName` 的确切方法名；不得猜 API，也不得改 1782000008。
+
+- [ ] **Step 3: 运行隔离测试确认转绿**
+
+Run:
+
+```bash
+(cd web &amp;&amp; node e2e/sec-account-role.mjs)
+(cd web &amp;&amp; node e2e/sec-potato-ai-bias.mjs)
+```
+
+Expected: 原 4 项 role 安全矩阵和新增 6 项 potato 权限矩阵全部 PASS。
+
+- [ ] **Step 4: 验证 apply/down/replay**
+
+使用新的 `/tmp` 临时目录：
+
+```bash
+PB_TMP=$(mktemp -d /tmp/jjb-potato-migration.XXXXXX)
+backend/pocketbase migrate up --dir "$PB_TMP"
+backend/pocketbase migrate down 1 --dir "$PB_TMP"
+backend/pocketbase migrate up --dir "$PB_TMP"
+```
+
+Expected: 三条命令 exit 0；up 后字段存在且 rule 为双字段不可变，down 后字段移除且 rule 精确回到 1782000008，replay 再恢复。不得省略 `--dir`。
+
+- [ ] **Step 5: 启动 Phase 2 并完成 gate**
+
+Phase 2 rubric 只评价 migration、字段权限和旧 role 安全不回归；review 前 evidence 必须包含隔离测试和 migration round-trip，不引用 gate 自身。
+
+---
+
+### Task 3: 打通认证字段链并覆盖刷新语义
+
+**Files:**
+- Modify: `web/src/logic/backend.ts:28,67-79,131-143`
+- Modify: `web/src/logic/__tests__/backend.test.ts`
+
+**Interfaces:**
+- Consumes: PB auth response `record.potato_ai_bias`。
+- Produces: `getAccount()?.potato_ai_bias?: boolean`，登录和 refresh 后一致。
+
+- [ ] **Step 1: 写失败单测**
+
+增加三条：
+
+```ts
+it('pbAuthHost 保存 potato_ai_bias=true', async () =&gt; {
+  mockFetchAuth({ id: 'h1', role: 'host', potato_ai_bias: true });
+  await pbAuthHost('host@jjb.test', 'pwd');
+  expect(getAccount()).toMatchObject({ kind: 'host', potato_ai_bias: true });
+});
+
+it('pbRefresh 用新 record 更新 potato_ai_bias', async () =&gt; {
+  // 先登录 false，再 refresh 返回 true
+  expect((await pbRefresh())).toBe(true);
+  expect(getAccount()?.potato_ai_bias).toBe(true);
+});
+
+it('字段缺失或非 true 时按 false', async () =&gt; {
+  // response 不含字段
+  expect(getAccount()?.potato_ai_bias).toBe(false);
+});
+```
+
+Run:
+
+```bash
+npm --prefix web test -- --run web/src/logic/__tests__/backend.test.ts
+```
+
+Expected: FAIL，因为 `AuthAccount` 和刷新路径没有该字段。
+
+- [ ] **Step 2: 最小实现认证解析**
+
+目标类型与 helper：
+
+```ts
+type AuthAccount = {
+  id: string;
+  kind: AccountKind;
+  role?: string;
+  display_name?: string;
+  nickname?: string;
+  potato_ai_bias?: boolean;
+};
+
+const readPotatoBias = (record: any): boolean =&gt; record?.potato_ai_bias === true;
+```
+
+`pbAuthHost` 写入 `potato_ai_bias: readPotatoBias(d.record)`；`pbRefresh` 在 token 更新后，用 refresh record 重建对应 kind 的 account，host 路径必须更新 `role/display_name/potato_ai_bias`，player 路径更新 `nickname`，再 `persistAuth()`。
+
+- [ ] **Step 3: 单测转绿并确认 remember 存储不回归**
+
+Run:
+
+```bash
+npm --prefix web test -- --run web/src/logic/__tests__/backend.test.ts
+```
+
+Expected: 新增测试和原 remember/localStorage/sessionStorage 测试全 PASS。
+
+---
+
+### Task 4: 实现纯随机模块与确定性概率测试
+
+**Files:**
+- Modify: `web/src/logic/aiEnemySelector.ts`
+- Create: `web/e2e/potato-ai-bias.mjs`
+- Modify: `web/e2e/random-enemy.mjs`
+
+**Interfaces:**
+- Produces:
+
+```ts
+type RandomSource = () =&gt; number;
+interface EnemyRoll {
+  id: string;
+  race: RaceCode;
+  nameZh: string;
+  potatoFriend?: boolean;
+}
+rollEnemiesForSession(matchCount: number, rng?: RandomSource, potatoBiasActive?: boolean): void
+```
+
+- [ ] **Step 1: 写确定性失败测试**
+
+`potato-ai-bias.mjs` 直接导入 selector，使用序列 RNG：
+
+```js
+const sequenceRng = (...values) =&gt; {
+  let i = 0;
+  return () =&gt; values[i++] ?? 0;
+};
+
+rollEnemiesForSession(3, sequenceRng(0.1, 0.2, 0.3), true);
+// 三场均 T_MechClassic，potatoFriend=true
+
+rollEnemiesForSession(1, sequenceRng(0.75, targetIndex / 19), true);
+// 0.75 不走直达；第二次从完整池抽，可自然抽中目标且 potatoFriend=true
+
+rollEnemiesForSession(1, sequenceRng(0.75, nonTargetIndex / 19), true);
+// 完整池非目标，potatoFriend false
+
+rollEnemiesForSession(1, sequenceRng(targetIndex / 19), false);
+// 非触发路径只消费一次 RNG，保持原均匀池语义
+```
+
+同时断言 AI ID 唯一、目标 ID 精确为 `T_MechClassic`、三场可重复、OFF 时为空。
+
+Run:
+
+```bash
+(cd web &amp;&amp; node e2e/potato-ai-bias.mjs)
+```
+
+Expected: FAIL，因为现接口不接收 RNG/bias，结果不含 ID/flag。
+
+- [ ] **Step 2: 实现最小随机逻辑**
+
+```ts
+const POTATO_AI_ID = 'T_MechClassic';
+const POTATO_DIRECT_RATE = 0.75;
+const potatoAi = AI_ENEMY_POOL.find((ai) =&gt; ai.id === POTATO_AI_ID);
+if (!potatoAi) throw new Error('[aiEnemySelector] missing T_MechClassic');
+
+function toRoll(ai: AIEnemy, potatoBiasActive: boolean): EnemyRoll {
+  return {
+    id: ai.id,
+    race: ai.race,
+    nameZh: ai.nameZh,
+    potatoFriend: potatoBiasActive &amp;&amp; ai.id === POTATO_AI_ID || undefined,
+  };
+}
+
+function rollOne(rng: RandomSource, potatoBiasActive: boolean): EnemyRoll {
+  if (potatoBiasActive &amp;&amp; rng() &lt; POTATO_DIRECT_RATE) return toRoll(potatoAi, true);
+  const ai = AI_ENEMY_POOL[Math.floor(rng() * AI_ENEMY_POOL.length)];
+  return toRoll(ai, potatoBiasActive);
+}
+```
+
+非触发路径必须只消费一个随机数；触发且直达也只消费一个；触发 fallback 消费两个。不得偷偷过滤目标。
+
+- [ ] **Step 3: 转绿并保留旧回归**
+
+Run:
+
+```bash
+(cd web &amp;&amp; node e2e/potato-ai-bias.mjs)
+(cd web &amp;&amp; node e2e/random-enemy.mjs)
+```
+
+Expected: 两脚本 PASS。将 `random-enemy.mjs` 的“60局必覆盖三族”降为辅助观察或用注入 RNG 改成确定性覆盖，避免随机 flaky。
+
+---
+
+### Task 5: 在单打与双打入口计算冻结触发快照
+
+**Files:**
+- Modify: `web/src/logic/session/sessionEngine.ts:103`
+- Modify: `web/src/logic/jjbDoubles.ts:91,177-180,311-315`
+- Modify or create focused helper in `web/src/logic/aiEnemySelector.ts`
+- Test: `web/e2e/potato-ai-bias.mjs`
+
+**Interfaces:**
+- Consumes: `getAccount()?.potato_ai_bias`、单打 `d.playerName`、双打 `getDoublesPlayers()`。
+- Produces: 每次新局调用 `rollEnemiesForSession(3, Math.random, potatoBiasActive)`。
+
+- [ ] **Step 1: 写触发组合失败测试**
+
+覆盖：
+
+```text
+账号 true + 普通名字 → true
+账号 false + 单打名“儒雅随和の土豆” → true
+账号 false + 双打 A 普通/B“小土豆” → true
+账号 false + 普通名字 → false
+player account 即使没有字段 + 名字含土豆 → true
+```
+
+测试应从真实 `startSession('std8')`、`startSession('doubles')`/`setDoublesPlayers` 路径观察 `getEnemyRoll()`，不只测 helper 自报值。
+
+- [ ] **Step 2: 提供统一判定 helper**
+
+```ts
+export function shouldUsePotatoBias(
+  accountFlag: unknown,
+  playerNames: readonly string[],
+): boolean {
+  return accountFlag === true || playerNames.some((name) =&gt; (name || '').includes('土豆'));
+}
+```
+
+单打调用方传 `[d.playerName]`；双打调用方传 `getDoublesPlayers()`。
+
+- [ ] **Step 3: 校正双打启动顺序**
+
+当前 `doublesStart()` 在 `HomeScreen` 调 `setDoublesPlayers()` 之前 roll。计划必须选择一个单一入口保证真名先于抽签：
+
+- 推荐：`setDoublesPlayers(a,b)` 写入名字后，如果当前刚完成 doubles 初始化且尚无 roll，则执行抽签；或让 `doublesStart(variant, players?)` 接受玩家元组并由 HomeScreen 一次调用。
+- 不允许 `doublesStart()` 用默认“选手A/B”先抽，再由 HomeScreen 改名，因为名字旁路会静默失效。
+
+优先选择 `doublesStart(variant, players?)` 或新的 `startDoublesSession(variant, players)` 单次初始化接口；若影响调用面过大，则把“写玩家+roll”封装为一个明确函数。不要在多个位置重复 roll。
+
+- [ ] **Step 4: 跑单双打确定性测试**
+
+Run:
+
+```bash
+(cd web &amp;&amp; node e2e/potato-ai-bias.mjs)
+npm --prefix web test -- --run web/src/logic/__tests__/jjbDoubles.test.ts
+```
+
+Expected: 单打、官突双打和 CM/非酋任一第二 variant 触发正确；原双打初始化/重置测试全绿。
+
+---
+
+### Task 6: 打通 view 与三尺寸彩蛋 UI
+
+**Files:**
+- Modify: `web/src/logic/jjbView.ts:101-109`
+- Modify: `web/src/components/EnemyBadge.tsx`
+- Modify: `web/src/components/MatchRow.tsx`
+- Modify: `web/src/components/ObsBar.tsx`
+- Modify: `web/src/screens/SelectScreen.tsx:304`
+- Modify: `web/src/screens/DoublesSelect.tsx:243`
+- Modify: `web/src/screens/BattleScreen.tsx:77-78`
+- Modify: `web/src/screens/ObsScreen.tsx:58`
+- Modify: `web/src/styles/random-enemy.css`
+
+**Interfaces:**
+- Produces:
+
+```ts
+currentEnemyEasterEggLabel(matchIdx: number): string | undefined
+EnemyBadgeProps.easterEggLabel?: string
+```
+
+- [ ] **Step 1: 写组件/UI失败断言**
+
+至少覆盖：
+
+```tsx
+&lt;EnemyBadge race="T" ai="旧世机械团" size="lg" easterEggLabel="土豆的老朋友" /&gt;
+// 有 data-enemy-easter-egg="potato-friend" 和完整文案
+
+&lt;EnemyBadge ... size="sm" easterEggLabel="土豆的老朋友" /&gt;
+// 有紧凑标识，DOM仍可访问到完整 aria-label/title
+
+&lt;EnemyBadge race="T" ai="旧世机械团" /&gt;
+// 无彩蛋元素
+```
+
+使用现有 Vitest/React 测试模式；若项目没有组件渲染测试基础，则把 DOM 断言放入 Playwright flow，不为此引新依赖。
+
+- [ ] **Step 2: 实现通用 label 透传**
+
+`EnemyBadge` 不读取账号、名字或 AI ID，只渲染调用方传入的 label：
+
+```tsx
+export function EnemyBadge({ race, ai, size = 'lg', easterEggLabel }: EnemyBadgeProps) {
+  // ...existing badge
+  {easterEggLabel &amp;&amp; (
+    &lt;span
+      className="menemy-easter-egg"
+      data-enemy-easter-egg="potato-friend"
+      title={easterEggLabel}
+    &gt;
+      {size === 'sm' ? '🥔' : easterEggLabel}
+    &lt;/span&gt;
+  )}
+}
+```
+
+是否使用 emoji 需遵循现有视觉风格；若不合适，sm 使用纯文字“老朋友”或小圆角“土豆”。不可引入新图片资产。
+
+- [ ] **Step 3: view 单点生成文案**
+
+```ts
+export function currentEnemyEasterEggLabel(i: number): string | undefined {
+  return getEnemyRoll(i)?.potatoFriend ? '土豆的老朋友' : undefined;
+}
+```
+
+所有四个消费位置从该 view 获取，不在屏幕里重复判断中文名。
+
+- [ ] **Step 4: 三尺寸 CSS**
+
+在 `random-enemy.css` 增加：
+
+```css
+.menemy-easter-egg { /* lg/md: 短 pill，使用现有 accent/token */ }
+.menemy-sm .menemy-easter-egg { /* 紧凑，不增加 232px 横条高度 */ }
+```
+
+必须用现有 token 和 `.menemy-*` 作用域，不改 `design/**`。
+
+- [ ] **Step 5: 构建与类型检查**
+
+Run:
+
+```bash
+npm --prefix web run build
+npm --prefix web test
+```
+
+Expected: TypeScript/Vite build 通过，全量既有测试通过。
+
+---
+
+### Task 7: Playwright 真人连续流与截图验收
+
+**Files:**
+- Create: `web/e2e/flows/potato-ai-bias.flow.mjs`
+- Modify: `docs/testing.md`
+- Output: `/tmp/jjb-potato-ai-bias/`
+
+**Interfaces:**
+- Consumes: 真实 UI、隔离 PB、可控浏览器随机源。
+- Produces: Select/Battle/OBS 截图与 DOM 摘要。
+
+- [ ] **Step 1: 建立可重复的浏览器随机控制**
+
+在 `page.addInitScript` 中仅为该 flow 提供可预测 `Math.random` 队列，或通过测试专用 query/debug seam 调用 selector 的注入 RNG。不得修改生产概率以迁就测试。
+
+- [ ] **Step 2: 名字旁路练习流**
+
+流程：
+
+```text
+首页练习 → 选手 A 输入“儒雅随和の土豆” → 开启随机敌方 → std8 开局
+→ 断言三场 EnemyBadge 全为旧世机械团且均有 potato-friend 标记
+→ 截 Select → 进入 Battle 截图 → 切 OBS 截图
+```
+
+每张截图后写一行目检说明；断言不是自报常量，必须读取 DOM 文案、`data-enemy-race`、AI 名和 bounding box。
+
+- [ ] **Step 3: 账号标记正式比赛流**
+
+用隔离 PB：superuser 创建 host，admin 设置 `potato_ai_bias=true`，前端真实登录；选手名不含土豆，切比赛并开局，断言同样触发。再创建未标记 host，普通名字下断言无彩蛋。
+
+- [ ] **Step 4: OBS 几何验收**
+
+在 1280×232 bare OBS：
+
+```js
+const badge = page.locator('[data-enemy-easter-egg="potato-friend"]');
+const box = await badge.boundingBox();
+expect(box &amp;&amp; box.y &gt;= 0 &amp;&amp; box.y + box.height &lt;= 232, '彩蛋角标完整在横条内');
+```
+
+同时检查没有横向 overflow、没有遮挡 AI 名；截图保存 `/tmp/jjb-potato-ai-bias/obs-1280x232.png`。
+
+- [ ] **Step 5: 运行 flow**
+
+Run:
+
+```bash
+cd web
+npm run build -s
+node e2e/flows/potato-ai-bias.flow.mjs
+```
+
+Expected: 全部断言 PASS，三类截图存在且本轮时间戳新鲜。
+
+---
+
+### Task 8: 全链验证、Harness gate 与 Hub验收
+
+**Files:**
+- Modify: `docs/testing.md`
+- Modify: `.harness_local/sessions/jjb-platform/planning/progress.md`
+- Runtime: `.harness-pro-potato-ai-bias/`
+
+**Interfaces:**
+- Produces: Phase 3/4 gate、audit、完整 proof 和未提交工作树。
+
+- [ ] **Step 1: Phase 3 — 随机与 UI gate**
+
+`runVerify` 至少执行：backend unit tests、backend auth unit tests、`random-enemy.mjs`、`potato-ai-bias.mjs`、build。Rubric 判断概率语义、触发快照、UI 透传和 codec v1 零改；review 使用真实异构 panel并显式 model config。
+
+- [ ] **Step 2: Phase 4 — 全链终验**
+
+Run:
+
+```bash
+git diff --check
+npm --prefix web test
+(cd web &amp;&amp; node e2e/sec-account-role.mjs)
+(cd web &amp;&amp; node e2e/sec-practice-ownership.mjs)
+(cd web &amp;&amp; node e2e/sec-potato-ai-bias.mjs)
+(cd web &amp;&amp; node e2e/random-enemy.mjs)
+(cd web &amp;&amp; node e2e/potato-ai-bias.mjs)
+(cd web &amp;&amp; node e2e/flows/potato-ai-bias.flow.mjs)
+```
+
+Expected: 全绿。不要运行默认使用 `backend/pb_data` 的 `backend/verify-all.sh`。
+
+- [ ] **Step 3: 红线与 secret scan**
+
+Run:
+
+```bash
+find backend/pb_data -type f -print0 2&gt;/dev/null | sort -z | xargs -0 shasum &gt; /tmp/jjb-potato-pbdata.after
+find test-x -type f -print0 2&gt;/dev/null | sort -z | xargs -0 shasum &gt; /tmp/jjb-potato-testx.after
+cmp /tmp/jjb-potato-pbdata.before /tmp/jjb-potato-pbdata.after
+cmp /tmp/jjb-potato-testx.before /tmp/jjb-potato-testx.after
+git diff -- projectplan.md &gt; /tmp/jjb-potato-projectplan.after.diff
+cmp /tmp/jjb-potato-projectplan.before.diff /tmp/jjb-potato-projectplan.after.diff
+```
+
+Expected: 三个 `cmp` exit 0。运行仓库 secret check，覆盖本轮 diff、测试数据、reviewer config 与 runtime；不得复述真实 key。
+
+- [ ] **Step 4: stop/audit**
+
+```bash
+npx harness-pro stop --runtime-dir .harness-pro-potato-ai-bias
+npx harness-pro doctor --runtime-dir .harness-pro-potato-ai-bias
+npx harness-pro audit --runtime-dir .harness-pro-potato-ai-bias
+```
+
+Expected: phases/reviewer/stop compliance PASS、真实签名、evidence chain closed。若 audit 为 partial，原样报告具体字段和 exit code，不伪称 full/native pass。
+
+- [ ] **Step 5: Parent Hub独立人工验收**
+
+Hub 必须：
+
+1. 逐文件审查 migration down 指向 1782000008，而非初始 rule；
+2. 用新隔离 PB 亲跑 admin 标记账号登录；
+3. 以普通账号+名字含土豆跑一局；
+4. 以未标记账号+普通名确认不显示；
+5. 目检 Select/Battle/OBS 三图，特别是 1280×232；
+6. 核对 `git status --short`，确认未提交、未 push、未部署；
+7. 按产品彩蛋与 Round S 安全修复分开列文件，等待 owner决定提交边界。
+
+---
+
+## Plan Self-Review
+
+- Spec coverage：触发条件、概率、全模式范围、账号字段、权限、认证 refresh、冻结快照、RNG seam、三尺寸 UI、PB/逻辑/Playwright/Harness/Hub 验收均有对应 Task。
+- Scope isolation：明确 Round S 既有文件与本轮新增文件，红线使用 before/after 指纹，不运行默认 pb_data 脚本。
+- Type consistency：统一使用 `potato_ai_bias`、`potatoBiasActive`、`potatoFriend`、`currentEnemyEasterEggLabel()`、`easterEggLabel`。
+- No placeholders：实施前唯一需要现场确认的是 PocketBase 0.39 `Fields.Add/RemoveByName` 确切 API；计划要求先读当前 API，不允许猜测，且不改变产品决策。
+- Commit handling：本计划不要求执行 Spoke commit，服从当前仓库“停在未提交工作树”的更高优先级约束。
+
+</pre>
+</body>
+</html>

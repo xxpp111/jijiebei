@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "docs/wiki/schemas/artifact-record.schema.json",
+  "title": "docs/wiki/log.jsonl 行（artifact 身份/导航账）",
+  "description": "log.jsonl 的每行 = 一个 artifact 的注册记录。type 四枚举。六种 authoring mode 明确派生 type/life：plan-active→plan/flow，decision-open→decision/flow，report-validating→report/flow，digest-active→digest/flow，knowledge-current→report/knowledge，archive-import→manifest 指定 type/archive；无 mode 的 legacy default 才是 plan/decision→flow、report/digest→knowledge。check 负责以 lifecycle 折叠对账；registration_id 前缀 boot- 表示 bootstrap 导入。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["registration_id", "id", "path", "title", "type", "life", "topic", "owner", "close_policy", "canonical_targets", "source_refs", "source_sha256", "ts"],
+  "properties": {
+    "registration_id": { "type": "string", "pattern": "^(reg-|boot-)" },
+    "id": { "type": "string", "pattern": "^jijiebei/[a-z0-9]+(?:-[a-z0-9]+)*@r\\d{8}-\\d{6}$" },
+    "path": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "enum": ["plan", "decision", "report", "digest"] },
+    "life": { "type": "string", "enum": ["flow", "archive", "knowledge"] },
+    "topic": { "type": "string" },
+    "owner": { "type": "string" },
+    "close_policy": { "type": "string" },
+    "canonical_targets": { "type": "array", "items": { "type": "string" } },
+    "source_refs": { "type": "array", "items": { "type": "string" } },
+    "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "ts": { "type": "string", "format": "date-time" }
+  }
+}

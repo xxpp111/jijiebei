@@ -11,6 +11,7 @@
 | `docs-drift-check.mjs` | `node scripts/docs-drift-check.mjs` | 文档漂移守护：检查关键文档声明与当前工程事实是否一致。 |
 | `snap-verify.mjs` | `node scripts/snap-verify.mjs` | 视觉回归入口：自起 Vite preview，固定随机源，采集 home/select/battle/result/obs，与 `e2e/snapshots/baseline/` 做 pixelmatch。更新基线用 `--update`。 |
 | `visual-diff.mjs` | 被 `snap-verify.mjs` 和 vitest 调用 | PNG 对比库函数，封装 `pixelmatch` + `pngjs`，不单独作为人工入口。 |
+| `wiki-governance.mjs` | `node scripts/wiki-governance.mjs` | JJB Alioth v2 账本 registrar：register/bootstrap/transition/check/query/build-context（`docs/wiki/{log,lifecycle}.jsonl` 双账；lock+journal+顺序 rename 保证可恢复）。测试：`node --test scripts/wiki-governance.test.mjs`。 |
 
 ## 调用链
 
@@ -26,6 +27,7 @@ snap-verify.mjs ──► visual-diff.mjs ──► e2e/snapshots/{actual,diff,b
 cd web
 node scripts/drift-check.mjs
 node scripts/docs-drift-check.mjs
+node scripts/wiki-governance.mjs transition --manifest <transition-manifest.json> --json
 npm run snap:visual
 npm run snap:visual -- --update
 ```

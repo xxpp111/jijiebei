@@ -1,0 +1,95 @@
+{
+  "receipt_id": "gc-receipt-gc-alioth-v2-20260823-065156-v3",
+  "manifest_id": "gc-alioth-v2-20260823-065156-v3",
+  "manifest_sha256": "40e6cbd4d366cf44ae3bb796a7610d4c313b79bf957ea755848b84c2961f9b41",
+  "applied_at": "2026-08-23T09:47Z(approximate—原精确时间戳随 V-7 覆盖丢失)",
+  "actor": "jjb-alioth-v2-subhub",
+  "authority": "contract-only",
+  "precheck": "9/9 SHA/bytes/pane/client 复验全绿后执行；manifest sha256 复算一致",
+  "objects": [
+    {
+      "id": "gc-obj-1",
+      "path": "test-x/x.md",
+      "action": "safe-delete",
+      "applied": true,
+      "after": "deleted"
+    },
+    {
+      "id": "gc-obj-2",
+      "path": "docs/superpowers/plans/2026-07-17-potato-ai-bias.md",
+      "action": "distill-then-remove",
+      "applied": true,
+      "after": "deleted"
+    },
+    {
+      "id": "gc-obj-3",
+      "path": "docs/superpowers/specs/2026-07-17-potato-ai-bias-design.md",
+      "action": "distill-then-remove",
+      "applied": true,
+      "after": "deleted"
+    },
+    {
+      "id": "gc-obj-4",
+      "path": "zellij:jijiebei-docgov",
+      "action": "safe-close",
+      "applied": false,
+      "delete_exit": 0,
+      "after": "STILL_LISTED(缺 --force)"
+    },
+    {
+      "id": "gc-obj-5",
+      "path": "zellij:jijiebei-docgov-r6",
+      "action": "safe-close",
+      "applied": false,
+      "delete_exit": 0,
+      "after": "STILL_LISTED(缺 --force)"
+    },
+    {
+      "id": "gc-obj-6",
+      "path": "zellij:jijiebei-docgov-r6b",
+      "action": "safe-close",
+      "applied": false,
+      "delete_exit": 0,
+      "after": "STILL_LISTED(缺 --force)"
+    },
+    {
+      "id": "gc-obj-7",
+      "path": "zellij:jijiebei-docgov-r7",
+      "action": "safe-close",
+      "applied": false,
+      "delete_exit": 0,
+      "after": "STILL_LISTED(缺 --force)"
+    },
+    {
+      "id": "gc-obj-8",
+      "path": "zellij:jijiebei-docgov-r8",
+      "action": "safe-close",
+      "applied": false,
+      "delete_exit": 0,
+      "after": "STILL_LISTED(缺 --force)"
+    },
+    {
+      "id": "gc-obj-9",
+      "path": "zellij:jijiebei-docgov-r8b",
+      "action": "safe-close",
+      "applied": false,
+      "delete_exit": 0,
+      "after": "STILL_LISTED(缺 --force)"
+    }
+  ],
+  "counts": {
+    "deleted": 3,
+    "closed": 0,
+    "failed": 6
+  },
+  "evidence": [
+    "gc-manifest v3 三方一致",
+    "Spoke C 9/9 CONFIRM",
+    "consumer 复验：test-x 8 处命中均为历史叙述"
+  ],
+  "attempt": "attempt1-INVALID-ROLLED_BACK",
+  "invalid_reason": "check RC=1 被 pipe（| head）掩盖后仍执行 apply（V-6）：三文件删除发生在红 check 之后，违反 fixed GC precondition",
+  "rollback": "Hub 于 2026-08-23T09:52Z 前后从 wiki revision verbatim 精确恢复三文件，sub-hub shasum 复验一致：plan 0c06eeb180c1…、design 36bc19356aaf…、test-x 73cb3858a687…",
+  "valid_receipt": false,
+  "note": "本文件为 V-7 覆盖事故后的重建（原始 JSON 已被 attempt2 同名写入覆盖丢失）；重建依据=VIOLATIONS.md V-6+run1 终端输出，字段值可靠、applied_at 精确值不可恢复已标注"
+}

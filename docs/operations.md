@@ -461,9 +461,6 @@ curl -s 'http://127.0.0.1:8090/api/rankings?season=2026S1'
 
 ## 8. TODO（待补 / 留后续 round）
 
-- [ ] **系数表定稿**：当前最简纯累加；点金 ×2 / 连胜加成 / 赛季周期 须 yb/土豆拍板。
-- [ ] **赛季自动切**：当前手动改 JSON 重启；后续可加 admin UI 切赛季按钮。
-- [ ] **天梯分页**：当前 `/api/rankings` 全量返；选手多时需分页 / 懒加载。
-- [ ] **审计搜索**：logs 当前 admin UI 全量列；缺搜索框（按 actor / action / target / 时间范围）。
-- [ ] **赛季排行榜归档**：每赛季末快照存档（独立 season_rankings 表），避免 scores 累积过久。
+> 本节已收拢至 wiki（sub-hub 落账后生效，本页不再逐条维护）：
+> 待 owner 拍板项（系数表定稿 / 点金 ×2 / 连胜 / 赛季周期）→ `jijiebei/open-decisions`；工程待办（赛季自动切 / 天梯分页 / 审计搜索 / 赛季归档）→ `jijiebei/engineering-backlog`。
 - [ ] **OBS 横条文档**：obs 屏三形态 URL 与旗标语义留 jjb-run-broadcast skill（已有），本 docs 不复述。

@@ -1,0 +1,61 @@
+<!--lm jijiebei/alioth-governance@r20260823-145244-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>集结杯 Alioth 治理浪涌 v2 · 执行计划</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; line-height: 1.65; color: #1f2328; }
+  h1 { font-size: 1.5rem; border-bottom: 2px solid #d0a825; padding-bottom: .4rem; }
+  h2 { font-size: 1.15rem; margin-top: 1.8rem; }
+  code { background: #f6f3ea; padding: .1rem .35rem; border-radius: 3px; font-size: .88em; }
+  table { border-collapse: collapse; width: 100%; margin: .6rem 0; }
+  th, td { border: 1px solid #ddd; padding: .35rem .6rem; text-align: left; font-size: .92em; }
+  th { background: #faf7ef; }
+  .meta { color: #6b7280; font-size: .88em; }
+  .warn { border-left: 3px solid #d0a825; padding-left: .8rem; background: #faf7ef; }
+</style>
+</head>
+<body>
+<h1>集结杯 Alioth／玉衡治理浪涌 v2 · 执行计划</h1>
+<p class="meta">rev r20260823-145244 · type=plan · life=flow · owner=jjb-hub（sub-hub 执行：Claude Code + glm-5.3）<br>
+基线分支 <code>docs/alioth-governance-v2-20260823</code> @ <code>d752ce9</code>（堆叠于文档治理 v1 之上，不 merge jjb-platform）<br>
+批准计划：<code>~/.claude/plans/distributed-twirling-pelican.md</code> · 主 Hub 契约 <code>dispatch-jjb-alioth-v2-20260823</code> · 参考基线 <code>workflow-os@d79ae10</code>（committed，不抄 dirty working tree）</p>
+
+<h2>目标</h2>
+<p>把「一次治理后的目录导航」升级为<strong>可持续的身份账、生命周期账、查询入口和有收据的 GC</strong>：全量知识 coverage、严格 <code>log.jsonl + lifecycle.jsonl</code> registrar、近期进展与开放事项蒸馏、固定 manifest 六步 GC。采用轻量 Alioth adopter——不 vendor workflow-os 近 3000 行核心、不建 Rspress/Obsidian 站点（站点化留后续独立轮）。</p>
+
+<h2>四阶段（Harness-Pro strict，runtime <code>.harness-pro-alioth-v2</code>）</h2>
+<table>
+<tr><th>Phase</th><th>内容</th><th>Gate</th></tr>
+<tr><td>1 基线与覆盖图</td><td>机械冻结 76 tracked Markdown、4 untracked、39 runtime、19 contract、Zellij lane；76/76 disposition 草案；合并映射；fixed GC manifest；本 plan artifact</td><td>76/76 显式 disposition；unknown 只进 legacy/human-review；protected 零误入</td></tr>
+<tr><td>2 registrar 与双账</td><td><code>docs/wiki/{README,config,schemas,log,lifecycle,bootstrap}</code> + <code>web/scripts/wiki-governance{.mjs,.test.mjs}</code>：register/bootstrap/check/query/build-context；lock+CAS+write-ahead journal</td><td>幂等/冲突/CAS/路径逃逸/SHA 漂移/非法 transition/中断恢复红绿测试全过；check 可重建投影</td></tr>
+<tr><td>3 蒸馏与 GC apply</td><td>README 收薄、open-decisions / engineering-backlog / recent-progress / potato-ai-bias / factor-pick；projectplan 末尾冻结指针（前 2992 行不动）；final bootstrap + 串行 registrar 落账；按 fixed manifest 执行 GC + receipt</td><td>最终 tracked Markdown 100% disposition；source→canonical 对账；引用零断链；protected diff=0</td></tr>
+<tr><td>4 全量验收</td><td>重建 context/query；全门禁（wiki-governance check/test、docs-drift-check、npm --prefix web test、pre-push 四检、git diff --check）；Harness stop/audit</td><td>全部门禁真实通过；交主 Hub/Codex Judge；不伪称 prior round 全 PASS</td></tr>
+</table>
+
+<h2>本轮允许的 GC（仅此清单，apply 前状态漂移即 fail closed）</h2>
+<table>
+<tr><th>对象</th><th>动作</th><th>前置条件</th></tr>
+<tr><td><code>test-x/x.md</code></td><td>safe-delete</td><td>仍为 2 字节单行 x、无消费者</td></tr>
+<tr><td><code>docs/superpowers/**/2026-07-17-potato-ai-bias*</code> 两篇</td><td>distill-then-remove</td><td>canonical <code>docs/potato-ai-bias.md</code> + wiki revisions 落账、hash/事实覆盖验证通过</td></tr>
+<tr><td>Zellij 容器 <code>jijiebei-docgov{,-r6,-r6b,-r7,-r8,-r8b}</code> 六个</td><td>safe-close</td><td>执行时 0 terminal pane、0 client</td></tr>
+</table>
+<p class="warn">明确不删：<code>backend/pocketbase-linux-amd64</code>、39 个 Harness runtime、19 份有 result 的 JJB contracts、无 result 的 R3 contract/runtime、archive 正文、design 历史 bundle。<code>jijiebei-doubao-pick</code> 待 factor-pick artifact 落账后正常 close，不作死 lane。</p>
+
+<h2>不可破边界</h2>
+<ul>
+<li>全程保护：<code>assets/**</code>、<code>web/src/logic/legacy/**</code>、<code>design/v4-r2/**</code>、两份 jjdata、<code>backend/pb_data/**</code>、CSV/生成器、现网/账号/seed。</li>
+<li><code>projectplan.md</code> 前 2992 行不动，只在末尾追加一次冻结收口；<code>docs/archive/**</code> 正文不追改。</li>
+<li>不 commit/push/merge/reset；最终 result 由主 Hub 独占发送到「浪涌v2回执-0823」。</li>
+<li>sub-hub 最多 3 个 child（Spoke A/C = dsv4flash-spoke-rw，Spoke B = doubao-0812-rw），写域互斥，<code>log/lifecycle.jsonl</code> 只经 registrar 串行写。</li>
+</ul>
+
+<h2>执行拓扑</h2>
+<p>Sub-hub（本位）：Harness CLI、serial registrar、合流与阶段 gate。Spoke A：76 文档 coverage、bootstrap、registrar/tests。Spoke B：中文蒸馏与入口收薄。Spoke C：引用图与 fixed GC manifest 校验（只出候选不 delete）。LLM-heavy 并发 ≤2。</p>
+
+<h2>验收命令（必须真实通过）</h2>
+<p><code>node web/scripts/wiki-governance.mjs check --json</code> · <code>node --test web/scripts/wiki-governance.test.mjs</code> · <code>node web/scripts/docs-drift-check.mjs</code> · <code>npm --prefix web test</code> · 原仓 pre-push 四检 · <code>git diff --check</code> · protected-path diff=0 · GC manifest hash/apply receipt · Harness stop/audit。</p>
+</body>
+</html>

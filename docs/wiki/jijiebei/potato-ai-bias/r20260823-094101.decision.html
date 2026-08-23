@@ -1,0 +1,215 @@
+<!--lm jijiebei/potato-ai-bias@r20260823-094101-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>土豆主播「旧世机械团」随机彩蛋 · 设计决策（原稿归档）</title>
+</head>
+<body>
+<h1>土豆主播「旧世机械团」随机彩蛋 · 设计决策（原稿归档）</h1>
+<blockquote>
+<p>原稿 verbatim 归档（Alioth v2 distill-then-remove，gc-obj-3）。原路径 <code>docs/superpowers/specs/2026-07-17-potato-ai-bias-design.md</code>，source sha256 <code>36bc19356aafb2a7e98a05b638e5853d28bcda3d10d20a2edba6ce5be16657fd</code>。当前 canonical 知识页：<code>docs/potato-ai-bias.md</code>。本页为同一 slug <code>jijiebei/potato-ai-bias</code> 的 decision revision，内容不追改。</p>
+</blockquote>
+<pre>
+# 土豆主播“旧世机械团”随机彩蛋设计
+
+日期：2026-07-17  
+状态：已获 owner 设计批准，待实施计划
+
+## 1. 目标
+
+当本局与“土豆”相关时，提高随机敌方抽中人族 AI“旧世机械团”的概率，并允许三场全部为同一 AI。实际抽中时显示短彩蛋“土豆的老朋友”。
+
+这是有意的主播彩蛋，不是安全或竞技防伪机制。它同时覆盖练习与正式比赛，也覆盖所有复用随机敌方机制的单打和双打模式。
+
+## 2. 已批准的产品语义
+
+### 2.1 触发条件
+
+以下任一条件满足即触发：
+
+1. 当前登录的是 `accounts` 账号，且账号上的管理员布尔标记 `potato_ai_bias` 为 `true`；
+2. 单打的 `SelectState.playerName`，或双打会话的选手 A/B（`_players[0]`、`_players[1]`）中任一名称包含连续中文字符串“土豆”。
+
+名称匹配规则：
+
+- 使用 `String.prototype.includes('土豆')`；
+- 不要求名称完全相等；
+- “儒雅随和の土豆”“土豆队”“小土豆”均触发；
+- 空值和不含“土豆”的名称不触发。
+
+由于名字旁路是 owner 明确批准的玩法入口，任何用户都可以通过输入含“土豆”的选手名主动触发彩蛋。本设计不追求浏览器端防伪。
+
+### 2.2 概率
+
+每场独立、有放回抽取：
+
+1. 先做一次 75% 判定；命中则直接选择 `T_MechClassic / 旧世机械团`；
+2. 未命中的 25% 继续从现有完整 AI 池均匀抽取，完整池仍包含“旧世机械团”。
+
+当前池大小为 19，因此最终概率为：
+
+- 单场旧世机械团：`0.75 + 0.25 × 1/19 = 29/38 ≈ 76.32%`；
+- 三场全部旧世机械团：`(29/38)^3 ≈ 44.45%`；
+- 允许任意重复，不增加去重逻辑。
+
+若未来 AI 池数量变化，第二项概率会随池大小变化；75% 直达权重保持不变。
+
+### 2.3 适用范围
+
+- 随机敌方开关关闭：不生成敌方，也不显示彩蛋；
+- 随机敌方开关开启：所有当前共用 `rollEnemiesForSession()` 的单打和双打模式生效；
+- `practice` 与 `match` 都生效；
+- 正式计分赛中的敌方 AI 分布被显著改变是 owner 已知并批准的产品行为。
+
+## 3. 数据模型与权限
+
+新增 amendment migration，不修改既有 migration：
+
+- `accounts.potato_ai_bias`：Boolean，默认 `false`；
+- 通过 PocketBase Admin UI 维护，不新增前台设置入口。
+
+账号更新规则必须同时保护 `role` 和新字段：
+
+```text
+本人更新：role 未改变 且 potato_ai_bias 未改变
+或
+当前认证账号 role = admin
+```
+
+因此普通 host/viewer 可以继续更新原本允许的非敏感个人字段，但不能通过 API 持久化开启彩蛋；admin 可以设置或取消标记。
+
+字段是否使用 PocketBase `Hidden` 取决于隔离 PB 实测：若 `Hidden=true` 会从本人 auth response 中剥离，前端就无法触发。最小设计默认不设 Hidden；字段存在性泄露不构成安全问题，因为名字旁路本就公开允许触发。
+
+## 4. 前端数据流
+
+### 4.1 触发快照
+
+在每次新会话生成三场敌方之前，由会话调用方从当前认证快照和对应模式的选手名载体计算一次：
+
+```text
+accountFlag = AuthAccount.potato_ai_bias === true
+singleNameHit = SelectState.playerName.includes('土豆')
+doublesNameHit = _players[0].includes('土豆') || _players[1].includes('土豆')
+potatoBiasActive = accountFlag || (当前模式为单打 ? singleNameHit : doublesNameHit)
+```
+
+认证数据链必须同步扩展 `web/src/logic/backend.ts`：
+
+- `AuthAccount` 增加可选布尔字段 `potato_ai_bias`；
+- `pbAuthHost()` 解析认证响应中的 `record.potato_ai_bias`；
+- auth refresh 路径同样回写该字段；
+- 缺失或非布尔值统一按 `false` 处理。
+
+该值只用于本次抽取。抽取结果生成后保持稳定：登出、切账号或编辑名称不会改写已经生成的三场结果；下一次重新开局时重新计算。
+
+### 4.2 抽取结果
+
+为敌方结果保留稳定 ID，避免用相近中文名识别：
+
+```ts
+interface EnemyRoll {
+  id: string;
+  race: RaceCode;
+  nameZh: string;
+  potatoFriend?: boolean;
+}
+```
+
+- `id` 用于精确识别 `T_MechClassic`；
+- `potatoFriend` 在触发态下，凡最终结果为 `T_MechClassic` 都为 `true`；
+- 无论它来自 75% 直达还是 25% 普通池自然命中，展示完全一致，避免向用户泄露随机分支来源。
+
+不把触发标记或命中来源写入 codec v1、match payload 或后端记录；codec v1 保持冻结。贴码/恢复会话的敌方还原缺口不在本轮扩展，另行治理。
+
+### 4.3 随机函数可测试性
+
+将随机源和本局触发快照作为可选依赖注入，生产默认使用 `Math.random` 且默认不触发：
+
+```ts
+rollEnemiesForSession(matchCount, rng = Math.random, potatoBiasActive = false)
+```
+
+会话调用方先计算 `potatoBiasActive`，再将冻结值传入；`aiEnemySelector` 不自行读取认证状态或选手名。测试可直接传入确定性序列和触发布尔值，不使用大样本统计和概率容差，避免 flaky。
+
+## 5. UI 设计
+
+复用现有 `EnemyBadge`，不新增页面或设置面板。
+
+- 当 `potatoFriend=true` 时，在“旧世机械团”附近显示短文案：`土豆的老朋友`；
+- `lg/md` 尺寸显示完整短文案；
+- OBS 的 `sm` 尺寸使用紧凑角标，避免横条溢出；
+- 普通旧世机械团结果、非触发态和随机开关关闭时均不显示提示；
+- 组件只接收通用 `easterEggLabel`/等价属性，不在通用 Badge 内硬编码身份判断。
+
+## 6. 不在本轮处理
+
+- 不新增服务端抽签 API；
+- 不追求防止用户修改本地前端状态；
+- 不修改 codec schema v1；
+- 不把命中原因持久化到 matches/logs；
+- 不处理贴码恢复时敌方结果未还原的既有缺口；
+- 不顺带治理 BP 设置页反复开关可重新抽取敌方的既有行为；
+- 不修改其他 AI 的概率或池配置。
+
+## 7. 错误与降级
+
+- 未登录、player account、viewer、账号字段缺失或类型异常：账号标记按 `false` 处理；名字旁路仍可触发；
+- 目标 ID 不在 AI 池：开发/测试应硬失败，生产不得静默拿错误中文名替代；
+- 随机敌方关闭：结果为空，彩蛋自然不渲染；
+- 后端不可达但已有前端会话：账号标记按当前 auth store 的最后已知值；名字旁路不依赖后端。
+
+## 8. 测试与验收
+
+### 8.1 PocketBase 隔离权限测试
+
+使用显式临时 `--dir`，绝不接触 `backend/pb_data`：
+
+1. migration apply 后字段存在且默认 `false`；
+2. host 自 PATCH `potato_ai_bias=true` 被拒；
+3. host 同值回写或更新普通字段仍按既有设计工作；
+4. admin 修改 host 标记成功；
+5. rollback 恢复上一条 accounts rule，并移除新增字段；
+6. migration 重放幂等。
+
+### 8.2 纯逻辑确定性测试
+
+1. 无账号标记且名字不含土豆：保持原 19 项均匀路径；
+2. 账号标记为 true：触发；
+3. 选手 A 名字含土豆：触发；
+4. 选手 B 名字含土豆：触发；
+5. `rng &lt; 0.75`：直接得到 `T_MechClassic`；
+6. `rng &gt;= 0.75`：继续消费下一随机值从完整 19 项池抽取；
+7. 25% 普通池自然抽中 `T_MechClassic` 时，同样得到 `potatoFriend=true`；
+8. 注入三场序列可得到三个相同结果，证明有放回；
+9. 随机敌方关闭时不生成结果；
+10. 单打与至少两个双打 variant 复用同一行为；
+11. 非触发路径保留现有随机敌方测试全部通过。
+
+### 8.3 UI / Playwright
+
+1. 以管理员标记的 host 登录，开局后命中旧世机械团时看到“土豆的老朋友”；
+2. 不依赖账号，输入含“土豆”的选手名也触发；
+3. 普通名称、普通账号不显示彩蛋；
+4. 三场全是旧世机械团时三场均正确展示；
+5. Select、Battle、OBS 三个消费位置均检查；
+6. OBS 1280×232 检查无溢出、无遮挡；
+7. 练习和正式比赛各跑一条连续流。
+
+### 8.4 全量门禁
+
+- `npm --prefix web test`；
+- 新增隔离 PB 权限测试；
+- 相关 Playwright flow；
+- `git diff --check`；
+- secret scan；
+- Harness-Pro 至少三阶段真实异构 reviewer gate；
+- Hub 最终人工走流与截图目检。
+
+## 9. 实施边界
+
+Round S 当前安全修复仍在未提交工作树。实施本功能前，计划必须明确基线与提交边界，避免把安全止血和产品彩蛋混成不可审查的大提交。不得覆盖 `projectplan.md`、`test-x/**` 或当前未提交改动；不得访问 `backend/pb_data/**`。
+
+</pre>
+</body>
+</html>

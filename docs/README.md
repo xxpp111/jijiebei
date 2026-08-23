@@ -22,6 +22,7 @@ review_after: 2026-09-22
 | jijiebei/deployment | 集结杯 · 部署 | 部署运维 | [deployment.md](deployment.md) | devbox 实测；`backend/deploy/` 配置对照 |
 | jijiebei/testing | 集结杯 · 测试体系 | 测试回归 | [testing.md](testing.md) | `node web/scripts/docs-drift-check.mjs`（§D 清单+计数） |
 | jijiebei/operations | 集结杯 · 运维手册 | 日常运营 | [operations.md](operations.md) | admin 后台实测 |
+| jijiebei/potato-ai-bias | 集结杯 · 土豆 AI 加权彩蛋 | 产品彩蛋 | [potato-ai-bias.md](potato-ai-bias.md) | `web/e2e/potato-ai-bias.mjs` + `sec-potato-ai-bias.mjs`（确定性随机 + 权限矩阵） |
 | jijiebei/codec-schema | 集结杯 · 对局码 Schema v1 | 对局码契约 | [codec-schema.md](codec-schema.md) | `node web/e2e/codec.mjs`（往返门） |
 | jijiebei/rules-config | 集结杯 · 赛事设计与配置导读 | 赛事配置 | [rules-config.md](rules-config.md) | `python3 docs/build_guantu_config.py` 重生成比对 |
 | jijiebei/claude-design-loop | 集结杯 Claude Design 闭环 SOP | 设计流程 | [claude-design-loop.md](claude-design-loop.md) | 下一轮设计出稿实操 |
@@ -58,3 +59,7 @@ review_after: 2026-09-22
 |---|---|---|
 | `规则一-官突加n-细则v1.md` | [doubles-guantu-plus-n.md](doubles-guantu-plus-n.md) | 2026-08-22 受控 rename（英文稳定路径），历史引用不失效 |
 | `research-frontend-p2p3.md` | [archive/research-frontend-p2p3.md](archive/research-frontend-p2p3.md) | 历史调研正文唯一 home 在 archive，旧裸路径留指针防静默失效 |
+
+## 活跃 wiki 账本（Alioth 治理）
+
+机器账本与协议面在 [wiki/README.md](wiki/README.md)（log/lifecycle 唯一写手 = `web/scripts/wiki-governance.mjs`，不手写第二份真相）。查询：`node web/scripts/wiki-governance.mjs query <id|path|slug>`。

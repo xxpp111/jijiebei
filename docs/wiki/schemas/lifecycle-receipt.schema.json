@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "docs/wiki/schemas/lifecycle-receipt.schema.json",
+  "title": "docs/wiki/lifecycle.jsonl 行（唯一状态事件权威）",
+  "description": "lifecycle.jsonl 的每行 = 一次对象状态事件，append-only。event 合法转换表以 CLI check 折叠器为准（schema 只查形状）；bootstrap 导入的既有文档用 event=bootstrap-import 且 from=null，不伪造 register-* 语义。log.life 永远只由此账折叠派生。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "object", "from", "to", "event", "actor", "authority", "evidence", "actions", "occurred_at"],
+  "properties": {
+    "event_id": { "type": "string", "pattern": "^lce-[0-9a-f]{20}-\\d+$" },
+    "object": { "type": "string", "pattern": "^jijiebei/[a-z0-9]+(?:-[a-z0-9]+)*@r\\d{8}-\\d{6}$" },
+    "from": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "life"],
+          "properties": {
+            "state": { "type": "string", "enum": ["registered", "imported", "archived", "superseded"] },
+            "life": { "type": "string", "enum": ["flow", "archive", "knowledge"] }
+          }
+        }
+      ]
+    },
+    "to": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "life"],
+      "properties": {
+        "state": { "type": "string", "enum": ["registered", "imported", "archived", "superseded"] },
+        "life": { "type": "string", "enum": ["flow", "archive", "knowledge"] }
+      }
+    },
+    "event": { "type": "string", "enum": ["bootstrap-import", "register-flow", "register-knowledge", "register-archive", "correct-life", "promote", "archive", "supersede"] },
+    "actor": { "type": "string" },
+    "authority": { "type": "string" },
+    "evidence": { "type": "array", "items": { "type": "string" } },
+    "actions": { "type": "array", "items": { "type": "object" } },
+    "occurred_at": { "type": "string", "format": "date-time" }
+  }
+}

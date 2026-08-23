@@ -23,10 +23,21 @@
 //      嵌套引用与 quoted-H2/列表/表格/代码围栏伪装；禁额外空行/多 blockquote/无链接 blockquote/
 //      顺序变化）；指针目标须留在 docs 根目录内且存在（R6：拒绝对路径与 `../` 越出 docs）
 //   G. docs/testing.md 摘要三计数与磁盘机械枚举一致（根级 e2e 数 / flows 数 / vitest 单测文件数）
+//   H. docs/wiki 投影门（Alioth v2 registrar · 2026-08-23 新增）：
+//      H1 双账可对账：log 每个 id 在 lifecycle 有事件、lifecycle 每个对象在 log 有行（空账 0=0 绿）
+//      H2 bootstrap 覆盖：bootstrap.json 存在时，coverage glob 对 `git ls-files` 枚举的 tracked Markdown
+//         与 bootstrap 显式 item 求覆盖集，再与登记 path 双向对账；Git 枚举失败报 FATAL_CONFIG、fail closed；
+//         每次导入都真实落账（log boot- 行 = items）；bootstrap.json 未生成（Phase 3 前）→ 跳过 H2
+//      H3 README 投影单一模型：消费 registrar 的 checkReadmeProjection 同一算法，对 docs/wiki/README.md
+//         §8 表逐列对账 id/title/type/life/path 与计数（bootstrap 篇数 / 测试例数以参数传入）——消除
+//         第二套 README 投影真相（gen3 A3#8）
+//      —— 期望值全部从账本/磁盘解析，绝不硬编码第三份真相；只读。coverage 唯一 Git 依赖为
+//         `git ls-files` tracked 枚举，失败即 FATAL_CONFIG，不退化为空基线。
 //
 // 用法：node web/scripts/docs-drift-check.mjs   （repo 根或任意 cwd 均可，路径自锚定）
 // 退出码：0 全绿 / 1 有漂移或缺失 / 2 脚本自身错误（找不到应存在的文档）
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { runCheck, loadConfig, checkReadmeProjection, countTestCases } from './wiki-governance.mjs'; // §H 唯一 coverage/投影算法来源（Safety correction #4 + gen3 A3#8）
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve, isAbsolute, relative } from 'path';
 
@@ -403,6 +414,82 @@ const activeIds = new Set();
     if (!problems.length) ok(`G. testing.md 摘要计数 = 磁盘机械枚举（e2e ${diskE2e} / flows ${diskFlow} / vitest 文件 ${diskVitest}）`);
   }
   if (problems.length) fail(`G. testing.md 计数漂移: ${problems.join('；')}`);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// H. docs/wiki 投影门（Alioth v2 registrar · 2026-08-23 新增）
+//    只管「账本与磁盘/README 的投影一致」，账本自身语义（transition/life 折叠）归
+//    wiki-governance check；本门期望值全部从账本/磁盘解析，缺件（Phase 3 前的 bootstrap.json）
+//    静默跳过对应子项——绝不把第三份真相硬编码进本脚本。
+// ───────────────────────────────────────────────────────────────────────────
+{
+  checks++;
+  const wikiDir = R('docs/wiki');
+  const problems = [];
+  const readLinesOrNone = (rel) => {
+    const abs = R(rel);
+    if (!existsSync(abs)) return [];
+    return readFileSync(abs, 'utf8').trim().split('\n').filter((l) => l.trim() !== '');
+  };
+  const logLines = readLinesOrNone('docs/wiki/log.jsonl');
+  const lcLines = readLinesOrNone('docs/wiki/lifecycle.jsonl');
+  const logIds = new Set();
+  for (const l of logLines) {
+    try { const r = JSON.parse(l); if (r && r.id) logIds.add(r.id); } catch { problems.push(`docs/wiki/log.jsonl 有坏行: ${l.slice(0, 60)}`); }
+  }
+  const lcObjects = new Set();
+  let lcBad = false;
+  for (const l of lcLines) {
+    try { const r = JSON.parse(l); if (r && r.object) lcObjects.add(r.object); } catch { lcBad = true; }
+  }
+  if (lcBad) problems.push('docs/wiki/lifecycle.jsonl 有坏行（JSON 解析失败）');
+
+  // H1 双账可对账：id 集合双向相等（空账 0=0 成立）
+  const missingLc = [...logIds].filter((id) => !lcObjects.has(id));
+  const missingLog = [...lcObjects].filter((obj) => !logIds.has(obj));
+  if (missingLc.length) problems.push(`log 有 ${missingLc.length} 个 id 在 lifecycle 无事件: ${missingLc.slice(0, 3).join(', ')}…`);
+  if (missingLog.length) problems.push(`lifecycle 有 ${missingLog.length} 个对象在 log 无行: ${missingLog.slice(0, 3).join(', ')}…`);
+
+  // H2 bootstrap 覆盖：直接复用 wiki-governance runCheck 的结果（Safety correction #4：
+  // 本门不维护第二份 coverage 算法——tracked 基线/占位符 glob/落账对账全部以 registrar 为唯一实现）
+  const bootAbs = R('docs/wiki/bootstrap.json');
+  const bootExists = existsSync(bootAbs);
+  let h2 = 'bootstrap.json 未生成（Phase 3 前跳过覆盖对账）';
+  let runCheckRes = null;
+  if (bootExists) {
+    try {
+      runCheckRes = runCheck(loadConfig(repoRoot), repoRoot);
+    } catch (e) {
+      problems.push(`wiki-governance runCheck 异常: ${String(e && e.message || e).slice(0, 120)}`);
+    }
+    if (runCheckRes) {
+      if (runCheckRes.code !== 'CHECK_OK') problems.push(...runCheckRes.errors.map((e) => `registrar check: ${e}`));
+      const boot = runCheckRes.counts.bootstrap_items;
+      h2 = `registrar runCheck ${runCheckRes.code}（bootstrap ${boot} 项 / coverage ${runCheckRes.counts.coverage_files} 文件对账，log ${runCheckRes.counts.log_lines} 行）`;
+    }
+  }
+
+  // H3 README 投影单一模型对账（gen3 A3#8）：逐列 id/title/type/life/path + bootstrap/测试计数。
+  // 消费 registrar 的 checkReadmeProjection 同一算法，消除第二套 README 投影真相；期望值全部
+  // 从账本/磁盘解析，bootstrap 数与测试数由本门机械枚举后以参数传入（不硬编码第三份真相）。
+  let bootstrapCount = null;
+  if (bootExists) {
+    if (runCheckRes && runCheckRes.counts) bootstrapCount = runCheckRes.counts.bootstrap_items;
+    if (bootstrapCount === null || bootstrapCount === undefined) {
+      try {
+        const b = JSON.parse(readFileSync(bootAbs, 'utf8'));
+        if (b && Array.isArray(b.items)) bootstrapCount = b.items.length;
+      } catch { bootstrapCount = null; }
+    }
+  }
+  const testCount = countTestCases(R('web/scripts/wiki-governance.test.mjs'));
+  const proj = checkReadmeProjection(loadConfig(repoRoot), repoRoot, { readmeAbs: R('docs/wiki/README.md'), bootstrapCount, testCount });
+  for (const e of proj.problems) problems.push(`README 投影: ${e}`);
+  let h3 = `README 投影单一算法：${proj.expectedRows} 注册行 ↔ 表 ${proj.actualRows} 行逐列对账` +
+    `${bootstrapCount !== null ? ` / bootstrap ${bootstrapCount}` : ''}${testCount >= 0 ? ` / 测试 ${testCount} 例` : ''}`;
+
+  if (problems.length) fail(`H. docs/wiki 投影门违规 ${problems.length} 处: ${problems.slice(0, 6).join('；')}${problems.length > 6 ? ' …' : ''}`);
+  else ok(`H. docs/wiki 投影门：log ${logIds.size} / lifecycle 对象 ${lcObjects.size} 双向可对账；${h2}；${h3}`);
 }
 
 // ───────────────────────────────────────────────────────────────────────────

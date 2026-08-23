@@ -1,0 +1,15 @@
+{
+  "types": ["plan", "decision", "report", "digest"],
+  "lifeValues": ["flow", "archive", "knowledge"],
+  "idPattern": "^jijiebei/[a-z0-9]+(?:-[a-z0-9]+)*@r\\d{8}-\\d{6}$",
+  "pathTemplate": "docs/wiki/jijiebei/<slug>/r<ts>.<type>.<ext>",
+  "log": "log.jsonl",
+  "lifecycle": "lifecycle.jsonl",
+  "bootstrap": "bootstrap.json",
+  "lock": ".registrar.lock",
+  "journal": ".registrar.journal.json",
+  "stagedLog": "log.jsonl.new",
+  "stagedLifecycle": "lifecycle.jsonl.new",
+  "lockStaleMs": 120000,
+  "contextManifest": "docs/.context-manifest.json"
+}
