@@ -3,10 +3,10 @@ title: 集结杯 · 部署
 id: jijiebei/deployment
 status: current
 owner: jjb-hub
-updated: 2026-08-22
-applies_to: ["部署或更新 devbox 站点", "排查 8080 不可达 / 迁移核对 / 回滚", "改 nginx conf 或 systemd unit"]
+updated: 2026-08-26
+applies_to: ["部署或更新 devbox 站点", "排查 8080 不可达 / 迁移核对 / 回滚", "改 nginx conf 或 systemd unit", "从私有 GitHub 加密备份恢复数据"]
 replaces: ["docs/archive/runbook-*.md（历史 runbook 已归档，本文件是唯一部署真相源）"]
-evidence: ["backend/deploy/（nginx/systemd/litestream 配置真相）", "AGENTS.md 第 10 条（只更新 web 前必跑 check-migrations）"]
+evidence: ["backend/deploy/（nginx/systemd/litestream 配置真相）", "AGENTS.md 第 10 条（只更新 web 前必跑 check-migrations）", "docs/backup-restore-manifest.json（加密备份下载、完整性与恢复边界的机器入口）"]
 review_after: 2026-09-22
 ---
 # 集结杯 · 部署（Deployment）
@@ -351,6 +351,113 @@ curl -s http://127.0.0.1:8090/api/health
 ```
 
 > **RPO ≈ 1s**（litestream sync-interval）；**RTO ≈ 数分钟**（恢复 + 启动 + 反代生效）。
+
+### 7.4 从私有 GitHub 加密备份恢复（AI-first）
+
+> 机器唯一入口：[`docs/backup-restore-manifest.json`](backup-restore-manifest.json)。AI 和人都先读 manifest，再执行本节；禁止从聊天、旧日志或文件名猜 repo/tag/hash。公开仓只保存说明与哈希，**不保存数据库、明文归档或口令**。
+
+#### 口令语义
+
+当前备份使用 GPG symmetric AES256：同一份 `.gpg` 密文在新电脑上只需要**完全相同的口令**即可解密，不需要额外私钥文件。口令只保存在 operator 的密码管理器中；GitHub 无法找回，遗失即无法解密。禁止把口令放进命令参数、env、脚本、日志、仓库或聊天。
+
+#### 下载与四道完整性门
+
+```bash
+set -euo pipefail
+MANIFEST=docs/backup-restore-manifest.json
+BACKUP_REPO=$(node -p "require('./' + process.argv[1]).backup_source.repository" "$MANIFEST")
+RELEASE_TAG=$(node -p "require('./' + process.argv[1]).backup_source.release_tag" "$MANIFEST")
+CIPHERTEXT=$(node -p "require('./' + process.argv[1]).assets.ciphertext" "$MANIFEST")
+CIPHER_SHA=$(node -p "require('./' + process.argv[1]).integrity.ciphertext_sha256" "$MANIFEST")
+PLAIN_SHA=$(node -p "require('./' + process.argv[1]).integrity.decrypted_plaintext_sha256" "$MANIFEST")
+
+# ① 私有仓权限：必须是已授权账号；visibility 不为 PRIVATE 就停止。
+gh auth status
+test "$(gh repo view "$BACKUP_REPO" --json visibility -q .visibility)" = PRIVATE
+
+# ② 下载密文和脱敏证据；工作目录只允许当前用户访问。
+WORK="$HOME/jjb-restore-$RELEASE_TAG"
+install -d -m 700 "$WORK/download" "$WORK/staging"
+gh release download "$RELEASE_TAG" --repo "$BACKUP_REPO" --dir "$WORK/download"
+
+test "$(shasum -a 256 "$WORK/download/$CIPHERTEXT" | cut -d' ' -f1)" = "$CIPHER_SHA"
+
+# ③ 交互式解密：GPG 自己询问口令；不要添加 --passphrase 或把密码写进变量。
+gpg --output "$WORK/backup.tar.gz" --decrypt "$WORK/download/$CIPHERTEXT"
+test "$(shasum -a 256 "$WORK/backup.tar.gz" | cut -d' ' -f1)" = "$PLAIN_SHA"
+
+# ④ 只解包到 staging；先验证归档内逐文件 SHA，再按 public manifest 复算完整相对文件集摘要，最后检查 SQLite 结构；不读取业务数据行。
+tar -xzf "$WORK/backup.tar.gz" -C "$WORK/staging"
+(cd "$WORK/staging" && shasum -a 256 -c SHA256SUMS.relative)
+python3 - "$MANIFEST" "$WORK/staging" <<'PY'
+import hashlib, json, sqlite3, sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text())
+root = Path(sys.argv[2])
+integrity = manifest["integrity"]
+contract = integrity["payload_relative_set_digest_contract"]
+expected_contract = {
+    "algorithm": "sha256-lines-v1",
+    "digest_input": "UTF-8 concatenation of one line per regular file",
+    "roots_in_order": ["payload", "metadata"],
+    "path_order": "lexicographic-within-each-root",
+    "fields_in_order": ["file_sha256", "relative_posix_path", "byte_size"],
+    "field_separator": "single-space",
+    "line_terminator": "LF",
+}
+if contract != expected_contract:
+    raise SystemExit("unsupported relative-set digest contract")
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+lines = []
+for root_name in contract["roots_in_order"]:
+    base = root / root_name
+    if not base.is_dir():
+        raise SystemExit(f"missing relative-set root: {root_name}")
+    files = sorted(
+        (path for path in base.rglob("*") if path.is_file()),
+        key=lambda path: path.relative_to(root).as_posix(),
+    )
+    for path in files:
+        relative = path.relative_to(root).as_posix()
+        lines.append(f"{file_sha256(path)} {relative} {path.stat().st_size}\n")
+actual_set_digest = hashlib.sha256("".join(lines).encode()).hexdigest()
+if actual_set_digest != integrity["payload_relative_set_digest"]:
+    raise SystemExit("relative-set digest mismatch")
+print("relative-set digest=ok")
+
+pb_data = root / "payload" / "pb_data"
+for name in ("data.db", "auxiliary.db", "data.db.bak-20260718"):
+    path = pb_data / name
+    con = sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)
+    result = con.execute("PRAGMA quick_check").fetchone()[0]
+    con.close()
+    if result != "ok":
+        raise SystemExit(f"{name}: quick_check={result}")
+    print(f"{name}: quick_check=ok")
+PY
+```
+
+四道门全部通过后，默认动作仍是**停在 staging**。当前 Release 是 hot safety backup：三个 SQLite 各自一致，但不是跨库/附件同一时点快照；在线读期间还产生/变化过 WAL/SHM sidecar。AI 不得据此自动覆盖 live `pb_data`。
+
+#### 写回 live 的额外硬门
+
+只有在 owner 明确批准的迁服窗口，且同时满足以下条件，才另立执行契约：
+
+1. `jjb-backend` 已停止并确认无写者；
+2. 现有 `pb_data` 已原样保留为 rollback copy；
+3. 优先使用后续 cold authoritative backup；仅在没有 cold 包的应急场景才考虑本 hot 包；
+4. 写回时不复用备份中的 `*-wal` / `*-shm`，由 SQLite 在新实例自行生成；
+5. 恢复后依次验证 health、migration、账号/选手/场次/积分的**结构与计数**，不把密码或用户记录打印到日志。
+
+账号密码在 SQLite 中以哈希保存：完整恢复数据库后，原密码仍可用于登录；数据库不能反推出明文。超管/主播明文密码仍须由 owner 的密码管理器独立保存。
 
 ---
 

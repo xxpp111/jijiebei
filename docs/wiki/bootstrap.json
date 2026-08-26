@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-23T16:21:01.000Z",
+  "generated_at": "2026-08-26T10:04:24.000Z",
   "coverage": [
     "*.md",
     "docs/**/*.md",
@@ -22,7 +22,7 @@
     },
     {
       "path": ".claude/skills/jjb-deploy/SKILL.md",
-      "id": "jijiebei/claude-skills-jjb-deploy-skill@r20260823-094500",
+      "id": "jijiebei/claude-skills-jjb-deploy-skill@r20260826-180254",
       "type": "report",
       "life": "knowledge",
       "disposition": "knowledge",
@@ -502,7 +502,7 @@
     },
     {
       "path": "docs/deployment.md",
-      "id": "jijiebei/deployment@r20260823-094500",
+      "id": "jijiebei/deployment@r20260826-180254",
       "type": "report",
       "life": "knowledge",
       "disposition": "knowledge",
@@ -632,7 +632,7 @@
       "path": "docs/wiki/README.md",
       "disposition": "knowledge",
       "reason": "JJB Alioth 协议与 registrar 使用说明（A2 交付，log 投影 §8 表所在）",
-      "id": "jijiebei/docs-wiki-readme@r20260823-162100",
+      "id": "jijiebei/docs-wiki-readme@r20260826-180424",
       "type": "report",
       "life": "knowledge"
     },

@@ -1,6 +1,6 @@
 ---
 name: jjb-deploy
-description: 集结杯部署到开发机 devbox-tianlang（10.37.220.128）的持久化 docker nginx 链路。核心解决"开发机外网受限、拉不到镜像"这一最大障碍。要把站点部署/更新到开发机、排查 8080 不可达、换机器重新部署时使用。
+description: 集结杯部署到开发机 devbox-tianlang（10.37.220.128）的持久化 docker nginx 链路，以及换机时从私有 GitHub 加密备份做 fail-closed 数据恢复。核心解决“开发机外网受限、拉不到镜像”和“公开仓不存数据但 AI 仍能恢复”的问题。
 ---
 
 # 集结杯开发机部署
@@ -31,6 +31,17 @@ node backend/scripts/check-migrations.mjs
 它会读取本地 `backend/pb_migrations/*.go` 的迁移 id，并通过 `devbox-tianlang` 只读查询 PocketBase `_migrations.file`。若输出缺口或命令非 0，**必须先做 backend 部署**：推送包含这些 migrations 的新二进制，并在 backend 侧完成 `migrate up`，不能只更新 web。
 
 2026-07-02 真实事故：backend 二进制停在 Jun 26，web `682f09b` 上了依赖 `player_accounts` / `event_rules` 新 collection 的注册功能，公网用户实测注册 404 `Missing or invalid collection context`。
+
+### 🔐 换机／加密数据恢复入口
+
+1. **先读机器真相**：`docs/backup-restore-manifest.json`，再读 `docs/deployment.md` §7.4；repo/tag/asset/hash 不从聊天或历史日志猜。
+2. public repo 只保存恢复说明与 hash；数据库只存在 private GitHub Release 的 GPG 密文中。禁止把 `.db`、明文 tar 或口令写回仓库。
+3. AI 可以自动完成：private repo 权限检查、Release 下载、ciphertext/plaintext/payload SHA、staging 解包、SQLite `quick_check`。
+4. **human-in-the-loop**：GPG 口令由 operator 在交互式 pinentry 输入；AI 不得索取、记录、传 env 或拼到命令行。对称密文只需该口令即可解密，口令遗失无法恢复。
+5. 默认停在 0700 staging。任何 live restore 必须 owner 单独批准，先停 `jjb-backend`、保留现有 `pb_data` rollback copy，并优先使用 cold authoritative backup。
+6. 四道完整性门任一失败、private repo 无权、migration/health 不明或只有 hot 包却试图宣称跨库原子 → fail closed，不写 live。
+
+本 Skill 只保留入口和硬门，完整命令只存在于 `docs/deployment.md`，避免双真相。
 
 ## 🛠 部署步骤
 

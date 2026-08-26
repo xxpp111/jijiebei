@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "jijiebei/encrypted-backup-restore",
+  "public_repo": "xxpp111/jijiebei",
+  "guide": "docs/deployment.md#74-从私有-github-加密备份恢复ai-first",
+  "backup_source": {
+    "repository": "derivative2002/jijiebei-backups-private",
+    "visibility_required": "PRIVATE",
+    "release_tag": "hot-20260824T120026Z"
+  },
+  "assets": {
+    "ciphertext": "jjb-hot-20260824T120026Z-hot-1e2f9bd0-portable.tar.gz.gpg",
+    "ciphertext_sha256_file": "jjb-hot-20260824T120026Z-hot-1e2f9bd0-portable.tar.gz.gpg.sha256",
+    "sanitized_manifest": "release-manifest-public.json"
+  },
+  "integrity": {
+    "ciphertext_sha256": "3fa1a805b80c7aeadaad14e96a5cd45abb9ad44cdbfb5a8c927e15949e91fb20",
+    "decrypted_plaintext_sha256": "f3deff7b08225c6f434a876b95e0ec03ec99a2681cecd6ac6fe957c2a7167013",
+    "payload_relative_set_digest": "783919f15bcc9a9457b329c1835f3f1be7c0fed7fff21b3b8b0a44131c0fd024",
+    "payload_relative_set_digest_contract": {
+      "algorithm": "sha256-lines-v1",
+      "digest_input": "UTF-8 concatenation of one line per regular file",
+      "roots_in_order": [
+        "payload",
+        "metadata"
+      ],
+      "path_order": "lexicographic-within-each-root",
+      "fields_in_order": [
+        "file_sha256",
+        "relative_posix_path",
+        "byte_size"
+      ],
+      "field_separator": "single-space",
+      "line_terminator": "LF"
+    }
+  },
+  "encryption": {
+    "type": "gpg-symmetric",
+    "cipher": "AES256",
+    "private_key_file_required": false,
+    "passphrase_source": "operator-password-manager",
+    "passphrase_forbidden_locations": [
+      "public-repo",
+      "private-repo",
+      "command-line",
+      "environment-variable",
+      "logs",
+      "chat"
+    ]
+  },
+  "classification": "hot-safety-only-allow-with-warning",
+  "contains_plaintext_data": false,
+  "public_repo_contains_backup_bytes": false,
+  "restore_policy": {
+    "default_action": "download-decrypt-stage-verify-only",
+    "live_restore_requires": [
+      "owner-explicit-approval",
+      "jjb-backend-stopped",
+      "existing-pb_data-rollback-copy",
+      "all-integrity-gates-pass"
+    ],
+    "cold_authoritative_backup_required_before_migration": true
+  },
+  "required_tools": [
+    "gh",
+    "gpg",
+    "node",
+    "python3",
+    "shasum",
+    "tar"
+  ],
+  "warnings": [
+    "hot snapshot is individually consistent per SQLite database, not cross-database or attachment atomic",
+    "live SQLite sidecars were created or changed during online reads; do not clean them online",
+    "the decryption passphrase is not recoverable from either GitHub repository",
+    "migration live remains CANNOT_VERIFY until a cold restore rehearsal passes"
+  ]
+}
