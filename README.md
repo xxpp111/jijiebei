@@ -10,6 +10,7 @@
 | 11 屏 + 7 集合 + 数据流 | [docs/architecture.md](docs/architecture.md) |
 | 三层测试（vitest / AI-E2E / 双打同步） | [docs/testing.md](docs/testing.md) |
 | devbox 部署手册（nginx / Litestream / 回滚） | [docs/deployment.md](docs/deployment.md) |
+| 换电脑 / 换服务器 / cold backup / cutover / rollback | [docs/migration.md](docs/migration.md) |
 | 主播账号 / 选手 / 赛季 / 系数 / 天梯 / FAQ | [docs/operations.md](docs/operations.md) |
 
 ---

@@ -3,8 +3,8 @@ title: docs · 文档索引（唯一人工导航）
 id: jijiebei/docs-index
 status: current
 owner: jjb-hub
-updated: 2026-08-22
-applies_to: ["查找任何当前事实文档的入口", "登记新活文档 / 判断文档属 knowledge-flow-archive-generated-compat 哪一栏"]
+updated: 2026-08-27
+applies_to: ["查找任何当前事实文档的入口", "登记新活文档 / 判断文档属 knowledge-flow-archive-generated-compat 哪一栏", "查找换电脑 / 换服务器 / 数据搬迁入口"]
 replaces: []
 evidence: ["本目录顶层活文档（各篇头部 front matter 均带 id/title）", "web/scripts/docs-drift-check.mjs（本索引与磁盘的机器校验）"]
 review_after: 2026-09-22
@@ -20,6 +20,7 @@ review_after: 2026-09-22
 |---|---|---|---|---|
 | jijiebei/architecture | 集结杯 · 架构 | 体系结构 | [architecture.md](architecture.md) | `node web/scripts/docs-drift-check.mjs`（§A 模块清单） |
 | jijiebei/deployment | 集结杯 · 部署 | 部署运维 | [deployment.md](deployment.md) | devbox 实测；`backend/deploy/` 配置对照 |
+| jijiebei/migration | 集结杯 · 搬迁手册 | 换电脑 / 换服务器 / cold backup / cutover / rollback | [migration.md](migration.md) | `node web/scripts/docs-drift-check.mjs`；正式迁服仍需 cold rehearsal |
 | jijiebei/testing | 集结杯 · 测试体系 | 测试回归 | [testing.md](testing.md) | `node web/scripts/docs-drift-check.mjs`（§D 清单+计数） |
 | jijiebei/operations | 集结杯 · 运维手册 | 日常运营 | [operations.md](operations.md) | admin 后台实测 |
 | jijiebei/potato-ai-bias | 集结杯 · 土豆 AI 加权彩蛋 | 产品彩蛋 | [potato-ai-bias.md](potato-ai-bias.md) | `web/e2e/potato-ai-bias.mjs` + `sec-potato-ai-bias.mjs`（确定性随机 + 权限矩阵） |

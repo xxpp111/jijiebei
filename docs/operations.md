@@ -3,10 +3,10 @@ title: 集结杯 · 运维手册
 id: jijiebei/operations
 status: current
 owner: jjb-hub
-updated: 2026-08-22
-applies_to: ["开主播账号 / 注册选手 / 开赛季 / 调系数", "查天梯 / 处理常见运营问题"]
+updated: 2026-08-27
+applies_to: ["开主播账号 / 注册选手 / 开赛季 / 调系数", "查天梯 / 处理常见运营问题", "查询日常备份与正式迁服边界"]
 replaces: []
-evidence: ["backend/config/scoring.json（系数配置真相）", "admin/（Arco 后台操作面）"]
+evidence: ["backend/config/scoring.json（系数配置真相）", "admin/（Arco 后台操作面）", "docs/migration.md（cold authoritative backup 与迁服边界）"]
 review_after: 2026-09-22
 ---
 # 集结杯 · 运维（Operations）
@@ -348,20 +348,11 @@ curl -s -H "Authorization: <admin_token>" \
 
 ### 5.5 数据库备份 / 导出
 
-```bash
-# 1. 在线导出（SQLite WAL 模式：复制 db + wal + shm 三件套）
-ssh 10.37.220.128
-cp /opt/jjb-backend/pb_data/data.db      /tmp/jjb-export.db
-cp /opt/jjb-backend/pb_data/data.db-wal  /tmp/jjb-export.db-wal 2>/dev/null || true
-cp /opt/jjb-backend/pb_data/data.db-shm  /tmp/jjb-export.db-shm 2>/dev/null || true
+- **正式迁服 / 灾难恢复**：统一进入 [migration.md](migration.md)。权威迁服备份必须先停止 `jjb-backend`、确认无写者，再快照整个 `/opt/jjb-backend/pb_data`（数据库、附件及其他应用数据），并经过 hash、加密、PRIVATE 上传与 staging 恢复门。
+- **当前 GitHub hot 包**：只用于 safety/staging；逐 SQLite 一致，但不是跨库/附件同一时点原子快照，不能直接授权 server cutover。机器参数只读 [backup-restore-manifest.json](backup-restore-manifest.json)。
+- **日常运营导出**：优先使用 Admin UI 或受控 API 导出需要的字段；不要直接打开 live SQLite 后再清理 sidecar，也不要把业务行、密码 hash 或 token 输出到共享日志。
 
-# 2. 本地查询
-sqlite3 /tmp/jjb-export.db ".tables"
-sqlite3 /tmp/jjb-export.db "SELECT nickname, player_code, active FROM players"
-sqlite3 /tmp/jjb-export.db "SELECT COUNT(*) FROM matches"
-```
-
-> **不要只复制 data.db**：WAL 模式下，未提交的写可能在 wal/shm 里；**三件套一起复制**才能保证一致性。
+> **禁止把在线 raw copy 当作权威备份**：复制 `data.db`、`data.db-wal`、`data.db-shm` 即使三件套齐全，也不能证明多个数据库与附件处于同一时点。它只能作为明确标注限制的临时取证副本，不能用于正式迁服、覆盖 live `pb_data` 或替代 cold authoritative backup。
 
 ---
 

@@ -3,6 +3,7 @@ pb_data/
 
 # 编译产物
 pocketbase
+pocketbase-linux-*
 jjb-backend
 *.exe
 *.test

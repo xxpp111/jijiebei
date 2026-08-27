@@ -17,6 +17,11 @@ export const DEFAULT_MIGRATIONS_DIR = resolve(backendRoot, 'pb_migrations');
 const MIGRATIONS_TABLE = '_migrations';
 const MIGRATION_FILE_COLUMN = 'file';
 
+// JJB 自有迁移均使用 178200xxxx 前缀；PocketBase 内部迁移不在这个命名空间。
+// 该边界让检查器能拒绝“源库已有、目标 checkout 不认识”的版本倒退，
+// 同时不把 PocketBase 自带 _migrations 行误报为目标 ref 漂移。
+export const PROJECT_MIGRATION_PREFIX = '178200';
+
 export function normalizeMigrationId(value) {
   return basename(String(value).trim()).replace(/\.(go|js|ts)$/i, '');
 }
@@ -34,6 +39,25 @@ export function findMissingMigrations(localIds, appliedIds) {
   }
 
   return missing;
+}
+
+export function findMigrationDrift(localIds, appliedIds, projectPrefix = PROJECT_MIGRATION_PREFIX) {
+  const local = [...new Set(localIds.map(normalizeMigrationId).filter(Boolean))];
+  const localSet = new Set(local);
+  const seenUnexpected = new Set();
+  const unexpected = [];
+
+  for (const rawId of appliedIds) {
+    const id = normalizeMigrationId(rawId);
+    if (!id || !id.startsWith(projectPrefix) || localSet.has(id) || seenUnexpected.has(id)) continue;
+    seenUnexpected.add(id);
+    unexpected.push(id);
+  }
+
+  return {
+    missing: findMissingMigrations(local, appliedIds),
+    unexpected,
+  };
 }
 
 export async function readLocalMigrationIds(migrationsDir = DEFAULT_MIGRATIONS_DIR) {
@@ -64,22 +88,15 @@ import sqlite3
 import sys
 
 db_path = sys.argv[1]
-uris = [
-    "file:" + db_path + "?mode=ro",
-    "file:" + db_path + "?mode=ro&immutable=1",
-]
-last_error = None
-for uri in uris:
-    try:
-        con = sqlite3.connect(uri, uri=True)
-        for (file_name,) in con.execute("SELECT file FROM _migrations ORDER BY file"):
-            print(file_name)
-        con.close()
-        sys.exit(0)
-    except Exception as exc:
-        last_error = exc
-sys.stderr.write("python sqlite readonly query failed: " + str(last_error) + "\\n")
-sys.exit(1)
+try:
+    con = sqlite3.connect("file:" + db_path + "?mode=ro", uri=True)
+    rows = con.execute("SELECT file FROM _migrations ORDER BY file").fetchall()
+    con.close()
+except Exception as exc:
+    sys.stderr.write("python sqlite WAL-aware readonly query failed: " + str(exc) + "\\n")
+    sys.exit(1)
+for (file_name,) in rows:
+    print(file_name)
 PY
   exit $?
 fi
@@ -146,22 +163,33 @@ async function main(argv = process.argv.slice(2)) {
   const [host = DEFAULT_HOST, dbPath = DEFAULT_DB_PATH] = argv;
   const localIds = await readLocalMigrationIds();
   const appliedIds = await readAppliedMigrationIds({ host, dbPath });
-  const missing = findMissingMigrations(localIds, appliedIds);
+  const { missing, unexpected } = findMigrationDrift(localIds, appliedIds);
 
   console.log('[jjb migration check]');
   console.log(`local migrations: ${localIds.length} (${resolve(repoRoot, 'backend/pb_migrations')})`);
   console.log(`remote applied:   ${appliedIds.length} (${host}:${dbPath}, 含 PocketBase 内部系统迁移，非本项目专属数)`);
 
-  if (missing.length === 0) {
-    console.log('OK: remote backend has all local migrations applied.');
+  if (missing.length === 0 && unexpected.length === 0) {
+    console.log('OK: remote JJB migration set is compatible with the local checkout.');
     return 0;
   }
 
-  console.error(`ERROR: remote backend is missing ${missing.length} migration(s):`);
-  for (const id of missing) {
-    console.error(`  - ${id}`);
+  if (missing.length > 0) {
+    console.error(`ERROR: remote backend is missing ${missing.length} local migration(s):`);
+    for (const id of missing) {
+      console.error(`  - ${id}`);
+    }
+    console.error('Action: deploy the backend binary containing these migrations and run migrate up before updating web.');
   }
-  console.error('Action: deploy the backend binary containing these migrations and run migrate up before updating web.');
+
+  if (unexpected.length > 0) {
+    console.error(`ERROR: remote database has ${unexpected.length} JJB migration(s) unknown to this checkout:`);
+    for (const id of unexpected) {
+      console.error(`  - ${id}`);
+    }
+    console.error('Action: stop; select an approved target SHA that contains every applied JJB migration. Never run an older backend against this database.');
+  }
+
   return 1;
 }
 

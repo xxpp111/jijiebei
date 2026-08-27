@@ -3,8 +3,8 @@ title: 集结杯 · 部署
 id: jijiebei/deployment
 status: current
 owner: jjb-hub
-updated: 2026-08-26
-applies_to: ["部署或更新 devbox 站点", "排查 8080 不可达 / 迁移核对 / 回滚", "改 nginx conf 或 systemd unit", "从私有 GitHub 加密备份恢复数据"]
+updated: 2026-08-27
+applies_to: ["部署或更新 devbox 站点", "排查 8080 不可达 / 迁移集合双向兼容 / 回滚", "改 nginx conf 或 systemd unit", "从私有 GitHub 加密备份恢复数据"]
 replaces: ["docs/archive/runbook-*.md（历史 runbook 已归档，本文件是唯一部署真相源）"]
 evidence: ["backend/deploy/（nginx/systemd/litestream 配置真相）", "AGENTS.md 第 10 条（只更新 web 前必跑 check-migrations）", "docs/backup-restore-manifest.json（加密备份下载、完整性与恢复边界的机器入口）"]
 review_after: 2026-09-22
@@ -127,7 +127,7 @@ sudo -u jjb /opt/jjb-backend/pocketbase migrate up --dir /opt/jjb-backend/pb_dat
 > ```bash
 > node backend/scripts/check-migrations.mjs
 > ```
-> 命令输出缺口或非 0 退出 → **停止本节，先做 §2.2/§2.3 backend 部署**，migrate up 完再回来跑本节。只更新 web 不核对迁移，等于重演 2026-07-02 的注册 404 事故。
+> 命令输出任一方向的 JJB migration 漂移或非 0 退出 → **停止本节并按错误给出的 Action 处理**：目标库缺本地迁移时先部署新版 backend 并 `migrate up`；目标库含当前 checkout 不认识的 JJB 迁移时改用不早于源库的批准 SHA。不得让旧 backend 接管较新 schema。
 
 ```bash
 # 本机构建（devbox 外网受限，npm install 也在本机完成）
@@ -188,7 +188,7 @@ EOF
 | 动作 | 命令 |
 |---|---|
 | **重启 backend** | `ssh 10.37.220.128 'sudo systemctl restart jjb-backend'` |
-| **重发 web/admin 产物** | **先 `node backend/scripts/check-migrations.mjs` 核对无缺口** → 本地 build → scp 覆盖 → 无需重启 nginx（hash 文件名避免缓存） |
+| **重发 web/admin 产物** | **先 `node backend/scripts/check-migrations.mjs` 核对 JJB migration 集合双向兼容** → 本地 build → scp 覆盖 → 无需重启 nginx（hash 文件名避免缓存） |
 | **reload nginx** | `ssh 10.37.220.128 'docker exec jijiebei-nginx nginx -s reload'`（改 conf 后） |
 | **看 backend 日志** | `ssh 10.37.220.128 'sudo journalctl -u jjb-backend -f'` |
 | **看 nginx 错误日志** | `ssh 10.37.220.128 'docker logs -f jijiebei-nginx'` |
@@ -436,7 +436,8 @@ print("relative-set digest=ok")
 pb_data = root / "payload" / "pb_data"
 for name in ("data.db", "auxiliary.db", "data.db.bak-20260718"):
     path = pb_data / name
-    con = sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)
+    # staging 目录可写；mode=ro 会读取同目录 WAL/SHM，immutable=1 会忽略 WAL，禁止使用。
+    con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     result = con.execute("PRAGMA quick_check").fetchone()[0]
     con.close()
     if result != "ok":
@@ -480,7 +481,7 @@ PY
 - [ ] 本机：web / admin / backend 依赖装齐
 - [ ] devbox：用户 jjb 已建，目录 /opt/jjb-backend 属主 jjb
 - [ ] devbox：jjb-backend.service 已 enable
-- [ ] 更新 web 前：先跑 `node backend/scripts/check-migrations.mjs` 核对 backend 迁移状态；若有缺口，先部署 backend 二进制并完成 migrations
+- [ ] 更新 web 前：先跑 `node backend/scripts/check-migrations.mjs` 核对 JJB migration 集合双向兼容；远端缺本地迁移时先升级 backend，远端有本地未知 JJB 迁移时停止并选择更新的批准 SHA
 - [ ] 本机：交叉编译 linux/amd64 二进制
 - [ ] 本机：web/dist 和 admin/dist 构建完成
 - [ ] scp：pocketbase + config + pb_migrations 推完
@@ -516,7 +517,7 @@ PY
 根因：web 和 backend 是独立 build、独立推送的两条部署节奏，但部署流程里没有检查「当前 backend 是否已经包含并应用 web 依赖的所有 schema migrations」。2026-07-02 的事故里，backend 二进制停在 Jun 26，web `682f09b` 已上线依赖 `player_accounts` / `event_rules` collection 的注册功能，公网用户实测注册返回 404 `Missing or invalid collection context`。
 
 现在的解法：
-- 工具化：`node backend/scripts/check-migrations.mjs` 读取本地 `backend/pb_migrations/*.go`，再只读查询目标 PocketBase `_migrations.file`，diff 出「本地有、目标未应用」的迁移缺口；有缺口时命令非 0。
-- 流程化：`.claude/skills/jjb-deploy/SKILL.md` 已把 `### 🔍 部署前必查：迁移核对` 作为部署前置步骤。任何只更新 web 的部署，都必须先跑该工具；若发现缺口，先做 backend 部署（推二进制 + migrate up），不能只更新 web。
+- 工具化：`node backend/scripts/check-migrations.mjs` 读取当前 checkout 的 `backend/pb_migrations/*.go`，再只读查询目标 PocketBase `_migrations.file`，对 JJB `178200*` 命名空间做双向 diff：既报“本地有、目标未应用”，也报“目标已应用、当前 checkout 不认识”；任一方向有漂移时命令非 0。PocketBase 内部系统迁移不纳入后者，避免误报。
+- 流程化：`.claude/skills/jjb-deploy/SKILL.md` 已把 `### 🔍 部署前必查：迁移核对` 作为部署前置步骤。任何只更新 web 的部署，都必须先跑该工具；目标缺迁移时先做 backend 部署（推二进制 + migrate up）；目标有本地未知的 JJB 迁移时说明 checkout 过旧，必须停止并选择包含全部已应用迁移的批准 SHA。
 
 这条检查解决的是部署节奏解耦问题，不替代 backend 自身的 `migrate up`、健康检查和 curl 冒烟；它的职责是在 web 推送前提前发现 backend 迁移债。

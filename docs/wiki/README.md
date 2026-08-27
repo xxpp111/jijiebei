@@ -11,7 +11,7 @@
 | `docs/wiki/config.json` | 域配置：type 枚举 / life 枚举 / id 模式 / 路径模板 / 锁与 journal 参数 |
 | `docs/wiki/log.jsonl` | artifact 身份 / 导航账（每行一个注册记录，字段见 §3） |
 | `docs/wiki/lifecycle.jsonl` | 唯一状态事件权威（每行一个事件，append-only，字段见 §4） |
-| `docs/wiki/bootstrap.json` | 当前 80 项 Markdown disposition 明细；账内保留 85 条历史 boot 快照（初始 78 条 + 7 次 canonical 内容刷新），另有 2 项与 register 行同 id 以 REPLAYED 跳过；coverage 由本文件显式界定 |
+| `docs/wiki/bootstrap.json` | 当前 81 项 Markdown disposition 明细；账内保留 105 条历史 boot 快照（初始 78 条 + 27 次 canonical 内容刷新），另有 2 项与 register 行同 id 以 REPLAYED 跳过；coverage 由本文件显式界定 |
 | `docs/wiki/schemas/artifact-record.schema.json` | log 行 JSON Schema（draft-07） |
 | `docs/wiki/schemas/lifecycle-receipt.schema.json` | lifecycle 行 JSON Schema（draft-07） |
 | `docs/wiki/jijiebei/<slug>/r<ts>.<type>.<ext>` | artifact 本体（plan/decision 强制 html + lm 标记） |
@@ -109,7 +109,13 @@ node web/scripts/wiki-governance.mjs build-context [--out <path>] [--json]
 
 - `coverage` glob 界定「`git ls-files` 枚举的 tracked Markdown + bootstrap 显式 item」范围（支持 `**`/`*`/`?`）；Git 枚举是 coverage 的唯一 Git 依赖，命令失败必须报 `FATAL_CONFIG` 并 fail closed，绝不把 tracked 基线退化为空。disposition 可由 bootstrap item 或任一 log/register path 提供。范围内文件两者均未登记 → `MISSING_DISPOSITION`；登记了不存在 → 红；`life` 显式给出（既有文档不伪装 register 语义）；`id` 由 sub-hub 决定（slug + rev 快照时间）。未 tracked 且未作为 bootstrap item 声明的本地文件不进入提交态 coverage。
 - bootstrap 是**一整份一次事务**导入；部分幂等：某 id 已落账且一致 → 跳过（计数 replayed），不一致 → 整体 `REGISTRATION_CONFLICT`。
-- 2026-08-26 加密恢复入口刷新终态：current bootstrap dispositions 仍为 80；账内 boot 历史为 85（初始 78 + 7 个 canonical refresh：既有 4 个，加密恢复的 deploy skill、deployment 与本协议页 3 个）。提交态 Markdown coverage 为 84；bootstrap current 与 Git 提交态 coverage 是不同口径，不互相替代。
+- 2026-08-26 加密恢复入口刷新时点：current bootstrap dispositions=80，boot 历史=85（初始 78 + 7 个 canonical refresh），提交态 Markdown coverage=84。
+- 2026-08-27 搬迁手册刷新终态：current bootstrap dispositions=81；账内 boot 历史=91（初始 78 + 13 个 canonical refresh）；提交态 Markdown coverage=85。bootstrap current、历史 boot 与 Git coverage 是三种不同口径，不互相替代。
+- 2026-08-27 搬迁手册终审修正终态：migration 的 fail-fast/目标架构修正与本协议页最终投影各追加新 rev；current bootstrap dispositions 仍为 81，账内 boot 历史=93（初始 78 + 15 个 canonical refresh），提交态 Markdown coverage=85。
+- 2026-08-27 搬迁命令语义收口终态：deploy skill、deployment、migration 与本协议页各追加新 rev；current bootstrap dispositions 仍为 81，账内 boot 历史=97（初始 78 + 19 个 canonical refresh），提交态 Markdown coverage=85。
+- 2026-08-27 搬迁 WAL/可移植部署最终收口：deploy skill、deployment、migration 与本协议页各再追加新 rev；current bootstrap dispositions 仍为 81，账内 boot 历史=101（初始 78 + 23 个 canonical refresh），提交态 Markdown coverage=85。
+- 2026-08-27 搬迁重试路径最终收口：migration 的 operator/server 初始化与 source/runtime 分离修订及本协议页各追加新 rev；current bootstrap dispositions 仍为 81，账内 boot 历史=103（初始 78 + 25 个 canonical refresh），提交态 Markdown coverage=85。
+- 2026-08-27 nginx 架构终验收口：migration 的目标镜像 inspect/pull/assert/smoke 修订及本协议页各追加新 rev；current bootstrap dispositions 仍为 81，账内 boot 历史=105（初始 78 + 27 个 canonical refresh），提交态 Markdown coverage=85。
 
 ## 8. artifact registry（log 投影 · 供 §H 门对账）
 
@@ -139,6 +145,12 @@ node web/scripts/wiki-governance.mjs build-context [--out <path>] [--json]
 4. generation4 correction register：`recent-progress@r20260823-153500`（digest-active→flow），只新增 revision，不追改 `r20260823-111300`。
 5. `alioth-gc` report 的 life=`flow` 来自 mode 矩阵 `report-validating`={type:report, life:flow}；实际 lifecycle 初态为 `{registered,flow}`。
 6. 2026-08-26 加密恢复入口 bootstrap refresh：deployment 与 deploy skill 内容冻结后各追加新 rev；本协议页同步最终投影后再追加新 rev，旧 boot 行只保留历史、不追改。
+7. 2026-08-27 搬迁手册 bootstrap refresh：新增 migration current item，并为 root/docs README、operations、deploy skill 与本协议页各追加新 rev；内容冻结后由一次 registrar transaction 写入，旧 boot 行不追改。
+8. 2026-08-27 搬迁手册终审修正 refresh：为 migration 的 fail-fast/目标架构修订与本协议页最终投影各追加新 rev；旧 `boot-89`/`boot-91` 保留为历史，current item 只指向新修订。
+9. 2026-08-27 搬迁命令语义收口 refresh：为 deploy skill、deployment、migration 的双向迁移/停写/归档/不可变 SHA/参数化部署修订与本协议页投影各追加新 rev；旧行只保留历史。
+10. 2026-08-27 搬迁 WAL/可移植部署 refresh：为 deployment/migration 的 WAL 感知与 clean `TARGET_SHA` build、deploy skill/migration 的代理/前端/多架构 fallback 修订及本协议页投影各追加新 rev；旧行只保留历史。
+11. 2026-08-27 搬迁重试路径 refresh：为 migration 的独立 operator/server 初始化与 `jijiebei-source`/`jijiebei-deploy` 分离修订及本协议页投影各追加新 rev；旧行只保留历史。
+12. 2026-08-27 nginx 架构终验 refresh：为 migration 的 cached-image 架构 inspect、目标平台 pull、post-pull assert 与 smoke 修订及本协议页投影各追加新 rev；旧行只保留历史。
 
 ## 9. 测试
 

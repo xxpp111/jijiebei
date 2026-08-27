@@ -16,8 +16,9 @@
     "test:drift": "node scripts/drift-check.mjs",
     "test:docs-drift": "node scripts/docs-drift-check.mjs",
     "test:wiki": "node --test scripts/wiki-governance.test.mjs",
+    "test:migrations": "node ../backend/scripts/check-migrations.test.mjs",
     "test:back": "cd ../backend && go test ./...",
-    "test": "npm run test:unit && npm run test:drift && npm run test:docs-drift && npm run test:wiki && npm run test:back"
+    "test": "npm run test:unit && npm run test:drift && npm run test:docs-drift && npm run test:wiki && npm run test:migrations && npm run test:back"
   },
   "dependencies": {
     "@zumer/snapdom": "^2.12.9",

@@ -1,6 +1,6 @@
 ---
 name: jjb-deploy
-description: 集结杯部署到开发机 devbox-tianlang（10.37.220.128）的持久化 docker nginx 链路，以及换机时从私有 GitHub 加密备份做 fail-closed 数据恢复。核心解决“开发机外网受限、拉不到镜像”和“公开仓不存数据但 AI 仍能恢复”的问题。
+description: 集结杯部署到开发机 devbox-tianlang（10.37.220.128）的持久化 docker nginx 链路，以及换电脑/换服务器时从 cold backup、私有 GitHub 加密备份到 cutover/rollback 的 fail-closed 搬迁入口。核心解决“开发机外网受限、拉不到镜像”和“公开仓不存数据但 AI 仍能恢复”的问题。
 ---
 
 # 集结杯开发机部署
@@ -28,9 +28,16 @@ description: 集结杯部署到开发机 devbox-tianlang（10.37.220.128）的�
 node backend/scripts/check-migrations.mjs
 ```
 
-它会读取本地 `backend/pb_migrations/*.go` 的迁移 id，并通过 `devbox-tianlang` 只读查询 PocketBase `_migrations.file`。若输出缺口或命令非 0，**必须先做 backend 部署**：推送包含这些 migrations 的新二进制，并在 backend 侧完成 `migrate up`，不能只更新 web。
+它会读取当前 checkout 的 `backend/pb_migrations/*.go` 迁移 id，并通过 `devbox-tianlang` 只读查询 PocketBase `_migrations.file`，对 JJB `178200*` 命名空间做双向核对。若远端缺本地迁移，**必须先做 backend 部署**并完成 `migrate up`，不能只更新 web；若远端已有当前 checkout 不认识的 JJB 迁移，说明 checkout 过旧，必须停止并选择包含全部已应用迁移的批准 SHA，禁止让旧 backend 接管较新 schema。
 
 2026-07-02 真实事故：backend 二进制停在 Jun 26，web `682f09b` 上了依赖 `player_accounts` / `event_rules` 新 collection 的注册功能，公网用户实测注册 404 `Missing or invalid collection context`。
+
+### 🚚 换电脑／服务器搬迁总入口
+
+1. 任何“换电脑、换服务器、cold backup、cutover、rollback、旧机下线”任务，先读 `docs/migration.md` 决定是只恢复 operator 环境，还是迁移生产服务；不得把两条路径混做。
+2. `docs/migration.md` 只负责编排；systemd/nginx/build/migration/健康检查继续以 `docs/deployment.md` 和 `backend/deploy/` 为唯一真相，备份参数只读 `docs/backup-restore-manifest.json`。
+3. 当前 manifest 仍是 hot safety backup。没有停服后的完整 `pb_data` cold artifact、PRIVATE 加密上传和 staging rehearsal，server cutover 必须 fail closed。
+4. passphrase、live data replacement、切流、发生新写入后的 rollback 和 decommission 均须 human-in-the-loop；不得重启 cloudflared quick tunnel 作为切流手段。
 
 ### 🔐 换机／加密数据恢复入口
 
@@ -115,11 +122,15 @@ curl -s http://10.37.220.128:8080 | grep -oE "index-[A-Za-z0-9_]+\.js"
 - 只部署 origin 已 push 的稳定 commit，不部署未 push 的半成品。
 
 ## 附：本地灌镜像 fallback（proxy 失效 / 换无代理机器时）
-开发机拉不到镜像时，从本地（能上外网的机器）灌：
+开发机拉不到镜像时，从本地（能上外网的机器）灌。普通 devbox 部署缺省 `devbox-tianlang/amd64`；服务器搬迁必须先由 `docs/migration.md` 导出实际 `TARGET_HOST` 和 `TARGET_GOARCH`：
 ```bash
-# 本地强制取 amd64 后用 --platform 导出（关键：arm64 镜像灌 x86_64 会 exec format error）
-docker pull --platform=linux/amd64 nginx:1.27-alpine
-docker save --platform linux/amd64 nginx:1.27-alpine | ssh devbox-tianlang 'docker load'
-ssh devbox-tianlang 'docker run --rm nginx:1.27-alpine nginx -v'   # 能跑起来即架构正确
+set -euo pipefail
+FALLBACK_HOST=${TARGET_HOST:-devbox-tianlang}
+FALLBACK_GOARCH=${TARGET_GOARCH:-amd64}
+case "$FALLBACK_GOARCH" in amd64|arm64) ;; *) echo "unsupported GOARCH" >&2; exit 1 ;; esac
+# 本地按目标架构拉取并导出；禁止把 arm64/amd64 镜像灌错主机。
+docker pull --platform="linux/$FALLBACK_GOARCH" nginx:1.27-alpine
+docker save --platform "linux/$FALLBACK_GOARCH" nginx:1.27-alpine | ssh "$FALLBACK_HOST" 'docker load'
+ssh "$FALLBACK_HOST" 'docker run --rm nginx:1.27-alpine nginx -v'   # 能跑起来即架构正确
 ```
 > docker desktop 的 `image inspect {{.Architecture}}` 在 containerd store 下可能显示空——以能否跑起来为准。
