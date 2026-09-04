@@ -1477,7 +1477,7 @@ jjbSession 对外：`startSession/getSelectState/setSelectedCmd/setSelectedFac/c
 - `.agents/skills/jjb-run-broadcast` 与 `.agents/skills/jjb-verify` 和 `.claude/skills` 版本完全一致；`.agents/skills/jjb-dev-loop` / `jjb-knowledge-base` 是把 Claude 表述替换为 Codex 表述的变体。是否入库需 yb 拍板，不能归类为纯垃圾。
 
 **会话线索更正（2026-06-17 夜续查）**：
-- `Codex-history` 仍不可用（`command not found`），但用户级 Claude Code transcript **存在**：`/Users/bytedance/.claude/projects/-Users-bytedance----jijiebei/*.jsonl`。仓内 `.claude/` 只有 settings/skills，不代表用户级 session 不存在。
+- `Codex-history` 仍不可用（`command not found`），但用户级 Claude Code transcript **存在**：`<USER_HOME>/.claude/projects/<CLAUDE_PROJECT_SLUG>/*.jsonl`。仓内 `.claude/` 只有 settings/skills，不代表用户级 session 不存在。
 - 最近相关主 session 摘要：
   - `823fb134-1dc2-4e14-b295-186710b854c1`（title=`jjb-react-poc-fix1`）：三项修复原始 spoke。记录了打勾、返回选择、obs 窄视口、bare 固定采集、难度总分、`/tmp/jjb-test` 缺失、`reviewer_config_drift`、Dubhe Authorization header 调试。
   - `2fe22fb8-e499-43c8-9d9d-433e95f702b9`（title=`主控 - glm5.2`）：头像替换原始 session。记录蒙斯克/斯台特曼裸名图从 38×51 / 42×45 占位替换为 80×96，并同步 `.meta`，且确认不触碰 `assets/Script` / `Scene` / `jjdata` / `design` 红线。
@@ -1488,14 +1488,14 @@ jjbSession 对外：`startSession/getSelectState/setSelectedCmd/setSelectedFac/c
 **Codex session 线索定位（2026-06-17 夜续查）**：
 - `Codex-history` CLI 不可用；改用 `.codex` / `.codex-official` JSONL 只读检索。用户级 Codex JSONL 数量较多，强关键词命中里有当前审查 session、历史执行 session，也有 cwd 在本仓但任务归属其它项目的误命中。
 - 高相关 Codex sessions：
-  - `/Users/bytedance/.codex/sessions/2026/06/08/rollout-2026-06-08T17-03-44-019ea679-3dc0-75a1-9fa8-5d269bb8ae31.jsonl`：生成 `assets/resources/images/brand/jjb-title-{metal,sc2,minimal}.png` 标题艺术字，并初始化 `.harness-pro-jjb-title-art-png/`；属于早期品牌素材线索。
-  - `/Users/bytedance/.codex/sessions/2026/06/10/rollout-2026-06-10T12-09-20-019eafb8-6e59-7473-88df-fc33a7ad5f99.jsonl`：`jjb-frontend-redesign` 分支，记录新旧玩法对比与双打/官突 skeleton，最终有本地提交 `4b655e4` / `065ebd1`；用于追溯双打占位与规则差距。
-  - `/Users/bytedance/.codex/sessions/2026/06/12/rollout-2026-06-12T01-08-30-019eb7a8-2409-7630-9492-d984b32a7ec6.jsonl`：OBS 底部横条 R2 相关，明确当时本地未安装 Playwright，靠 MCP 全局包跑 `/tmp/jjb-test/obsbar.js`；支持“历史能跑，但当前 repo 无可复跑副本”的判断。
-  - `/Users/bytedance/.codex/sessions/2026/06/12/rollout-2026-06-12T14-06-08-019eba70-149d-7550-a867-02eb38c3cfd3.jsonl`：Phase F 因子边框矢量化 / bare 修复，最终 HEAD 记录为 `c98e689`，工作树干净；用于追溯 Cocos OBS/bare 视觉基线。
-  - `/Users/bytedance/.codex/sessions/2026/06/13/rollout-2026-06-13T01-18-52-019ebcd7-fcc7-7741-ad11-fac055f08a32.jsonl`：Phase G XP 对齐审计与演示态修正，覆盖 `assets/Script/jjbDesign/*` 与 `projectplan.md`，并引用 `.harness-pro-85aed822-xp` gate/audit；用于追溯 XP/DEMO 语义和 Cocos 验证背景。
-  - `/Users/bytedance/.codex-official/sessions/2026/06/17/rollout-2026-06-17T22-46-13-019ed60c-0827-7501-ad79-8d59f8c02d77.jsonl`：当前 Codex Desktop 审查主 session；本节所有复查、清理和验证续查均归档在这里。
+  - `<USER_HOME>/.codex/sessions/2026/06/08/rollout-2026-06-08T17-03-44-019ea679-3dc0-75a1-9fa8-5d269bb8ae31.jsonl`：生成 `assets/resources/images/brand/jjb-title-{metal,sc2,minimal}.png` 标题艺术字，并初始化 `.harness-pro-jjb-title-art-png/`；属于早期品牌素材线索。
+  - `<USER_HOME>/.codex/sessions/2026/06/10/rollout-2026-06-10T12-09-20-019eafb8-6e59-7473-88df-fc33a7ad5f99.jsonl`：`jjb-frontend-redesign` 分支，记录新旧玩法对比与双打/官突 skeleton，最终有本地提交 `4b655e4` / `065ebd1`；用于追溯双打占位与规则差距。
+  - `<USER_HOME>/.codex/sessions/2026/06/12/rollout-2026-06-12T01-08-30-019eb7a8-2409-7630-9492-d984b32a7ec6.jsonl`：OBS 底部横条 R2 相关，明确当时本地未安装 Playwright，靠 MCP 全局包跑 `/tmp/jjb-test/obsbar.js`；支持“历史能跑，但当前 repo 无可复跑副本”的判断。
+  - `<USER_HOME>/.codex/sessions/2026/06/12/rollout-2026-06-12T14-06-08-019eba70-149d-7550-a867-02eb38c3cfd3.jsonl`：Phase F 因子边框矢量化 / bare 修复，最终 HEAD 记录为 `c98e689`，工作树干净；用于追溯 Cocos OBS/bare 视觉基线。
+  - `<USER_HOME>/.codex/sessions/2026/06/13/rollout-2026-06-13T01-18-52-019ebcd7-fcc7-7741-ad11-fac055f08a32.jsonl`：Phase G XP 对齐审计与演示态修正，覆盖 `assets/Script/jjbDesign/*` 与 `projectplan.md`，并引用 `.harness-pro-85aed822-xp` gate/audit；用于追溯 XP/DEMO 语义和 Cocos 验证背景。
+  - `<USER_HOME>/.codex-official/sessions/2026/06/17/rollout-2026-06-17T22-46-13-019ed60c-0827-7501-ad79-8d59f8c02d77.jsonl`：当前 Codex Desktop 审查主 session；本节所有复查、清理和验证续查均归档在这里。
 - 低相关 / 误命中：
-  - `/Users/bytedance/.codex-official/sessions/2026/06/17/rollout-2026-06-17T23-02-06-019ed61a-92c0-7743-a488-aa11e4bfd0bc.jsonl`：cwd 在 `jijiebei`，但任务实际是定位 Lark Search / ModelHub 文档 Claude session，不属于集结杯代码审查。
+  - `<USER_HOME>/.codex-official/sessions/2026/06/17/rollout-2026-06-17T23-02-06-019ed61a-92c0-7743-a488-aa11e4bfd0bc.jsonl`：cwd 在 `jijiebei`，但任务实际是定位 Lark Search / ModelHub 文档 Claude session，不属于集结杯代码审查。
   - 2026-06-17 若干 cwd=`jijiebei` 的 Codex session 实际属于 harness-pro / Flux statusline / ModelHub 文档等其它项目上下文，只作为误命中排除，不纳入集结杯交付事实。
 - 审查结论：Codex 侧 durable 线索与 Claude/projectplan 口径基本一致。历史 `/tmp/jjb-test` 全绿主要来自 6/12-6/13 周期，但最终源码没有完整持久化到 repo；当前只能承认“历史结果存在、当前套件不可复跑”，不能把 transcript 片段拼成新的 PASS。
 
@@ -2035,7 +2035,7 @@ R7 把**双打从占位骨架做成了真引擎**，并完成**「飞球→非�
 
 **怎么启动**（copy-paste 模式，改外部状态须 hub 审一遍再粘贴）：
 ```
-cd /Users/bytedance/项目/jijiebei && ANTHROPIC_BASE_URL=http://127.0.0.1:8686 ANTHROPIC_AUTH_TOKEN=<DUBHE_KEY> ANTHROPIC_MODEL=<glm-5.2真alias> claude -n jjb-kb-rewrite
+cd <PROJECT_ROOT> && ANTHROPIC_BASE_URL=http://127.0.0.1:8686 ANTHROPIC_AUTH_TOKEN=<DUBHE_KEY> ANTHROPIC_MODEL=<glm-5.2真alias> claude -n jjb-kb-rewrite
 ```
 第一条输入 `/goal` + 契约的 objective→motivation 整段，再接 EXECUTE PROMPT 段。**起跑自检两关任一不通即停报**：①`curl /v1/models` 确认 glm-5.2 真 alias（models-dubhe.json 只有 5.1/mh-5.1，5.2 需 live probe）；②`lark-cli docs +fetch --as user=白天朗` 确认读写通（token 过期则起跑就停）。
 
@@ -2074,7 +2074,7 @@ cd /Users/bytedance/项目/jijiebei && ANTHROPIC_BASE_URL=http://127.0.0.1:8686 
 **Commits（本会话 9 个，旧→新）**
 `b407227`(双打真引擎Phase4) `1055ab0`(首页5/6双打) `fad2979`(非酋正名+机制改正) `9a481d4`(_redirects) `f49ac06`(vite allowedHosts) `5040ab2`(skill 隧道配方) `374623d`(OBS三修) `b0076d5`(Phase A降权/ban/虚空) `b59319a`(真相表0节，=HEAD，未push)
 
-**核心代码文件**（均 `/Users/bytedance/项目/jijiebei/` 下）
+**核心代码文件**（均 `<PROJECT_ROOT>/` 下）
 - `web/src/logic/jjbDoubles.ts`（双打唯一真引擎）
 - `web/src/logic/commanderWeight.ts`（降权 0.25 加权无放回）
 - `web/src/logic/jjbSession.ts`（FACTOR_SCORE_FALLBACKS 虚空=7）

@@ -24,7 +24,7 @@
 - **Claude Design = 全程版式总设计**（用户选定）：出海报版式 HTML 稿 → Handoff 给 Claude Code 翻译合成
 
 ## 4. GPT-image-2 出背景图（需内网 VPN）
-- 必须连 VPN：`aidp.bytedance.net`（内网 10.94.x）。校验 `python3 -c "import socket;socket.gethostbyname('aidp.bytedance.net')"`
+- 必须连 VPN：`<INTERNAL_API_ENDPOINT>`（内网 10.94.x）。校验 `python3 -c "import socket;socket.gethostbyname('<INTERNAL_API_ENDPOINT>')"`
 - key：`~/.config/jijiebei/modelhub.env`（MODELHUB_AK，不入库）
 - 封装现成：`design/poster-r1/gen_bg.py`。跑（关沙箱、5min）：`python3 design/poster-r1/gen_bg.py duo`
 - 出无字底图（CRITICAL NO TEXT）；变体 duo=双指挥官并肩 / trio=三族集结 / atmos=纯氛围

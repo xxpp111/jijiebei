@@ -12,7 +12,7 @@ description: 集结杯部署到开发机 devbox-tianlang（10.37.220.128）的�
 ## ✅ 外网已通（2026-06-18 配好 dockerd proxy）—— 直接 pull 即可
 - **现状**：dockerd 已配公司透明代理，开发机可直接 `docker pull`。配置在
   `/etc/systemd/system/docker.service.d/http-proxy.conf`：
-  `HTTP(S)_PROXY=http://sys-proxy-rd-relay.byted.org:8118`、`NO_PROXY=.byted.org,localhost,127.0.0.1,::1`，已持久化（重启保留）。
+  `HTTP(S)_PROXY=http://<COMPANY_PROXY>:8118`、`NO_PROXY=.<COMPANY_DOMAIN>,localhost,127.0.0.1,::1`，已持久化（重启保留）。
 - **历史教训（换机器/proxy 失效时回看）**：dockerd **不读 shell 的 http_proxy env**——curl 经 proxy 通≠`docker pull` 通，
   必须配在 systemd 层并 `sudo systemctl daemon-reload && sudo systemctl restart docker` 才生效。
   重启 daemon 前确认 `live-restore: true`（重启不杀 running 容器）。
@@ -67,7 +67,7 @@ dist 是只读挂载，**rebuild 后重启容器即生效**，无需重建容器
 且 fetch 失败时务必**强校验 HEAD**：`a && b && c` 列表中间命令失败时 `set -e` **不触发**，会静默 build 旧码：
 ```bash
 ssh devbox-tianlang 'set -e
-export http_proxy=http://sys-proxy-rd-relay.byted.org:8118 https_proxy=http://sys-proxy-rd-relay.byted.org:8118 no_proxy=.byted.org,localhost,127.0.0.1
+export http_proxy=http://<COMPANY_PROXY>:8118 https_proxy=http://<COMPANY_PROXY>:8118 no_proxy=.<COMPANY_DOMAIN>,localhost,127.0.0.1
 cd ~/jijiebei-deploy
 git fetch origin jjb-live-dock
 git reset --hard origin/jjb-live-dock

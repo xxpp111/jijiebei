@@ -1,6 +1,6 @@
 # 集结杯 · 渲染架构 & 协作分工
 
-> 来源：飞书画板「集结杯单刷 · 渲染架构 & 工具分工」（画板 token `G2YZw0hZvhRhqVbWjZucZ8m7nGe`，内嵌于 docx <https://bytedance.larkoffice.com/docx/KMIodWA5Wo9L6exPkXYc6D4AnJh>），本地同源 `design/README.md` + `design/v3/project/spec.jsx`。
+> 来源：飞书画板「集结杯单刷 · 渲染架构 & 工具分工」（画板 token `G2YZw0hZvhRhqVbWjZucZ8m7nGe`，内嵌于 docx <https://<LARK_OFFICE>/docx/KMIodWA5Wo9L6exPkXYc6D4AnJh>），本地同源 `design/README.md` + `design/v3/project/spec.jsx`。
 > 本文 = 原画板转录 + **协作分工更新到现行模式**。原画板停在 2026-06-08，把工程画成"Opus 自组装"，未含 Claude Code 工程角色——本文已更新，见第四节差异说明。
 
 ## 一、渲染架构：每屏 = `danshua.fire` 4 层节点叠出来

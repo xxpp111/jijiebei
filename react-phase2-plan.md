@@ -122,15 +122,15 @@
 
 ### 关键文件路径（绝对）
 
-- 真身组件：`/Users/bytedance/项目/jijiebei/web/src/components/{FactorFrame,CommanderCard,MatchRow,ObsBar}.tsx`
-- 图源待重写：`/Users/bytedance/项目/jijiebei/web/src/lib/{designAssets,nameAsset}.ts`（新建 `realAsset.ts`）
-- screen 接缝 + debug：`/Users/bytedance/项目/jijiebei/web/src/{App.tsx,screens/BattleScreen.tsx,screens/ObsScreen.tsx,logic/jjbSession.ts,cc-shim.ts}`
-- 真实游戏图（中文名 PNG，只读 glob）：`/Users/bytedance/项目/jijiebei/assets/resources/images/{maps,commander,factor,brand}/*.png`
-- 逻辑源（红线只读）：`/Users/bytedance/项目/jijiebei/assets/Script/jijie2/{JijieContro.ts,JijieData.ts,view/InitPanel.ts,view/SelectPanel.ts,data/JJConfigData.ts}`
-- 桥（复用）：`/Users/bytedance/项目/jijiebei/assets/Script/jjbDesign/{JJBData.ts,JJBSelect.ts}`
-- 设计稿源：`/Users/bytedance/项目/jijiebei/design/v4-r2/components/select-screen.jsx`
-- BP 规则：`/Users/bytedance/项目/jijiebei/knowledge-base/bp-impl-spec.md` + `rules-decisions.md`；r3 brief：`/Users/bytedance/项目/jijiebei/design/v4-input-r2/r3-bp-pointgold-difficulty-brief.md`
-- build/alias：`/Users/bytedance/项目/jijiebei/web/{vite.config.ts,tsconfig.json}`
+- 真身组件：`<PROJECT_ROOT>/web/src/components/{FactorFrame,CommanderCard,MatchRow,ObsBar}.tsx`
+- 图源待重写：`<PROJECT_ROOT>/web/src/lib/{designAssets,nameAsset}.ts`（新建 `realAsset.ts`）
+- screen 接缝 + debug：`<PROJECT_ROOT>/web/src/{App.tsx,screens/BattleScreen.tsx,screens/ObsScreen.tsx,logic/jjbSession.ts,cc-shim.ts}`
+- 真实游戏图（中文名 PNG，只读 glob）：`<PROJECT_ROOT>/assets/resources/images/{maps,commander,factor,brand}/*.png`
+- 逻辑源（红线只读）：`<PROJECT_ROOT>/assets/Script/jijie2/{JijieContro.ts,JijieData.ts,view/InitPanel.ts,view/SelectPanel.ts,data/JJConfigData.ts}`
+- 桥（复用）：`<PROJECT_ROOT>/assets/Script/jjbDesign/{JJBData.ts,JJBSelect.ts}`
+- 设计稿源：`<PROJECT_ROOT>/design/v4-r2/components/select-screen.jsx`
+- BP 规则：`<PROJECT_ROOT>/knowledge-base/bp-impl-spec.md` + `rules-decisions.md`；r3 brief：`<PROJECT_ROOT>/design/v4-input-r2/r3-bp-pointgold-difficulty-brief.md`
+- build/alias：`<PROJECT_ROOT>/web/{vite.config.ts,tsconfig.json}`
 
 ### XP / debug 接口面增量
 

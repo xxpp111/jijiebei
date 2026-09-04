@@ -6,22 +6,15 @@ description: 集结杯飞书知识库的维护规范与配方——定位口径/
 # 集结杯知识库维护
 
 ## 库在哪 / 谁能改（2026-06-15 迁移后已变，重要）
-- **库已整体迁到 `mcn1taa2k785` 租户**（owner=「歪比」`ou_3af26249…`，space_id `7651322868680100812`，总览 node `WF0ZwD2QciFDqGkmHSMcRrdvnyd` / docx `CBvGdEAEko3BFdxhzVgc9ccMnYf`）。**bytedance my_library 原件已被移走、不存在**（旧 space `7480004245586018307` + 下方旧 obj_token 全失效）。
-- **当前身份白天朗(`ou_fe7587cdffda88eacf701ed1a67bc7c0`)对新库：编辑已有文档可写、建新节点被拒**。`docs +fetch` 读 + `docs +update`/`docs +media-insert` 改已有文档**实测通**（总览 rev 15+）；但 `wiki +node-create` 建新子页报 `131006 need edit permission`。**→ 新增内容并进已有文档（如「使用指南」已并入总览），不要建新页。**
-- **要能编辑**：owner 歪比 给白天朗开 space `7651322868680100812`（或总览节点）的 **edit 权限**（白天朗已能读，升 edit 应可通）；或把 lark-cli 重新授权为歪比账号。
-- 拿到写权限后，**旧 obj_token 全废，重新 `docs +search "集结杯"` / `wiki +node-list` 取新 token**。下方 token 表是迁移前的 bytedance 旧值，仅留作历史，勿直接用。
+- **库已整体迁到 `<REDACTED_TENANT>` 租户**（owner=<REDACTED>，space_id <REDACTED>，总览 node `<REDACTED_NODE>` / docx `<REDACTED_DOCX>`）。**<COMPANY> my_library 原件已被移走、不存在**（旧 space `<OLD_SPACE_ID>` + 下方旧 obj_token 全失效）。
+- **当前身份白天朗(`<REDACTED_USER_ID>`)对新库：编辑已有文档可写、建新节点被拒**。`docs +fetch` 读 + `docs +update`/`docs +media-insert` 改已有文档**实测通**（总览 rev 15+）；但 `wiki +node-create` 建新子页报 `131006 need edit permission`。**→ 新增内容并进已有文档（如「使用指南」已并入总览），不要建新页。**
+- **要能编辑**：owner 歪比 给白天朗开 space <REDACTED>（或总览节点）的 **edit 权限**（白天朗已能读，升 edit 应可通）；或把 lark-cli 重新授权为歪比账号。
+- 拿到写权限后，**旧 obj_token 全废，重新 `docs +search "集结杯"` / `wiki +node-list` 取新 token**。下方 token 表是迁移前的旧值，仅留作历史，勿直接用。
 
 ## 文档 token 表（docx obj_token，编辑用）
 | 篇 | docx token | 画板 token |
 |---|---|---|
-| 总览 | `ERMJd17uoo9DeexdZUqcHM4nnvg` | `ZfKNwvG0DhOlTsbvvfhcaGZInlb` |
-| 比赛模式与规则 | `FgmFdjs28oz5JExzLvqcv1rKnSb` | `HtDqwyLsOhKzW9bPaG1c22hdnCh` |
-| 软件架构与渲染 | `TJOMdVd1aokk5Bx6UqfcrYygnab` | `LKsTwSOnFhq1rWbetd2c87rDnie` |
-| 协作与开发流程 | `ODJbdAOPJoJglwxUdmsct9LDn7c` | `S7CywyuINhCXinbHlilcLHvMnsg` |
-| 当期赛事配置 | `AVeidFUyYor160x5L3VcA0jtnrg` | （表格无画板）|
-| 开放问题与决策 | `BeDjdey9YoksBax41XZcv3R7n3g` | （表格无画板）|
-| 架构与协作(样板) | `H1vKdOindoIlYfx9B9NcagJwnAg` | `AeI9wuwmChOE9ObN3TNcT5Tnntg` |
-
+| (tokens redacted for public repo) | — | — |
 ## 五条规范（写 / 改任何篇都守）
 1. **定位锚点（全库统一）**：每篇显著处必带——「集结杯 = 《星际2》合作任务『单刷 / 双打挑战赛』；本软件 = 按比赛规则随机生成『突变因子(Mutator)组合』的工具，记分 / 展示只是外壳」。不要退回「抽签 / 记分前端」。
 2. **配色（全库画板统一调色板）**：主色 深`#1F2D3D` / 中`#3E5871` / 浅`#DCE4ED`；accent 金棕`#B8893A`（只标题分隔线 + 唯一最高优先元素）；中性底`#F7F8FA` / 描边`#C9D1DA`；文字`#2B2B2B`；警示(唯一)`#C0563B`。四原则：三色封顶 / 层级靠明度不靠色相 / 金色只强调 / 留白优先。

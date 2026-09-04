@@ -30,7 +30,7 @@
 
 ## 部署旁注（非 design-sync，但同期真相）—— docker 持久化已达成
 - 开发机 `10.37.220.128`：Docker 早装好（18.09，7 容器在跑，daemon `is-enabled=enabled`），
-  外网受限（Docker Hub 不可达、公司 `hub.byted.org` 无 nginx、本地 macOS arm64 灌 x86_64 报 `exec format error`）。
+  外网受限（Docker Hub 不可达、公司 `<COMPANY_REGISTRY>` 无 nginx、本地 macOS arm64 灌 x86_64 报 `exec format error`）。
 - **破局关键**：本地 `docker pull --platform=linux/amd64 nginx:1.27-alpine` →
   `docker save --platform linux/amd64 ... | ssh devbox docker load`（强制导出 amd64，绕开开发机外网）。
 - 服务：`docker run -d --name jijiebei-nginx --restart=always -p 8080:80 -v ~/jijiebei-deploy/web/dist:/usr/share/nginx/html:ro nginx:1.27-alpine`。
