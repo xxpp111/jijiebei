@@ -65,7 +65,7 @@
 
   proof（spoke 必须运行并贴回原文，不许只描述）：
   <pre lang="bash">
-  cd /Users/bytedance/项目/jijiebei/backend && ./pocketbase serve --http 127.0.0.1:8090 &
+  cd <PROJECT_ROOT>/backend && ./pocketbase serve --http 127.0.0.1:8090 &
   # 1) migrations 重放
   rm -rf pb_data && ./pocketbase migrate up && ls pb_migrations/
   # 2) 建 admin + host + viewer 账号，逐角色 curl 验权限矩阵
@@ -95,9 +95,9 @@
 
 <context>
   必须先读（按序）：
-  - /Users/bytedance/项目/jijiebei/docs/research-backend-p5.md（本契约展开版：schema 字段级表 + 权限矩阵 + Go hook 伪码 + 部署 2.1-2.5 + 前端对接 3.x）
-  - /Users/bytedance/项目/jijiebei/tmp/platform-research-report.md（§1 选型 / §2 架构 / §5 schema 草案）
-  - /Users/bytedance/项目/jijiebei/projectplan.md（搜「6 Phase 路线图」「数据 schema」「开放问题决策」「P0 架构清场 完成记录」）
+  - <PROJECT_ROOT>/docs/research-backend-p5.md（本契约展开版：schema 字段级表 + 权限矩阵 + Go hook 伪码 + 部署 2.1-2.5 + 前端对接 3.x）
+  - <PROJECT_ROOT>/tmp/platform-research-report.md（§1 选型 / §2 架构 / §5 schema 草案）
+  - <PROJECT_ROOT>/projectplan.md（搜「6 Phase 路线图」「数据 schema」「开放问题决策」「P0 架构清场 完成记录」）
   - web/src/logic/jjbSession.ts（SelectState 定义 + SessionMode:64 + getScore + winLoseList/RESULT_VAL）
   - web/src/logic/jjbDoubles.ts（DoublesConfig + _slots）
   - web/src/logic/jjbView.ts（门面）
@@ -172,7 +172,7 @@ RT=<init 生成的 .harness-pro-* 目录>             # 立即记录；后续每
 - schema 细化全文：`docs/research-backend-p5.md`
 - 调研报告：`tmp/platform-research-report.md`（§1 选型 / §2 架构 / §5 schema）
 - 路线图 + 决策：`projectplan.md`
-- 派发协议：`/Users/bytedance/.claude/skills/agent-dispatch/SKILL.md`
+- 派发协议：`<USER_HOME>/.claude/skills/agent-dispatch/SKILL.md`
 
 ## 三处需 hub/yb 拍板的 caveat（spoke 遇到标记后 STOP/留 runbook，不自决）
 1. **CF Pages 跨域 vs devbox nginx 同源**：本 round 只在 devbox 内做 `/api` 同源反代（research-backend-p5 §2.4-a）；CF Pages 前端连后端的公网暴露受内网穿透红线约束、须 SRE 走 TLB，是独立后续事项，不阻塞 P5 本地/devbox 联通——runbook 标注最终拓扑待 yb 定。

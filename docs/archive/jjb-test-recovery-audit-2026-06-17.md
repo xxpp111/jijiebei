@@ -20,7 +20,7 @@ Claude Code 用户级 transcript 里能证明这四套历史上存在并曾跑�
 
 用户级 Claude transcript 路径：
 
-`/Users/bytedance/.claude/projects/-Users-bytedance----jijiebei/`
+`<USER_HOME>/.claude/projects/<CLAUDE_PROJECT_SLUG>/`
 
 可定位到的历史全绿证据：
 

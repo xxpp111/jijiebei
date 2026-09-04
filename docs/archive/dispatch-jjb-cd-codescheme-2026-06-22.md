@@ -59,7 +59,7 @@
 
   proof（spoke 真实跑并贴回原文）：
   <pre lang="bash">
-  cd /Users/bytedance/项目/jijiebei/web && npx tsc --noEmit && npm run build 2>&1 | tail -3
+  cd <PROJECT_ROOT>/web && npx tsc --noEmit && npm run build 2>&1 | tail -3
   node e2e/codec.mjs            # 往返等价 + 版本校验断言
   for f in run ui-smoke bp-rules random-enemy r6-doubles-downstream; do node e2e/$f.mjs 2>&1 | tail -2; done
   </pre>
@@ -137,9 +137,9 @@
 - 屏 D：code 输入 + status（null/ok/invalid/version）；doParse = decodePayload(code) 成功→ok+摘要、失败→invalid/version+banner；「按此码开局」= decode 成功后还原 state 进 battle/对照
 
 ## 关键文件速查（绝对路径）
-- 设计样式真相：/Users/bytedance/项目/jijiebei/web/src/styles/code-scheme.css
-- 编码源（选择状态）：/Users/bytedance/项目/jijiebei/web/src/logic/jjbSession.ts + jjbDoubles.ts + jjbView.ts
-- 卡片/toast 复用：/Users/bytedance/项目/jijiebei/web/src/components/FactorFrame.tsx + web/src/styles/bp.css（.toastv.soft）
-- 真图接法：/Users/bytedance/项目/jijiebei/web/src/lib/designAssets.ts
-- P3 调研：/Users/bytedance/项目/jijiebei/docs/research-frontend-p2p3.md
-- 编码契约产出（待写，P5 复用）：/Users/bytedance/项目/jijiebei/docs/codec-schema.md
+- 设计样式真相：<PROJECT_ROOT>/web/src/styles/code-scheme.css
+- 编码源（选择状态）：<PROJECT_ROOT>/web/src/logic/jjbSession.ts + jjbDoubles.ts + jjbView.ts
+- 卡片/toast 复用：<PROJECT_ROOT>/web/src/components/FactorFrame.tsx + web/src/styles/bp.css（.toastv.soft）
+- 真图接法：<PROJECT_ROOT>/web/src/lib/designAssets.ts
+- P3 调研：<PROJECT_ROOT>/docs/research-frontend-p2p3.md
+- 编码契约产出（待写，P5 复用）：<PROJECT_ROOT>/docs/codec-schema.md

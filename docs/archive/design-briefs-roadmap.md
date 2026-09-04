@@ -149,7 +149,7 @@
 5. **F（P5 登录）+ G（P6 天梯）** — 与后端并行先行出图，接通待 PocketBase。
 
 相关文件（绝对路径）：
-- 现状屏：`/Users/bytedance/项目/jijiebei/web/src/screens/{HomeScreen,SelectScreen,ObsScreen,BpConfigScreen,BattleScreen,ResultScreen}.tsx`
-- BP 逻辑（遗留①）：`/Users/bytedance/项目/jijiebei/web/src/logic/bpConfig.ts`、`/Users/bytedance/项目/jijiebei/web/src/logic/jjbSession.ts`（`getSelectWarn`/`getBanFor`/`validate` 软违规段）
-- 设计系统 token 真相：`/Users/bytedance/项目/jijiebei/design/v4-r2/theme.css`（`.jjb` 根）；通用 toast 形态 `/Users/bytedance/项目/jijiebei/design/v4-r2/v4.css`（§4.2 `.toastv`）
-- 闭环 SOP：`/Users/bytedance/项目/jijiebei/docs/claude-design-loop.md`（设计系统 ID `e956fe00`，BpConfig 已出自项目 `3a9216be`）
+- 现状屏：`<PROJECT_ROOT>/web/src/screens/{HomeScreen,SelectScreen,ObsScreen,BpConfigScreen,BattleScreen,ResultScreen}.tsx`
+- BP 逻辑（遗留①）：`<PROJECT_ROOT>/web/src/logic/bpConfig.ts`、`<PROJECT_ROOT>/web/src/logic/jjbSession.ts`（`getSelectWarn`/`getBanFor`/`validate` 软违规段）
+- 设计系统 token 真相：`<PROJECT_ROOT>/design/v4-r2/theme.css`（`.jjb` 根）；通用 toast 形态 `<PROJECT_ROOT>/design/v4-r2/v4.css`（§4.2 `.toastv`）
+- 闭环 SOP：`<PROJECT_ROOT>/docs/claude-design-loop.md`（设计系统 ID `e956fe00`，BpConfig 已出自项目 `3a9216be`）

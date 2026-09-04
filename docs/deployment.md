@@ -61,7 +61,7 @@ devbox 上的目标目录结构：
 
 ```bash
 # 本机 mac/linux 交叉编译 linux/amd64
-cd /Users/bytedance/项目/jijiebei/backend
+cd <PROJECT_ROOT>/backend
 GOOS=linux GOARCH=amd64 go build -o pocketbase-linux-amd64 .
 # 单二进制内嵌 pb_migrations/*.go（init() 自动注册）
 
@@ -76,7 +76,7 @@ useradd -r jjb 2>/dev/null || true
 mkdir -p /opt/jjb-backend/pb_data && chown -R jjb:jjb /opt/jjb-backend
 
 # systemd unit（已在 backend/deploy/jjb-backend.service 准备好）
-scp /Users/bytedance/项目/jijiebei/backend/deploy/jjb-backend.service \
+scp <PROJECT_ROOT>/backend/deploy/jjb-backend.service \
   10.37.220.128:/etc/systemd/system/
 
 systemctl daemon-reload
@@ -120,8 +120,8 @@ sudo -u jjb /opt/jjb-backend/pocketbase migrate up --dir /opt/jjb-backend/pb_dat
 
 ```bash
 # 本机构建（devbox 外网受限，npm install 也在本机完成）
-cd /Users/bytedance/项目/jijiebei/web     && npm install && npm run build  # → web/dist
-cd /Users/bytedance/项目/jijiebei/admin  && npm install && npm run build  # → admin/dist (vite base=/admin/)
+cd <PROJECT_ROOT>/web     && npm install && npm run build  # → web/dist
+cd <PROJECT_ROOT>/admin  && npm install && npm run build  # → admin/dist (vite base=/admin/)
 
 # scp 推（devbox 目标目录已 mkdir）
 ssh 10.37.220.128 'mkdir -p /opt/jjb/web/dist /opt/jjb/admin/dist'
@@ -137,7 +137,7 @@ devbox 上跑 nginx 容器（`nginx:1.27-alpine`），挂载产物 + conf：
 
 ```bash
 # 推 nginx conf
-scp /Users/bytedance/项目/jijiebei/backend/deploy/nginx-docker-triple.conf \
+scp <PROJECT_ROOT>/backend/deploy/nginx-docker-triple.conf \
   10.37.220.128:~/jijiebei-deploy/nginx-conf/default.conf
 
 # 容器 run（已有则 stop+rm+run 重建同镜像）
@@ -301,13 +301,13 @@ curl -s http://127.0.0.1:8080/api/scoring
 
 ```bash
 # web 回滚到上一个 git tag（或本地 build）
-cd /Users/bytedance/项目/jijiebei/web
+cd <PROJECT_ROOT>/web
 git checkout <prev-tag> -- src/
 npm run build
 scp -r dist/* 10.37.220.128:/opt/jjb/web/dist/
 
 # admin 同样
-cd /Users/bytedance/项目/jijiebei/admin
+cd <PROJECT_ROOT>/admin
 git checkout <prev-tag> -- src/
 npm run build
 scp -r dist/* 10.37.220.128:/opt/jjb/admin/dist/

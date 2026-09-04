@@ -25,7 +25,7 @@
 
 ```bash
 # 本地交叉编译 linux/amd64 二进制（devbox 外网受限，二进制随产物 scp 推，不在 devbox 现拉）
-cd /Users/bytedance/项目/jijiebei/backend
+cd <PROJECT_ROOT>/backend
 GOOS=linux GOARCH=amd64 go build -o pocketbase-linux-amd64 .
 
 # scp 推到 devbox
@@ -52,8 +52,8 @@ sudo -u jjb /opt/jjb-backend/pocketbase migrate up --dir /opt/jjb-backend/pb_dat
 
 ```bash
 # 本地构建（三皮肤 token 不动，纯 build）
-cd /Users/bytedance/项目/jijiebei/web   && npm run build   # → web/dist
-cd /Users/bytedance/项目/jijiebei/admin && npm run build   # → admin/dist（vite base=/admin/）
+cd <PROJECT_ROOT>/web   && npm run build   # → web/dist
+cd <PROJECT_ROOT>/admin && npm run build   # → admin/dist（vite base=/admin/）
 
 # scp 推到 devbox 统一目录
 ssh 10.37.220.128 'mkdir -p /opt/jjb/web /opt/jjb/admin'
@@ -65,7 +65,7 @@ scp -r admin/dist/* 10.37.220.128:/opt/jjb/admin/dist/
 
 ```bash
 # 推 nginx-triple.conf（本 round 产物，合并 web+admin+/api 三片）
-scp /Users/bytedance/项目/jijiebei/backend/deploy/nginx-triple.conf 10.37.220.128:/etc/nginx/conf.d/jjb-triple.conf
+scp <PROJECT_ROOT>/backend/deploy/nginx-triple.conf 10.37.220.128:/etc/nginx/conf.d/jjb-triple.conf
 
 # devbox 上：nginx 容器挂载或裸 nginx，按实际拓扑 include
 nginx -t                  # 语法检查

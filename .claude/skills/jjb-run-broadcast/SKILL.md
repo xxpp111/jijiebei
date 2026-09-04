@@ -50,7 +50,7 @@ Mac 休眠/合盖隧道断；URL 随进程重启更换。
 开发机出网走公司 HTTP 代理，cloudflared 默认 QUIC/UDP 穿不过，**必须 `--protocol http2` + 代理 env**：
 ```bash
 ssh devbox-tianlang   # cloudflared 装在 ~（curl github release 走 proxy）
-export https_proxy=http://sys-proxy-rd-relay.byted.org:8118 http_proxy=$https_proxy no_proxy=.byted.org,localhost,127.0.0.1
+export https_proxy=http://<COMPANY_PROXY>:8118 http_proxy=$https_proxy no_proxy=.<COMPANY_DOMAIN>,localhost,127.0.0.1
 nohup ./cloudflared tunnel --protocol http2 --url http://localhost:8080 > ~/cf-tunnel.log 2>&1 &   # 指向 nginx 8080
 grep trycloudflare.com ~/cf-tunnel.log   # 取公网 URL
 # 拆除：pkill -f "cloudflared tunnel"

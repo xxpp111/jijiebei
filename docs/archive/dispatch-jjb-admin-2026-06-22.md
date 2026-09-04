@@ -42,7 +42,7 @@
 
   proof（spoke 真跑贴回）：
   <pre lang="bash">
-  cd /Users/bytedance/项目/jijiebei/backend && ./pocketbase serve --http 127.0.0.1:8090 --dir pb_data &  # 起 P5
+  cd <PROJECT_ROOT>/backend && ./pocketbase serve --http 127.0.0.1:8090 --dir pb_data &  # 起 P5
   bash verify-all.sh >/dev/null 2>&1  # 造数据（admin/host/viewer/players）
   cd ../admin && npm i && npm run build 2>&1 | tail -3  # admin 编译
   node e2e/<admin-e2e>.mjs  # 登录+各模块 fetch P5 断言

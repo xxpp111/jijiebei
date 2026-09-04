@@ -1,7 +1,7 @@
 <!-- dispatch_contract:v1 target=claude-session entry=goal | marker: jjb-kb-rewrite -->
 <!-- 执行位：官方 Claude Code session（无三方 env；copy-paste 模式，改 live 公司 KB）。原 GLM-5.2/Dubhe 版因平台限流改官方。 -->
 <!-- 创建会话（官方 Claude，无三方 env 前缀，可直接粘贴）：
-cd /Users/bytedance/项目/jijiebei && claude -n jjb-kb-rewrite-official
+cd <PROJECT_ROOT> && claude -n jjb-kb-rewrite-official
 第一条输入：/goal + 下面 <objective>…</motivation> 整段；之后接续粘贴 EXECUTE PROMPT 段 -->
 
 <objective>

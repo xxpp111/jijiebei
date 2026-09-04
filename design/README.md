@@ -3,7 +3,7 @@
 Claude Design 产出的设计稿放这里，**受 git 管**（开发模式见记忆 `dev-workflow-claude-design-to-opus`）。
 
 ## 🎨 渲染架构（设计前必读）
-> 飞书画板（Claude visualizer 风格）：<https://bytedance.larkoffice.com/docx/KMIodWA5Wo9L6exPkXYc6D4AnJh>
+> 飞书画板（Claude visualizer 风格）：<https://<LARK_OFFICE>/docx/KMIodWA5Wo9L6exPkXYc6D4AnJh>
 
 实测 `danshua.fire`：每屏 = **4 层节点叠出来**，决定了各工具分工——
 - **① 静态美术整图**（`images/bg/`）：背景1.jpg 1280×720、回归杯横幅.png（待换）、背景2/群号/mask → **GPT-image-2 出无字整图**

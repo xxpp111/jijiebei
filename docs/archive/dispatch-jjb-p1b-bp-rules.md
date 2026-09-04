@@ -42,14 +42,14 @@
 
   proof（spoke 必须真实运行并把输出原文贴回）：
   <pre lang="bash">
-  cd /Users/bytedance/项目/jijiebei/web && npm run build
-  node /Users/bytedance/项目/jijiebei/web/e2e/run.mjs
-  node /Users/bytedance/项目/jijiebei/web/e2e/ui-smoke.mjs
-  node /Users/bytedance/项目/jijiebei/web/e2e/r6-doubles-downstream.mjs
-  node /Users/bytedance/项目/jijiebei/web/e2e/random-enemy.mjs
+  cd <PROJECT_ROOT>/web && npm run build
+  node <PROJECT_ROOT>/web/e2e/run.mjs
+  node <PROJECT_ROOT>/web/e2e/ui-smoke.mjs
+  node <PROJECT_ROOT>/web/e2e/r6-doubles-downstream.mjs
+  node <PROJECT_ROOT>/web/e2e/random-enemy.mjs
   # 新规则专项断言（spoke 新增的 e2e，覆盖 done-when 1-6）：
-  node /Users/bytedance/项目/jijiebei/web/e2e/<新增 bp-rules e2e 文件>.mjs
-  git -C /Users/bytedance/项目/jijiebei status --porcelain assets/   # 须为空
+  node <PROJECT_ROOT>/web/e2e/<新增 bp-rules e2e 文件>.mjs
+  git -C <PROJECT_ROOT> status --porcelain assets/   # 须为空
   </pre>
 </validation>
 
@@ -65,11 +65,11 @@
 
 <context>
   必读(执行前先读全)：
-  - /Users/bytedance/项目/jijiebei/projectplan.md —— 搜「BP 规则定稿」(规则唯一真相) + 「集结杯 → 比赛平台 路线图」(P1) + 「P0 架构清场 完成记录」(web/ 自包含 + assets 冻结边界)。
-  - /Users/bytedance/项目/jijiebei/web/src/logic/jjbSession.ts —— ban runtime、validate 三规则、setSelectedFac ban 拦截、getSelectState/selfPool/selfShow、isGroupB 查表。
-  - /Users/bytedance/项目/jijiebei/web/src/logic/bpConfig.ts —— BP_MODE_DEFS 6 键(缺 feiqiu-doubles)。
-  - /Users/bytedance/项目/jijiebei/web/src/screens/SelectScreen.tsx + HomeScreen.tsx —— select error 渲染路径 + home practice/match tab(homeMode)。
-  - /Users/bytedance/项目/jijiebei/web/src/logic/jjbDoubles.ts —— A档4+B档2=6人池、FEIQIU_ASSIGN_POOL、variant。
+  - <PROJECT_ROOT>/projectplan.md —— 搜「BP 规则定稿」(规则唯一真相) + 「集结杯 → 比赛平台 路线图」(P1) + 「P0 架构清场 完成记录」(web/ 自包含 + assets 冻结边界)。
+  - <PROJECT_ROOT>/web/src/logic/jjbSession.ts —— ban runtime、validate 三规则、setSelectedFac ban 拦截、getSelectState/selfPool/selfShow、isGroupB 查表。
+  - <PROJECT_ROOT>/web/src/logic/bpConfig.ts —— BP_MODE_DEFS 6 键(缺 feiqiu-doubles)。
+  - <PROJECT_ROOT>/web/src/screens/SelectScreen.tsx + HomeScreen.tsx —— select error 渲染路径 + home practice/match tab(homeMode)。
+  - <PROJECT_ROOT>/web/src/logic/jjbDoubles.ts —— A档4+B档2=6人池、FEIQIU_ASSIGN_POOL、variant。
   - jjb-race-rules 记忆 —— 7 模式真相 / 指挥官 A·B 降权 / 胜负判定(交叉印证规则定稿)。
   飞书规则文档若需核对，优先 lark-cli 读 live truth(jjb-race-rules 记忆有链接)，MCP 仅 fallback。
 </context>

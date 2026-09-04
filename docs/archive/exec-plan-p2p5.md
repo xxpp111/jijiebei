@@ -125,12 +125,12 @@
 ---
 
 **附：关键文件锚点（spoke 契约可直接引用，均绝对路径）**
-- 编排真相：`/Users/bytedance/项目/jijiebei/projectplan.md`（路线图 L2150-2236 / OBS·双打调研 L1760-1924）
-- 设计闭环 SOP：`/Users/bytedance/项目/jijiebei/docs/claude-design-loop.md`
-- 平台调研全文（schema §5 / 部署 §1.2 / 并行 §6）：`/Users/bytedance/项目/jijiebei/tmp/platform-research-report.md`
-- config 单源骨架：`/Users/bytedance/项目/jijiebei/web/src/config/`（`index.ts`/`factors.ts`/`README.md`）
-- cutover 触点：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbSession.ts`（glob L24-57 / fallback L859-898）+ `/Users/bytedance/项目/jijiebei/web/scripts/gen-config.mjs`
-- 双打引擎（暂不接）：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbDoubles.ts`
-- e2e 验证门：`/Users/bytedance/项目/jijiebei/web/e2e/`（`run.mjs` 9模式 / `ui-smoke.mjs` / `r6-doubles-downstream.mjs` / `random-enemy.mjs` / `bp-rules.mjs`）
-- 屏幕落地点：`/Users/bytedance/项目/jijiebei/web/src/screens/`（`ObsScreen.tsx`/`BpConfigScreen.tsx`/`SelectScreen.tsx` 等）
+- 编排真相：`<PROJECT_ROOT>/projectplan.md`（路线图 L2150-2236 / OBS·双打调研 L1760-1924）
+- 设计闭环 SOP：`<PROJECT_ROOT>/docs/claude-design-loop.md`
+- 平台调研全文（schema §5 / 部署 §1.2 / 并行 §6）：`<PROJECT_ROOT>/tmp/platform-research-report.md`
+- config 单源骨架：`<PROJECT_ROOT>/web/src/config/`（`index.ts`/`factors.ts`/`README.md`）
+- cutover 触点：`<PROJECT_ROOT>/web/src/logic/jjbSession.ts`（glob L24-57 / fallback L859-898）+ `<PROJECT_ROOT>/web/scripts/gen-config.mjs`
+- 双打引擎（暂不接）：`<PROJECT_ROOT>/web/src/logic/jjbDoubles.ts`
+- e2e 验证门：`<PROJECT_ROOT>/web/e2e/`（`run.mjs` 9模式 / `ui-smoke.mjs` / `r6-doubles-downstream.mjs` / `random-enemy.mjs` / `bp-rules.mjs`）
+- 屏幕落地点：`<PROJECT_ROOT>/web/src/screens/`（`ObsScreen.tsx`/`BpConfigScreen.tsx`/`SelectScreen.tsx` 等）
 - Design System：「集结杯 Design System」`e956fe00`；部署 skill：`jjb-deploy`（devbox-tianlang docker nginx :8080）

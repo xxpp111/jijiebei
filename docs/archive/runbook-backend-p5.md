@@ -11,7 +11,7 @@
 ### 1.1 编译单二进制
 
 ```bash
-cd /Users/bytedance/项目/jijiebei/backend
+cd <PROJECT_ROOT>/backend
 go mod tidy                                   # 拉依赖（首次，需外网）
 go build -o pocketbase .                      # 编译（pb_migrations 编译进二进制）
 ```
@@ -43,7 +43,7 @@ devbox 外网受限、拉镜像难 — PocketBase/Litestream 二进制**本地�
 
 ```bash
 # 本地（有外网）交叉编译 linux/amd64 二进制
-cd /Users/bytedance/项目/jijiebei/backend
+cd <PROJECT_ROOT>/backend
 GOOS=linux GOARCH=amd64 go build -o pocketbase-linux-amd64 .
 
 # scp 推到 devbox（目录 /opt/jjb-backend 需先建，属主 jjb）

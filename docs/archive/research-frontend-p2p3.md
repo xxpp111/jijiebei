@@ -223,10 +223,10 @@ web/src/screens/HomeScreen.tsx     比赛 tab 加「贴码开局」输入入口
 | 7 | **双打盘面直写函数** | jjbDoubles 是模块级闭包态，无对外直写整盘 API | 新增 `applyDoublesSnapshot` 直填 `_*`；编解码对称测试当 done-when |
 
 **关键文件绝对路径速查**
-- P2 落点：`/Users/bytedance/项目/jijiebei/web/src/lib/`（新建 capture.ts）、`/Users/bytedance/项目/jijiebei/web/src/components/`（新建 CaptureButtons.tsx）、`web/src/screens/{SelectScreen,ObsScreen,ResultScreen}.tsx`
-- 字体真相：`/Users/bytedance/项目/jijiebei/web/src/styles/index.css:3`（CDN @import）；clip-path 仅 metal：`web/src/styles/{home-mode,bp-config,promo-bar,random-enemy}.css`
-- P3 落点：`/Users/bytedance/项目/jijiebei/web/src/logic/`（新建 codeScheme.ts）、`web/src/App.tsx:92-104`（hash 解码插入点，仿 `:95` doublesLive 守卫）
-- 码索引源：`/Users/bytedance/项目/jijiebei/web/src/data/mutatorPool.ts`（MUTATOR_POOL A/B/C 顺序）、`/Users/bytedance/项目/jijiebei/web/src/config/factors.ts`（FACTORS 71 条，★查排序）、`/Users/bytedance/项目/jijiebei/web/scripts/gen-config.mjs`（★排序纪律）
-- 单打状态形状：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbSession.ts`（`SelectState` 接口 `:504`、`getSelectState` `:535`、gold/ban/ruleMode 运行时态 `:798/:827/:820`）
-- 双打状态形状：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbDoubles.ts`（`DoublesState` `:141`、模块态 `_*` `:46-52`、`doublesStart` 随机开盘 `:79`）
-- 索引函数：`/Users/bytedance/项目/jijiebei/web/src/logic/legacy/JJBData.ts`（`facFlatIdx` `:91`、`manualSlots` `:98`、`RESULT_VAL` `:80`）
+- P2 落点：`<PROJECT_ROOT>/web/src/lib/`（新建 capture.ts）、`<PROJECT_ROOT>/web/src/components/`（新建 CaptureButtons.tsx）、`web/src/screens/{SelectScreen,ObsScreen,ResultScreen}.tsx`
+- 字体真相：`<PROJECT_ROOT>/web/src/styles/index.css:3`（CDN @import）；clip-path 仅 metal：`web/src/styles/{home-mode,bp-config,promo-bar,random-enemy}.css`
+- P3 落点：`<PROJECT_ROOT>/web/src/logic/`（新建 codeScheme.ts）、`web/src/App.tsx:92-104`（hash 解码插入点，仿 `:95` doublesLive 守卫）
+- 码索引源：`<PROJECT_ROOT>/web/src/data/mutatorPool.ts`（MUTATOR_POOL A/B/C 顺序）、`<PROJECT_ROOT>/web/src/config/factors.ts`（FACTORS 71 条，★查排序）、`<PROJECT_ROOT>/web/scripts/gen-config.mjs`（★排序纪律）
+- 单打状态形状：`<PROJECT_ROOT>/web/src/logic/jjbSession.ts`（`SelectState` 接口 `:504`、`getSelectState` `:535`、gold/ban/ruleMode 运行时态 `:798/:827/:820`）
+- 双打状态形状：`<PROJECT_ROOT>/web/src/logic/jjbDoubles.ts`（`DoublesState` `:141`、模块态 `_*` `:46-52`、`doublesStart` 随机开盘 `:79`）
+- 索引函数：`<PROJECT_ROOT>/web/src/logic/legacy/JJBData.ts`（`facFlatIdx` `:91`、`manualSlots` `:98`、`RESULT_VAL` `:80`）

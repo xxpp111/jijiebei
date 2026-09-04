@@ -337,12 +337,12 @@ docs/*.csv (UTF-8 BOM)  ──► web/scripts/gen-config.ts ──► web/src/co
 ---
 
 **关键文件绝对路径速查**
-- vite alias / 剥离落点：`/Users/bytedance/项目/jijiebei/web/vite.config.ts`
-- React 依赖的 3 个旧文件：`/Users/bytedance/项目/jijiebei/assets/Script/jijie2/JijieData.ts`、`.../jijie2/data/JJConfigData.ts`（抽签引擎，活逻辑，不可换桩）、`.../jjbDesign/JJBData.ts`
+- vite alias / 剥离落点：`<PROJECT_ROOT>/web/vite.config.ts`
+- React 依赖的 3 个旧文件：`<PROJECT_ROOT>/assets/Script/jijie2/JijieData.ts`、`.../jijie2/data/JJConfigData.ts`（抽签引擎，活逻辑，不可换桩）、`.../jjbDesign/JJBData.ts`
 - 死链候选（剥离断链删）：`.../jijie2/data/GameData.ts` + `PlayerData.ts`
-- 接缝层：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbSession.ts`（唯一调引擎）、`/Users/bytedance/项目/jijiebei/web/src/cc-shim.ts`（13 行 Cocos 垫片）
-- 运行期单打真相：`/Users/bytedance/项目/jijiebei/assets/resources/jjdata/*.txt`（5 CSV，CRLF 脆弱）
-- 运行期双打/敌方真相：`/Users/bytedance/项目/jijiebei/web/src/data/{mutatorPool,aiEnemyPool}.ts`
-- 人工母表（生成期）：`/Users/bytedance/项目/jijiebei/docs/{因子点数配置,官突ABC配置_官突池,官突ABC配置_挑战池}.csv`
-- 死数据（建议清理）：`/Users/bytedance/项目/jijiebei/assets/resources/data/*`
-- 码方案/截图相关：`/Users/bytedance/项目/jijiebei/web/src/screens/SelectScreen.tsx`（选择状态真实形状）、`/Users/bytedance/项目/jijiebei/web/src/screens/ObsScreen.tsx`（直播横条）
+- 接缝层：`<PROJECT_ROOT>/web/src/logic/jjbSession.ts`（唯一调引擎）、`<PROJECT_ROOT>/web/src/cc-shim.ts`（13 行 Cocos 垫片）
+- 运行期单打真相：`<PROJECT_ROOT>/assets/resources/jjdata/*.txt`（5 CSV，CRLF 脆弱）
+- 运行期双打/敌方真相：`<PROJECT_ROOT>/web/src/data/{mutatorPool,aiEnemyPool}.ts`
+- 人工母表（生成期）：`<PROJECT_ROOT>/docs/{因子点数配置,官突ABC配置_官突池,官突ABC配置_挑战池}.csv`
+- 死数据（建议清理）：`<PROJECT_ROOT>/assets/resources/data/*`
+- 码方案/截图相关：`<PROJECT_ROOT>/web/src/screens/SelectScreen.tsx`（选择状态真实形状）、`<PROJECT_ROOT>/web/src/screens/ObsScreen.tsx`（直播横条）

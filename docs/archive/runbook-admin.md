@@ -6,7 +6,7 @@
 
 ```bash
 # 1. 起 P5 后端（前置，见 backend/README.md）
-cd /Users/bytedance/项目/jijiebei/backend
+cd <PROJECT_ROOT>/backend
 ./pocketbase serve --http 127.0.0.1:8090 --dir pb_data &
 bash verify-all.sh   # 造测试数据（admin/host/viewer + players）
 

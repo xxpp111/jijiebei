@@ -1,5 +1,5 @@
 <!-- dispatch_contract:v1 target=claude-session entry=goal | marker: jjb-r7-doubles-mechanism -->
-<!-- 创建会话：cd /Users/bytedance/项目/jijiebei && claude -n jjb-r7-doubles -->
+<!-- 创建会话：cd <PROJECT_ROOT> && claude -n jjb-r7-doubles -->
 <!-- 第一条输入：/goal + 下面 <objective>…</persistence> 整段；之后接续粘贴 EXECUTE PROMPT 段 -->
 
 <objective>

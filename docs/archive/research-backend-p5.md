@@ -278,13 +278,13 @@ ruleMode==='practice'（HomeScreen 练习 tab）：
 ### 4.1 创建会话命令 / Session 名
 
 ```
-cd /Users/bytedance/项目/jijiebei && claude -n jjb-p5-backend
+cd <PROJECT_ROOT> && claude -n jjb-p5-backend
 ```
 
 ### 4.2 /goal 命令（spoke 第一条输入，外置指针）
 
 ```
-/goal 在 /Users/bytedance/项目/jijiebei（分支 jjb-platform）搭建集结杯比赛平台 PocketBase 后端：5 集合 schema + 记录级权限 + 积分/天梯 Go hook + devbox 部署清单 + Litestream 容灾，前端 web/src 仅只读对接、本 round 不改前端代码。完整契约见 /tmp/dispatch-jjb-p5-backend-2026-06-22.md，本回合第一个工具调用必须是 Read 该文件，读全再开工；读不到立即 STOP 报告。
+/goal 在 <PROJECT_ROOT>（分支 jjb-platform）搭建集结杯比赛平台 PocketBase 后端：5 集合 schema + 记录级权限 + 积分/天梯 Go hook + devbox 部署清单 + Litestream 容灾，前端 web/src 仅只读对接、本 round 不改前端代码。完整契约见 /tmp/dispatch-jjb-p5-backend-2026-06-22.md，本回合第一个工具调用必须是 Read 该文件，读全再开工；读不到立即 STOP 报告。
 ```
 
 ### 4.3 契约全文（hub 写入 `/tmp/dispatch-jjb-p5-backend-2026-06-22.md`）
@@ -348,7 +348,7 @@ cd /Users/bytedance/项目/jijiebei && claude -n jjb-p5-backend
 
   proof（spoke 必须运行并贴回原文）：
   <pre lang="bash">
-  cd /Users/bytedance/项目/jijiebei/backend && ./pocketbase serve --http 127.0.0.1:8090 &
+  cd <PROJECT_ROOT>/backend && ./pocketbase serve --http 127.0.0.1:8090 &
   # 1) migrations 重放
   rm -rf pb_data && ./pocketbase migrate up && ls pb_migrations/
   # 2) 建 admin + host + viewer 账号，逐角色 curl 验权限矩阵
@@ -376,8 +376,8 @@ cd /Users/bytedance/项目/jijiebei && claude -n jjb-p5-backend
 
 <context>
   必须先读（按序）：
-  - /Users/bytedance/项目/jijiebei/tmp/platform-research-report.md（§1 选型 / §2 架构 / §5 schema 草案）
-  - /Users/bytedance/项目/jijiebei/projectplan.md（搜「6 Phase 路线图」「数据 schema」「开放问题决策」「P0 架构清场 完成记录」）
+  - <PROJECT_ROOT>/tmp/platform-research-report.md（§1 选型 / §2 架构 / §5 schema 草案）
+  - <PROJECT_ROOT>/projectplan.md（搜「6 Phase 路线图」「数据 schema」「开放问题决策」「P0 架构清场 完成记录」）
   - web/src/logic/jjbSession.ts（SelectState 定义在 export interface SelectState；SessionMode 在 :64）
   - web/src/logic/jjbDoubles.ts（DoublesConfig + _slots）
   - web/src/logic/jjbView.ts（门面）
@@ -417,15 +417,15 @@ cd /Users/bytedance/项目/jijiebei && claude -n jjb-p5-backend
 
 ## 关键文件绝对路径速查
 
-- 选择状态权威（payload_code 编码源）：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbSession.ts`（`SelectState` interface + `getSelectState()` + `SessionMode`:64 + `getScore()`:458 + `winLoseList`/`RESULT_VAL`）
-- 双打选择状态：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbDoubles.ts`（`DoublesConfig`:127 + `_slots`:51 + `doublesStart`/`doublesLive`）
-- 统一门面（前端对接挂点）：`/Users/bytedance/项目/jijiebei/web/src/logic/jjbView.ts`（`currentPlayerName`:57 / `currentMatches`:32 / `currentScore`:36）
-- 落库源字段：`/Users/bytedance/项目/jijiebei/web/src/logic/legacy/JijieData.ts`（全静态态：playerName/mapList/lockFactorList/selectedFactorList/selectedCommanderList/winLoseList/winCount/winbCount）
-- 入口分流（mode 映射源）：`/Users/bytedance/项目/jijiebei/web/src/screens/HomeScreen.tsx`（`setRuleMode` practice/match :38 + 选手 ID 输入 :109-113）
-- 选择屏（选择真实形状）：`/Users/bytedance/项目/jijiebei/web/src/screens/SelectScreen.tsx`
-- 调研报告：`/Users/bytedance/项目/jijiebei/tmp/platform-research-report.md`（§1 选型 / §2 架构 / §5 schema）
-- 路线图 + 决策真相：`/Users/bytedance/项目/jijiebei/projectplan.md`（「6 Phase 路线图」「数据 schema」「开放问题决策」「P0 架构清场 完成记录」「P1 进度」节）
-- 派发协议：`/Users/bytedance/.claude/skills/agent-dispatch/SKILL.md`（契约四段 + marker + 外置 >4000 字符配方）
+- 选择状态权威（payload_code 编码源）：`<PROJECT_ROOT>/web/src/logic/jjbSession.ts`（`SelectState` interface + `getSelectState()` + `SessionMode`:64 + `getScore()`:458 + `winLoseList`/`RESULT_VAL`）
+- 双打选择状态：`<PROJECT_ROOT>/web/src/logic/jjbDoubles.ts`（`DoublesConfig`:127 + `_slots`:51 + `doublesStart`/`doublesLive`）
+- 统一门面（前端对接挂点）：`<PROJECT_ROOT>/web/src/logic/jjbView.ts`（`currentPlayerName`:57 / `currentMatches`:32 / `currentScore`:36）
+- 落库源字段：`<PROJECT_ROOT>/web/src/logic/legacy/JijieData.ts`（全静态态：playerName/mapList/lockFactorList/selectedFactorList/selectedCommanderList/winLoseList/winCount/winbCount）
+- 入口分流（mode 映射源）：`<PROJECT_ROOT>/web/src/screens/HomeScreen.tsx`（`setRuleMode` practice/match :38 + 选手 ID 输入 :109-113）
+- 选择屏（选择真实形状）：`<PROJECT_ROOT>/web/src/screens/SelectScreen.tsx`
+- 调研报告：`<PROJECT_ROOT>/tmp/platform-research-report.md`（§1 选型 / §2 架构 / §5 schema）
+- 路线图 + 决策真相：`<PROJECT_ROOT>/projectplan.md`（「6 Phase 路线图」「数据 schema」「开放问题决策」「P0 架构清场 完成记录」「P1 进度」节）
+- 派发协议：`<USER_HOME>/.claude/skills/agent-dispatch/SKILL.md`（契约四段 + marker + 外置 >4000 字符配方）
 - 待落盘契约（hub Write）：`/tmp/dispatch-jjb-p5-backend-2026-06-22.md`
 
 ## 三处需 hub/yb 拍板的 caveat
